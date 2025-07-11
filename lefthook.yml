@@ -1,0 +1,58 @@
+pre-commit:
+  parallel: false
+  commands:
+    format:
+      glob: "*.{ts,js,json}"
+      run: npm run format
+      stage_fixed: true
+    remove-trailing-spaces:
+      run: perl -i -pe 's/[ \t]+$//' {staged_files}
+      glob:
+        - "*.ts"
+        - "*.js"
+        - "*.json"
+        - "*.yml"
+        - "*.yaml"
+        - "*.md"
+        - "*.txt"
+        - ".gitignore"
+        - "package.json"
+        - "tsconfig.json"
+        - "biome.json"
+        - "lefthook.yml"
+      stage_fixed: true
+    ensure-newline-eof:
+      run: perl -i -pe 'chomp if eof; $_ .= "\n" if eof' {staged_files}
+      glob:
+        - "*.ts"
+        - "*.js"
+        - "*.json"
+        - "*.yml"
+        - "*.yaml"
+        - "*.md"
+        - "*.txt"
+        - ".gitignore"
+        - "package.json"
+        - "tsconfig.json"
+        - "biome.json"
+        - "lefthook.yml"
+      stage_fixed: true
+    lint-biome:
+      glob: "*.{ts,js,json}"
+      run: npm run lint:biome
+    lint-md:
+      glob: "*.md"
+      run: npm run lint:md
+    types:
+      glob: "*.ts"
+      run: npx tsc --noEmit
+
+pre-push:
+  commands:
+    test:
+      run: npm test -- --run
+
+commit-msg:
+  commands:
+    commitlint:
+      run: npx commitlint --edit {1}

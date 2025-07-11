@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+.pnpm-debug.log
+pnpm-lock.yaml
+package-lock.json
+
+# Build outputs
+dist/
+build/
+out/
+*.js
+*.d.ts
+*.js.map
+
+# Keep TypeScript source files
+!src/**/*.ts
+
+# Keep configuration files
+!commitlint.config.js
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# ccvault runtime data (for development)
+.ccvault/
+
+# Lefthook
+.lefthook/
