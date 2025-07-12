@@ -1,6 +1,15 @@
 import { Command } from 'commander'
 import { Table } from 'console-table-printer'
-import { VaultCore } from './core/index.js'
+import {
+  catEntry,
+  closeVault,
+  createVault,
+  deleteEntry,
+  getEntry,
+  getInfo,
+  listEntries,
+  setEntry,
+} from './core/index.js'
 
 const program = new Command()
 
@@ -10,17 +19,18 @@ program
   .version('0.1.0')
 
 program
-  .command('set <key> <file>')
-  .description('Save content to vault')
+  .command('set <key>')
+  .description('Save content to vault (reads from stdin by default)')
+  .option('-f, --file <path>', 'Read content from file')
   .option('-d, --description <desc>', 'Add description')
-  .action((key, file, options) => {
+  .action((key, options) => {
     try {
-      const vault = new VaultCore()
-      const path = vault.set(key, file, {
+      const vault = createVault()
+      const path = setEntry(vault, key, options.file || '-', {
         description: options.description,
       })
       console.log(path)
-      vault.close()
+      closeVault(vault)
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : String(error))
       process.exit(1)
@@ -34,8 +44,8 @@ program
   .option('--project <path>', 'Get from different project')
   .action((key, options) => {
     try {
-      const vault = new VaultCore(options.project)
-      const path = vault.get(key, {
+      const vault = createVault(options.project)
+      const path = getEntry(vault, key, {
         version: options.version,
         project: options.project,
       })
@@ -46,7 +56,7 @@ program
         console.error(`Key not found: ${key}`)
         process.exit(1)
       }
-      vault.close()
+      closeVault(vault)
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : String(error))
       process.exit(1)
@@ -60,8 +70,8 @@ program
   .option('--project <path>', 'Get from different project')
   .action((key, options) => {
     try {
-      const vault = new VaultCore(options.project)
-      const content = vault.cat(key, {
+      const vault = createVault(options.project)
+      const content = catEntry(vault, key, {
         version: options.version,
         project: options.project,
       })
@@ -72,7 +82,7 @@ program
         console.error(`Key not found: ${key}`)
         process.exit(1)
       }
-      vault.close()
+      closeVault(vault)
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : String(error))
       process.exit(1)
@@ -87,8 +97,8 @@ program
   .option('--project <path>', 'List from different project')
   .action((options) => {
     try {
-      const vault = new VaultCore(options.project)
-      const entries = vault.list({
+      const vault = createVault(options.project)
+      const entries = listEntries(vault, {
         allVersions: options.allVersions,
         project: options.project,
       })
@@ -118,7 +128,7 @@ program
 
         table.printTable()
       }
-      vault.close()
+      closeVault(vault)
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : String(error))
       process.exit(1)
@@ -132,8 +142,8 @@ program
   .option('--project <path>', 'Delete from different project')
   .action((key, options) => {
     try {
-      const vault = new VaultCore(options.project)
-      const deleted = vault.delete(key, {
+      const vault = createVault(options.project)
+      const deleted = deleteEntry(vault, key, {
         version: options.version,
         project: options.project,
       })
@@ -144,7 +154,7 @@ program
         console.error(`Key not found: ${key}`)
         process.exit(1)
       }
-      vault.close()
+      closeVault(vault)
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : String(error))
       process.exit(1)
@@ -158,8 +168,8 @@ program
   .option('--project <path>', 'Show from different project')
   .action((key, options) => {
     try {
-      const vault = new VaultCore(options.project)
-      const entry = vault.info(key, {
+      const vault = createVault(options.project)
+      const entry = getInfo(vault, key, {
         version: options.version,
         project: options.project,
       })
@@ -170,7 +180,7 @@ program
         console.error(`Key not found: ${key}`)
         process.exit(1)
       }
-      vault.close()
+      closeVault(vault)
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : String(error))
       process.exit(1)

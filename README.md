@@ -31,11 +31,20 @@ npx ccvault <command>
 ### CLI Usage
 
 ```bash
-# Save content from a file
-ccvault set architecture design.md
+# Save content from stdin (default)
+echo "API design notes" | ccvault set api-notes
 
-# Save from stdin
-echo "API design notes" | ccvault set api-notes -
+# Save interactively
+ccvault set notes
+# Enter content (Ctrl-D when done):
+# Type your content here...
+# ^D
+
+# Save from a file
+ccvault set architecture -f design.md
+
+# Save with description
+ccvault set config -d "Production config" -f config.yaml
 
 # Get file path (for editing)
 vim $(ccvault get architecture)
