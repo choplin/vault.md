@@ -59,20 +59,60 @@ ccvault list
 ccvault get architecture --version=1
 ```
 
-### MCP Server
+### MCP Server Usage
 
-Start the MCP server:
+ccvault includes an MCP (Model Context Protocol) server that allows Claude Desktop to interact with your vault directly.
 
-```bash
-ccvault mcp
+#### Setup
+
+Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "ccvault": {
+      "command": "ccvault-mcp"
+    }
+  }
+}
 ```
 
-Then Claude Code can use these tools:
+Or if installed locally:
 
-- `ccvault_set` - Save content
-- `ccvault_get` - Retrieve content
-- `ccvault_list` - List available keys
-- `ccvault_info` - Get metadata
+```json
+{
+  "mcpServers": {
+    "ccvault": {
+      "command": "node",
+      "args": ["/path/to/ccvault/dist/mcp-server.js"]
+    }
+  }
+}
+```
+
+#### Available Tools
+
+Once configured, Claude Desktop can use these tools:
+
+- `vault_set` - Store content in the vault
+  - `key` (required): The key for the vault entry
+  - `content` (required): The content to store
+  - `description` (optional): Description for the entry
+
+- `vault_get` - Retrieve content from the vault
+  - `key` (required): The key to retrieve
+  - `version` (optional): Specific version (latest if not specified)
+
+- `vault_list` - List all entries in the vault
+  - `allVersions` (optional): Include all versions, not just latest
+
+- `vault_delete` - Delete an entry from the vault
+  - `key` (required): The key to delete
+  - `version` (optional): Specific version to delete (all if not specified)
+
+- `vault_info` - Get metadata about a vault entry
+  - `key` (required): The key to get info for
+  - `version` (optional): Specific version (latest if not specified)
 
 ## Key Concepts
 

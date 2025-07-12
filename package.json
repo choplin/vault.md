@@ -13,15 +13,18 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "ccvault": "./dist/cli.js"
+    "ccvault": "./dist/cli.js",
+    "ccvault-mcp": "./dist/mcp-server.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "dev": "tsx src/cli.ts",
-    "build": "npm run build:bundle && npm run build:types",
+    "dev:mcp": "tsx src/mcp-server.ts",
+    "build": "npm run build:bundle && npm run build:mcp && npm run build:types",
     "build:bundle": "esbuild src/cli.ts --bundle --platform=node --target=node18 --format=cjs --outfile=dist/cli.js --external:better-sqlite3 --banner:js='#!/usr/bin/env node'",
+    "build:mcp": "esbuild src/mcp-server.ts --bundle --platform=node --target=node18 --format=esm --outfile=dist/mcp-server.js --external:better-sqlite3 --banner:js='#!/usr/bin/env node'",
     "build:types": "tsc --emitDeclarationOnly",
     "test": "vitest",
     "lint": "npm run lint:biome && npm run lint:md",
@@ -35,9 +38,11 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.15.1",
     "better-sqlite3": "^12.2.0",
     "commander": "^14.0.0",
-    "console-table-printer": "^2.14.6"
+    "console-table-printer": "^2.14.6",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.1.1",
