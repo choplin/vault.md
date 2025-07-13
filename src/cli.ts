@@ -1,3 +1,4 @@
+import { isatty } from 'node:tty'
 import { Command } from 'commander'
 import { Table } from 'console-table-printer'
 import {
@@ -10,6 +11,7 @@ import {
   listEntries,
   setEntry,
 } from './core/index.js'
+import { VaultMCPServer } from './mcp/server.js'
 
 const program = new Command()
 
@@ -26,6 +28,10 @@ program
   .action((key, options) => {
     try {
       const vault = createVault()
+      // Show prompt for interactive TTY input
+      if (!options.file && isatty(0)) {
+        console.error('Enter content (Ctrl-D when done):')
+      }
       const path = setEntry(vault, key, options.file || '-', {
         description: options.description,
       })
@@ -190,8 +196,14 @@ program
 program
   .command('mcp')
   .description('Start MCP server')
-  .action(() => {
-    console.log('TODO: Implement MCP server')
+  .action(async () => {
+    try {
+      const server = new VaultMCPServer()
+      await server.run()
+    } catch (error) {
+      console.error('MCP server error:', error instanceof Error ? error.message : String(error))
+      process.exit(1)
+    }
   })
 
 program.parse()

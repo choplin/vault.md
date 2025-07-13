@@ -1,11 +1,10 @@
-#!/usr/bin/env node
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
-import type { VaultContext } from './core/vault.js'
-import * as vault from './core/vault.js'
-import { createVault } from './core/vault.js'
+import type { VaultContext } from '../core/vault.js'
+import * as vault from '../core/vault.js'
+import { createVault } from '../core/vault.js'
 
 // Zod schemas for tool parameters
 const SetEntrySchema = z.object({
@@ -266,7 +265,6 @@ export class VaultMCPServer {
   async run() {
     const transport = new StdioServerTransport()
     await this.server.connect(transport)
-    console.error('ccvault MCP server running')
   }
 
   async connect(transport: any) {
@@ -276,13 +274,4 @@ export class VaultMCPServer {
       vault.closeVault(this.vaultContext)
     }
   }
-}
-
-// Main entry point
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const server = new VaultMCPServer()
-  server.run().catch((error) => {
-    console.error('Server error:', error)
-    process.exit(1)
-  })
 }

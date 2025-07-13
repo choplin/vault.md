@@ -13,18 +13,16 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "ccvault": "./dist/cli.js",
-    "ccvault-mcp": "./dist/mcp-server.js"
+    "ccvault": "./dist/cli.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "dev": "tsx src/cli.ts",
-    "dev:mcp": "tsx src/mcp-server.ts",
-    "build": "npm run build:bundle && npm run build:mcp && npm run build:types",
+    "dev:mcp": "tsx src/cli.ts mcp",
+    "build": "npm run build:bundle && npm run build:types",
     "build:bundle": "esbuild src/cli.ts --bundle --platform=node --target=node18 --format=cjs --outfile=dist/cli.js --external:better-sqlite3 --banner:js='#!/usr/bin/env node'",
-    "build:mcp": "esbuild src/mcp-server.ts --bundle --platform=node --target=node18 --format=esm --outfile=dist/mcp-server.js --external:better-sqlite3 --banner:js='#!/usr/bin/env node'",
     "build:types": "tsc --emitDeclarationOnly",
     "test": "vitest",
     "lint": "npm run lint:biome && npm run lint:md",

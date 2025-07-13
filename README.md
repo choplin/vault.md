@@ -71,7 +71,8 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 {
   "mcpServers": {
     "ccvault": {
-      "command": "ccvault-mcp"
+      "command": "ccvault",
+      "args": ["mcp"]
     }
   }
 }
@@ -84,7 +85,7 @@ Or if installed locally:
   "mcpServers": {
     "ccvault": {
       "command": "node",
-      "args": ["/path/to/ccvault/dist/mcp-server.js"]
+      "args": ["/path/to/ccvault/dist/cli.js", "mcp"]
     }
   }
 }

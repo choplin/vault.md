@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs'
-import { isatty } from 'node:tty'
 import type { DatabaseContext } from './database.js'
 import * as db from './database.js'
 import * as fs from './filesystem.js'
@@ -21,10 +20,6 @@ export function setEntry(ctx: VaultContext, key: string, filePath: string, optio
   // Read content from file or stdin
   let content: string
   if (filePath === '-') {
-    // Check if stdin is a TTY (interactive terminal)
-    if (isatty(0)) {
-      console.error('Enter content (Ctrl-D when done):')
-    }
     content = readFileSync(0, 'utf-8')
   } else {
     content = fs.readFile(filePath)

@@ -52,8 +52,6 @@ function migrate(db: Database.Database): void {
   const currentVersion = getSchemaVersion(db)
 
   if (currentVersion < CURRENT_VERSION) {
-    console.error(`Migrating database from version ${currentVersion} to ${CURRENT_VERSION}...`)
-
     // Run migrations in order
     for (let v = currentVersion + 1; v <= CURRENT_VERSION; v++) {
       runMigration(db, v)
@@ -61,7 +59,6 @@ function migrate(db: Database.Database): void {
 
     // Update schema version
     setSchemaVersion(db, CURRENT_VERSION)
-    console.error('Migration completed successfully')
   } else if (currentVersion > CURRENT_VERSION) {
     throw new Error(
       `Database schema version ${currentVersion} is newer than CLI version ${CURRENT_VERSION}. ` +
