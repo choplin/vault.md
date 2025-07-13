@@ -15,10 +15,7 @@ import { VaultMCPServer } from './mcp/server.js'
 
 const program = new Command()
 
-program
-  .name('ccvault')
-  .description('Claude Code Knowledge Vault - persistent storage for AI-assisted development')
-  .version('0.1.0')
+program.name('vault').description('vault.md - A knowledge vault for AI-assisted development').version('0.1.0')
 
 program
   .command('set <key>')

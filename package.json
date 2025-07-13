@@ -1,19 +1,21 @@
 {
-  "name": "ccvault",
+  "name": "vault.md",
   "version": "0.1.0",
-  "description": "Claude Code Knowledge Vault - A KVS-based CLI tool for persistent knowledge management",
+  "description": "A knowledge vault for AI-assisted development - Store and version your context with a simple CLI",
   "keywords": [
-    "claude-code",
+    "context-engineering",
+    "ai-development",
     "knowledge-management",
-    "kvs",
+    "mcp",
     "cli",
-    "mcp"
+    "vault",
+    "markdown"
   ],
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "ccvault": "./dist/cli.js"
+    "vault": "./dist/cli.js"
   },
   "files": [
     "dist"

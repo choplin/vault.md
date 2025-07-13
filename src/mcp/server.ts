@@ -35,7 +35,7 @@ export class VaultMCPServer {
   constructor() {
     this.server = new Server(
       {
-        name: 'ccvault',
+        name: 'vault.md',
         version: '0.1.0',
       },
       {
@@ -126,7 +126,7 @@ export class VaultMCPServer {
           case 'vault_set': {
             const params = SetEntrySchema.parse(args)
             // Create a temporary file to store the content
-            const tmpFile = `/tmp/ccvault-mcp-${Date.now()}.txt`
+            const tmpFile = `/tmp/vault-mcp-${Date.now()}.txt`
             const { writeFileSync, unlinkSync } = await import('node:fs')
 
             try {
@@ -267,7 +267,7 @@ export class VaultMCPServer {
     await this.server.connect(transport)
   }
 
-  async connect(transport: any) {
+  async connect(transport: StdioServerTransport) {
     await this.server.connect(transport)
     return async () => {
       await this.server.close()

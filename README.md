@@ -1,10 +1,10 @@
-# ccvault
+# vault.md
 
-A knowledge vault for Claude Code - persistent storage for AI-assisted development workflows.
+A knowledge vault for AI-assisted development - Store and version your context with a simple CLI.
 
 ## Overview
 
-ccvault is a simple key-value store designed specifically for Claude Code, providing persistent storage for knowledge, context, and work artifacts across AI sessions.
+vault.md is a context engineering tool that provides persistent storage for knowledge, context, and work artifacts across AI development sessions. Like Markdown for your AI's memory.
 
 ## Features
 
@@ -17,13 +17,13 @@ ccvault is a simple key-value store designed specifically for Claude Code, provi
 ## Installation
 
 ```bash
-npm install -g ccvault
+npm install -g vault.md
 ```
 
 Or run directly with npx:
 
 ```bash
-npx ccvault <command>
+npx vault.md <command>
 ```
 
 ## Quick Start
@@ -32,36 +32,36 @@ npx ccvault <command>
 
 ```bash
 # Save content from stdin (default)
-echo "API design notes" | ccvault set api-notes
+echo "API design notes" | vault set api-notes
 
 # Save interactively
-ccvault set notes
+vault set notes
 # Enter content (Ctrl-D when done):
 # Type your content here...
 # ^D
 
 # Save from a file
-ccvault set architecture -f design.md
+vault set architecture -f design.md
 
 # Save with description
-ccvault set config -d "Production config" -f config.yaml
+vault set config -d "Production config" -f config.yaml
 
 # Get file path (for editing)
-vim $(ccvault get architecture)
+vim $(vault get architecture)
 
 # View content directly
-ccvault cat architecture
+vault cat architecture
 
 # List all keys in current project
-ccvault list
+vault list
 
 # Get specific version
-ccvault get architecture --version=1
+vault get architecture --version=1
 ```
 
 ### MCP Server Usage
 
-ccvault includes an MCP (Model Context Protocol) server that allows Claude Desktop to interact with your vault directly.
+vault.md includes an MCP (Model Context Protocol) server that allows Claude Desktop and other AI tools to interact with your vault directly.
 
 #### Setup
 
@@ -70,8 +70,8 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 ```json
 {
   "mcpServers": {
-    "ccvault": {
-      "command": "ccvault",
+    "vault": {
+      "command": "vault",
       "args": ["mcp"]
     }
   }
@@ -83,9 +83,9 @@ Or if installed locally:
 ```json
 {
   "mcpServers": {
-    "ccvault": {
+    "vault": {
       "command": "node",
-      "args": ["/path/to/ccvault/dist/cli.js", "mcp"]
+      "args": ["/path/to/vault.md/dist/cli.js", "mcp"]
     }
   }
 }
@@ -131,10 +131,10 @@ Every update creates a new version automatically. Old versions are preserved for
 
 ## Storage Location
 
-Data is stored in `~/.ccvault/` with this structure:
+Data is stored in `~/.vault/` with this structure:
 
 ```text
-~/.ccvault/
+~/.vault/
 ├── index.db                              # SQLite metadata
 └── objects/
     └── -Users-yourname-project/         # Project directory

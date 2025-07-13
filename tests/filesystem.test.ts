@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 // Set up isolated test directory before importing modules
-const testDir = mkdtempSync(join(tmpdir(), 'ccvault-fs-test-'))
+const testDir = mkdtempSync(join(tmpdir(), 'vault-fs-test-'))
 process.env.VAULT_DIR = testDir
 
 import {
@@ -22,13 +22,13 @@ describe('filesystem functions', () => {
 
   beforeAll(() => {
     // Set up isolated test directory before tests
-    testDir = mkdtempSync(join(tmpdir(), 'ccvault-fs-test-'))
+    testDir = mkdtempSync(join(tmpdir(), 'vault-fs-test-'))
     process.env.VAULT_DIR = testDir
   })
 
   beforeEach(() => {
     // Create temporary directory for testing
-    tempDir = mkdtempSync(join(tmpdir(), 'ccvault-test-'))
+    tempDir = mkdtempSync(join(tmpdir(), 'vault-test-'))
   })
 
   afterEach(() => {

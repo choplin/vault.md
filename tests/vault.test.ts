@@ -22,13 +22,13 @@ describe('vault functions', () => {
 
   beforeAll(() => {
     // Set up isolated test directory before tests
-    testDir = mkdtempSync(join(tmpdir(), 'ccvault-vault-test-'))
+    testDir = mkdtempSync(join(tmpdir(), 'vault-vault-test-'))
     process.env.VAULT_DIR = testDir
   })
 
   beforeEach(() => {
     // Create temporary directory for test files
-    tempDir = mkdtempSync(join(tmpdir(), 'ccvault-test-files-'))
+    tempDir = mkdtempSync(join(tmpdir(), 'vault-test-files-'))
     ctx = createVault()
   })
 

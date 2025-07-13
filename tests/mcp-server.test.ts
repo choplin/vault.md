@@ -12,7 +12,7 @@ describe('MCP Server Operations', () => {
 
   beforeAll(() => {
     // Set up isolated test directory
-    testDir = mkdtempSync(join(tmpdir(), 'ccvault-mcp-test-'))
+    testDir = mkdtempSync(join(tmpdir(), 'vault-mcp-test-'))
     process.env.VAULT_DIR = testDir
   })
 

@@ -62,7 +62,7 @@ function migrate(db: Database.Database): void {
   } else if (currentVersion > CURRENT_VERSION) {
     throw new Error(
       `Database schema version ${currentVersion} is newer than CLI version ${CURRENT_VERSION}. ` +
-        'Please update ccvault to the latest version.',
+        'Please update vault.md to the latest version.',
     )
   }
 }

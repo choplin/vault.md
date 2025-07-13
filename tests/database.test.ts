@@ -22,7 +22,7 @@ describe('database functions', () => {
 
   beforeAll(() => {
     // Set up isolated test directory before tests
-    testDir = mkdtempSync(join(tmpdir(), 'ccvault-db-test-'))
+    testDir = mkdtempSync(join(tmpdir(), 'vault-db-test-'))
     process.env.VAULT_DIR = testDir
   })
 
