@@ -203,4 +203,20 @@ program
     }
   })
 
+program
+  .command('serve')
+  .description('Start web UI server')
+  .option('-p, --port <port>', 'Port to listen on', '8080')
+  .action(async (options) => {
+    try {
+      const { startWebServer } = await import('./web/server.js')
+      const vault = createVault()
+      const port = parseInt(options.port)
+      startWebServer(vault, port)
+    } catch (error) {
+      console.error('Web server error:', error instanceof Error ? error.message : String(error))
+      process.exit(1)
+    }
+  })
+
 program.parse()
