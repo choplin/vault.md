@@ -131,10 +131,16 @@ Every update creates a new version automatically. Old versions are preserved for
 
 ## Storage Location
 
-Data is stored in `~/.vault/` with this structure:
+Data is stored following the XDG Base Directory specification:
+
+- **Default**: `~/.local/share/vault.md/`
+- **Custom**: Set `VAULT_DIR` environment variable
+- **XDG Override**: Set `XDG_DATA_HOME` to change the base directory
+
+Structure:
 
 ```text
-~/.vault/
+~/.local/share/vault.md/
 ├── index.db                              # SQLite metadata
 └── objects/
     └── -Users-yourname-project/         # Project directory
