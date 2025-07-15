@@ -36,6 +36,18 @@ function runMigration(db: Database.Database, version: number): void {
 
         CREATE INDEX idx_project_key_version
         ON entries(project, key, version DESC);
+
+        -- Projects table for future enhancements
+        CREATE TABLE projects (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          path TEXT NOT NULL UNIQUE,
+          name TEXT,
+          description TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX idx_projects_path ON projects(path);
       `)
       break
     // Future migrations will be added here:
@@ -124,6 +136,7 @@ export function getNextVersion(ctx: DatabaseContext, project: string, key: strin
 }
 
 export function insertEntry(ctx: DatabaseContext, entry: Omit<VaultEntry, 'id' | 'createdAt'>): number {
+  // Insert into entries table
   const stmt = ctx.db.prepare(`
     INSERT INTO entries (project, version, key, file_path, hash, description)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -137,6 +150,14 @@ export function insertEntry(ctx: DatabaseContext, entry: Omit<VaultEntry, 'id' |
     entry.hash,
     entry.description || null,
   )
+
+  // Ensure project exists in projects table
+  ctx.db
+    .prepare(`
+    INSERT OR IGNORE INTO projects (path)
+    VALUES (?)
+  `)
+    .run(entry.project)
 
   return result.lastInsertRowid as number
 }
@@ -186,5 +207,53 @@ export function closeDatabase(ctx: DatabaseContext): void {
 }
 
 export function clearDatabase(ctx: DatabaseContext): void {
-  ctx.db.exec('DELETE FROM entries')
+  ctx.db.exec('DELETE FROM entries; DELETE FROM projects;')
+}
+
+export function getAllProjects(ctx: DatabaseContext): string[] {
+  // First ensure all projects from entries are in projects table
+  ctx.db
+    .prepare(`
+    INSERT OR IGNORE INTO projects (path)
+    SELECT DISTINCT project FROM entries
+  `)
+    .run()
+
+  // Then get all projects from projects table
+  const stmt = ctx.db.prepare(`
+    SELECT path
+    FROM projects
+    ORDER BY path
+  `)
+
+  const rows = stmt.all() as { path: string }[]
+  return rows.map((row) => row.path)
+}
+
+export function getAllEntriesGroupedByProject(ctx: DatabaseContext): Record<string, VaultEntry[]> {
+  const projects = getAllProjects(ctx)
+  const result: Record<string, VaultEntry[]> = {}
+
+  for (const project of projects) {
+    result[project] = listEntries(ctx, project, false)
+  }
+
+  return result
+}
+
+export function getAllEntries(ctx: DatabaseContext): VaultEntry[] {
+  const stmt = ctx.db.prepare(`
+    SELECT e1.* FROM entries e1
+    INNER JOIN (
+      SELECT project, key, MAX(version) as max_version
+      FROM entries
+      GROUP BY project, key
+    ) e2 ON e1.project = e2.project
+        AND e1.key = e2.key
+        AND e1.version = e2.max_version
+    ORDER BY e1.project, e1.key
+  `)
+
+  const rows = stmt.all() as Record<string, unknown>[]
+  return rows.map((row) => rowToEntry(row))
 }
