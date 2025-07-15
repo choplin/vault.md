@@ -11,12 +11,15 @@ out/
 *.js
 *.d.ts
 *.js.map
+src/web/static/assets/
 
 # Keep TypeScript source files
 !src/**/*.ts
 
 # Keep configuration files
 !commitlint.config.js
+!svelte.config.js
+!vite.config.ts
 
 # IDE
 .vscode/

@@ -205,7 +205,7 @@ program
   })
 
 program
-  .command('serve')
+  .command('web')
   .description('Start web UI server')
   .option('-p, --port <port>', 'Port to listen on', '8080')
   .action(async (options) => {

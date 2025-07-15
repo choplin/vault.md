@@ -5,6 +5,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { getAllEntries } from '../core/database.js'
 import { catEntry, getEntry, listEntries } from '../core/index.js'
+import type { VaultEntry } from '../core/types.js'
 import type { VaultContext } from '../core/vault.js'
 
 export function createWebServer(vault: VaultContext) {
@@ -27,7 +28,24 @@ export function createWebServer(vault: VaultContext) {
   app.get('/api/entries/all', (c) => {
     try {
       const allEntries = getAllEntries(vault.database)
-      return c.json(allEntries)
+      const currentProject = vault.project
+
+      // Group entries by project
+      const projectMap = new Map<string, VaultEntry[]>()
+      for (const entry of allEntries) {
+        if (!projectMap.has(entry.project)) {
+          projectMap.set(entry.project, [])
+        }
+        projectMap.get(entry.project)!.push(entry)
+      }
+
+      // Convert to array format expected by frontend
+      const projects = Array.from(projectMap.entries()).map(([project, entries]) => ({
+        project,
+        entries,
+      }))
+
+      return c.json({ currentProject, projects })
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
     }
@@ -59,7 +77,7 @@ export function createWebServer(vault: VaultContext) {
   // Serve static files
   // Determine the static files path based on what exists
   const staticPaths = [
-    './src/web/static', // Development
+    './src/web/static', // Production build output
     './dist/web/static', // Production (from project root)
     './web/static', // Production (from dist directory)
   ]
