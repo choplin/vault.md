@@ -4,6 +4,7 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { catEntry, getEntry, listEntries } from '../core/index.js'
+import type { VaultEntry } from '../core/types.js'
 import type { VaultContext } from '../core/vault.js'
 
 export function createWebServer(vault: VaultContext) {
@@ -20,6 +21,37 @@ export function createWebServer(vault: VaultContext) {
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
     }
+  })
+
+  // Get all entries from all projects
+  app.get('/api/entries/all', (c) => {
+    try {
+      // Get all unique projects from the database
+      const stmt = vault.database.db.prepare(`
+        SELECT DISTINCT project FROM entries
+        ORDER BY project
+      `)
+      const projects = stmt.all() as { project: string }[]
+
+      // Get entries for each project
+      const allEntries: VaultEntry[] = []
+      for (const { project } of projects) {
+        const projectEntries = listEntries(vault, {
+          allVersions: false,
+          project,
+        })
+        allEntries.push(...projectEntries)
+      }
+
+      return c.json(allEntries)
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
+    }
+  })
+
+  // Get current project path
+  app.get('/api/current-project', (c) => {
+    return c.json({ project: vault.project })
   })
 
   app.get('/api/entry/:project/:key/:version?', (c) => {

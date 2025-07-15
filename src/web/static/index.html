@@ -39,46 +39,105 @@
 
       <!-- Tree View -->
       <div x-show="!loading" class="px-2 pb-4">
-        <template x-for="project in projects" :key="project.path">
-          <div class="mb-2">
-            <button @click="project.open = !project.open" class="btn btn-ghost btn-sm w-full justify-start normal-case">
-              <svg class="w-4 h-4 mr-2 transition-transform text-base-content/40" :class="{'rotate-90': project.open}"
-                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
-              <svg class="w-4 h-4 mr-2 text-base-content/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-              </svg>
-              <span class="font-medium text-base-content truncate" x-text="project.name"></span>
-              <span class="ml-auto badge badge-sm badge-ghost" x-text="project.entries.length"></span>
-            </button>
-
-            <div x-show="project.open" x-transition class="ml-5 mt-1">
-              <template x-for="entry in project.entries" :key="entry.key">
-                <div class="w-full">
-                  <button @click="selectEntry(project.path, entry.key)"
-                    class="btn btn-ghost btn-sm w-full justify-start ml-4 normal-case"
-                    :class="{'btn-active': selectedKey === entry.key}">
-                    <svg class="w-4 h-4 mr-2"
-                      :class="selectedKey === entry.key ? 'text-primary' : 'text-base-content/40'" fill="none"
-                      stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
-                      </path>
-                    </svg>
-                    <div class="flex-1 text-left">
-                      <span class="text-base-content font-medium" x-text="entry.key"></span>
-                      <p class="text-xs text-base-content/60 truncate" x-show="entry.description"
-                        x-text="entry.description"></p>
-                    </div>
-                    <span class="ml-2 text-xs opacity-60">
-                      v<span x-text="entry.version"></span>
-                    </span>
-                  </button>
-                </div>
-              </template>
+        <!-- Current Project Section -->
+        <template x-if="projects.find(p => p.isCurrentProject)">
+          <div>
+            <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wider px-3 py-2">
+              Current Project
             </div>
+            <template x-for="project in projects.filter(p => p.isCurrentProject)" :key="project.path">
+              <div class="mb-2">
+                <button @click="project.open = !project.open" class="btn btn-ghost btn-sm w-full justify-start normal-case">
+                  <svg class="w-4 h-4 mr-2 transition-transform text-base-content/40" :class="{'rotate-90': project.open}"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                  <svg class="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                  </svg>
+                  <span class="font-medium text-base-content truncate" x-text="project.name"></span>
+                  <span class="ml-auto badge badge-sm badge-primary" x-text="project.entries.length"></span>
+                </button>
+
+                <div x-show="project.open" x-transition class="ml-5 mt-1">
+                  <template x-for="entry in project.entries" :key="entry.key">
+                    <div class="w-full">
+                      <button @click="selectEntry(project.path, entry.key)"
+                        class="btn btn-ghost btn-sm w-full justify-start ml-4 normal-case"
+                        :class="{'btn-active': selectedKey === entry.key}">
+                        <svg class="w-4 h-4 mr-2"
+                          :class="selectedKey === entry.key ? 'text-primary' : 'text-base-content/40'" fill="none"
+                          stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                          </path>
+                        </svg>
+                        <div class="flex-1 text-left">
+                          <span class="text-base-content font-medium" x-text="entry.key"></span>
+                          <p class="text-xs text-base-content/60 truncate" x-show="entry.description"
+                            x-text="entry.description"></p>
+                        </div>
+                        <span class="ml-2 text-xs opacity-60">
+                          v<span x-text="entry.version"></span>
+                        </span>
+                      </button>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Other Projects Section -->
+        <template x-if="projects.filter(p => !p.isCurrentProject).length > 0">
+          <div class="mt-4">
+            <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wider px-3 py-2">
+              Other Projects
+            </div>
+            <template x-for="project in projects.filter(p => !p.isCurrentProject)" :key="project.path">
+              <div class="mb-2">
+                <button @click="project.open = !project.open" class="btn btn-ghost btn-sm w-full justify-start normal-case">
+                  <svg class="w-4 h-4 mr-2 transition-transform text-base-content/40" :class="{'rotate-90': project.open}"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                  <svg class="w-4 h-4 mr-2 text-base-content/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                  </svg>
+                  <span class="font-medium text-base-content truncate" x-text="project.name"></span>
+                  <span class="ml-auto badge badge-sm badge-ghost" x-text="project.entries.length"></span>
+                </button>
+
+                <div x-show="project.open" x-transition class="ml-5 mt-1">
+                  <template x-for="entry in project.entries" :key="entry.key">
+                    <div class="w-full">
+                      <button @click="selectEntry(project.path, entry.key)"
+                        class="btn btn-ghost btn-sm w-full justify-start ml-4 normal-case"
+                        :class="{'btn-active': selectedKey === entry.key}">
+                        <svg class="w-4 h-4 mr-2"
+                          :class="selectedKey === entry.key ? 'text-primary' : 'text-base-content/40'" fill="none"
+                          stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                          </path>
+                        </svg>
+                        <div class="flex-1 text-left">
+                          <span class="text-base-content font-medium" x-text="entry.key"></span>
+                          <p class="text-xs text-base-content/60 truncate" x-show="entry.description"
+                            x-text="entry.description"></p>
+                        </div>
+                        <span class="ml-2 text-xs opacity-60">
+                          v<span x-text="entry.version"></span>
+                        </span>
+                      </button>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
           </div>
         </template>
       </div>
@@ -163,9 +222,16 @@
           selectedVersion: null,
           content: null,
           renderedContent: '',
+          currentProject: null,
 
           // Initialize
           async init() {
+            // Get current project path
+            const response = await fetch('/api/current-project');
+            if (response.ok) {
+              const data = await response.json();
+              this.currentProject = data.project;
+            }
             await this.loadEntries();
           },
 
@@ -175,7 +241,8 @@
               this.loading = true;
               this.error = null;
 
-              const response = await fetch('/api/entries');
+              // Always load all entries
+              const response = await fetch('/api/entries/all');
               if (!response.ok) throw new Error('Failed to load entries');
 
               const data = await response.json();
@@ -187,7 +254,8 @@
                     path: entry.project,
                     name: entry.project.split('/').pop(),
                     open: false,
-                    entries: []
+                    entries: [],
+                    isCurrentProject: false
                   };
                 }
 
@@ -207,7 +275,24 @@
                 return acc;
               }, {});
 
-              this.projects = Object.values(grouped);
+              // Sort projects: current project first, then others
+              const projectsArray = Object.values(grouped);
+              const currentProjectData = projectsArray.find(p => p.path === this.currentProject);
+              const otherProjects = projectsArray.filter(p => p.path !== this.currentProject);
+              
+              this.projects = [];
+              if (currentProjectData) {
+                this.projects.push({
+                  ...currentProjectData,
+                  isCurrentProject: true
+                });
+              }
+              if (otherProjects.length > 0) {
+                this.projects.push(...otherProjects.map(p => ({
+                  ...p,
+                  isCurrentProject: false
+                })));
+              }
             } catch (err) {
               this.error = err.message;
             } finally {
