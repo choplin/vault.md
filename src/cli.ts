@@ -6,6 +6,7 @@ import {
   closeVault,
   createVault,
   deleteEntry,
+  editEntry,
   getEntry,
   getInfo,
   listEntries,
@@ -215,6 +216,32 @@ program
       startWebServer(vault, port)
     } catch (error) {
       console.error('Web server error:', error instanceof Error ? error.message : String(error))
+      process.exit(1)
+    }
+  })
+
+program
+  .command('edit <key>')
+  .description('Edit entry with $EDITOR')
+  .option('--version <version>', 'Edit specific version', parseInt)
+  .option('--project <path>', 'Edit from different project')
+  .action((key, options) => {
+    try {
+      const vault = createVault(options.project)
+      const changed = editEntry(vault, key, {
+        project: options.project,
+        version: options.version,
+      })
+
+      if (changed) {
+        console.log('Entry updated')
+      } else {
+        console.log('No changes made')
+      }
+
+      closeVault(vault)
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : String(error))
       process.exit(1)
     }
   })
