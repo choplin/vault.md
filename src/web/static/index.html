@@ -6,51 +6,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vault.md</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.css" rel="stylesheet" type="text/css" />
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html@3.4.45/bundles/css/diff2html.min.css">
   <script src="https://cdn.jsdelivr.net/npm/diff2html@3.4.45/bundles/js/diff2html-ui.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Prism.js for syntax highlighting -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 </head>
 
-<body class="bg-gray-50" x-data="vaultApp()">
+<body class="bg-base-200" x-data="vaultApp()" data-theme="light">
   <div class="flex h-screen">
     <!-- Sidebar -->
-    <div class="w-80 bg-white border-r border-gray-200 overflow-y-auto">
-      <div class="p-4">
-        <h1 class="text-xl font-semibold text-gray-800">vault.md</h1>
+    <div class="w-80 bg-base-100 border-r border-base-300 overflow-y-auto">
+      <div class="p-4 border-b border-base-200">
+        <h1 class="text-xl font-semibold text-base-content flex items-center gap-2">
+          <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+          </svg>
+          vault.md
+        </h1>
+        <p class="text-sm text-base-content/60 mt-1">Knowledge vault for AI development</p>
       </div>
 
       <!-- Loading State -->
-      <div x-show="loading" class="p-4 text-center text-gray-500">
-        Loading entries...
+      <div x-show="loading" class="flex justify-center items-center p-8">
+        <span class="loading loading-spinner loading-md"></span>
       </div>
 
       <!-- Tree View -->
       <div x-show="!loading" class="px-2 pb-4">
         <template x-for="project in projects" :key="project.path">
           <div class="mb-2">
-            <button @click="project.open = !project.open"
-              class="w-full flex items-center px-2 py-1 text-sm hover:bg-gray-100 rounded">
-              <svg class="w-4 h-4 mr-1 transition-transform" :class="{'rotate-90': project.open}" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24">
+            <button @click="project.open = !project.open" class="btn btn-ghost btn-sm w-full justify-start normal-case">
+              <svg class="w-4 h-4 mr-2 transition-transform text-base-content/40" :class="{'rotate-90': project.open}"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
               </svg>
-              <span class="font-medium text-gray-700" x-text="project.name"></span>
+              <svg class="w-4 h-4 mr-2 text-base-content/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+              </svg>
+              <span class="font-medium text-base-content truncate" x-text="project.name"></span>
+              <span class="ml-auto badge badge-sm badge-ghost" x-text="project.entries.length"></span>
             </button>
 
             <div x-show="project.open" x-transition class="ml-5 mt-1">
               <template x-for="entry in project.entries" :key="entry.key">
                 <div class="w-full">
                   <button @click="selectEntry(project.path, entry.key)"
-                    class="w-full flex items-center px-2 py-1 text-sm hover:bg-blue-50 rounded group"
-                    :class="{'bg-blue-100': selectedKey === entry.key}">
-                    <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="btn btn-ghost btn-sm w-full justify-start ml-4 normal-case"
+                    :class="{'btn-active': selectedKey === entry.key}">
+                    <svg class="w-4 h-4 mr-2"
+                      :class="selectedKey === entry.key ? 'text-primary' : 'text-base-content/40'" fill="none"
+                      stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
                       </path>
                     </svg>
-                    <span class="text-gray-600" x-text="entry.key"></span>
-                    <span class="ml-auto text-xs text-gray-400 group-hover:text-gray-600">
+                    <div class="flex-1 text-left">
+                      <span class="text-base-content font-medium" x-text="entry.key"></span>
+                      <p class="text-xs text-base-content/60 truncate" x-show="entry.description"
+                        x-text="entry.description"></p>
+                    </div>
+                    <span class="ml-2 text-xs opacity-60">
                       v<span x-text="entry.version"></span>
                     </span>
                   </button>
@@ -63,138 +85,187 @@
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 p-8">
-      <div class="max-w-4xl mx-auto">
-        <!-- Error State -->
-        <div x-show="error" class="mb-4 p-4 bg-red-50 text-red-700 rounded">
-          <span x-text="error"></span>
+    <div class="flex-1 flex flex-col">
+      <!-- Content Header -->
+      <div x-show="selectedKey" class="bg-base-100 border-b border-base-200 px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-base-content" x-text="selectedKey"></h2>
+            <p class="text-sm text-base-content/60 mt-1">
+              <span x-text="selectedProject?.split('/').pop()"></span> • Version <span
+                x-text="selectedVersion || 'latest'"></span>
+            </p>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-sm btn-ghost flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                </path>
+              </svg>
+              Edit
+            </button>
+          </div>
         </div>
+      </div>
 
-        <!-- Content -->
-        <div x-show="!contentLoading && content" class="prose prose-lg" x-html="renderedContent"></div>
+      <!-- Content Area -->
+      <div class="flex-1 p-8 overflow-y-auto">
+        <div class="max-w-4xl mx-auto">
+          <!-- Error State -->
+          <div x-show="error" class="alert alert-error mb-4">
+            <span x-text="error"></span>
+          </div>
 
-        <!-- Loading Content -->
-        <div x-show="contentLoading" class="text-gray-500">
-          Loading content...
-        </div>
+          <!-- Content -->
+          <div x-show="!contentLoading && content" class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+              <article class="prose prose-lg max-w-none prose-pre:bg-base-200" x-html="renderedContent"></article>
+            </div>
+          </div>
 
-        <!-- Empty State -->
-        <div x-show="!contentLoading && !content && !error" class="text-gray-500">
-          Select an entry from the sidebar to view its content.
+          <!-- Loading Content -->
+          <div x-show="contentLoading" class="flex items-center justify-center py-12">
+            <div class="text-center">
+              <span class="loading loading-spinner loading-lg text-primary"></span>
+              <p class="text-base-content/60 mt-4">Loading content...</p>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div x-show="!contentLoading && !content && !error && !selectedKey" class="hero min-h-[50vh]">
+            <div class="hero-content text-center">
+              <div>
+                <svg class="w-16 h-16 mx-auto mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                  </path>
+                </svg>
+                <h1 class="text-2xl font-bold">No entry selected</h1>
+                <p class="py-6">Select an entry from the sidebar to view its content.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <script>
-    function vaultApp() {
-      return {
-        // State
-        loading: true,
-        contentLoading: false,
-        error: null,
-        projects: [],
-        selectedKey: null,
-        selectedProject: null,
-        content: null,
-        renderedContent: '',
+    <script>
+      function vaultApp() {
+        return {
+          // State
+          loading: true,
+          contentLoading: false,
+          error: null,
+          projects: [],
+          selectedKey: null,
+          selectedProject: null,
+          selectedVersion: null,
+          content: null,
+          renderedContent: '',
 
-        // Initialize
-        async init() {
-          await this.loadEntries();
-        },
+          // Initialize
+          async init() {
+            await this.loadEntries();
+          },
 
-        // Load all entries
-        async loadEntries() {
-          try {
-            this.loading = true;
-            this.error = null;
+          // Load all entries
+          async loadEntries() {
+            try {
+              this.loading = true;
+              this.error = null;
 
-            const response = await fetch('/api/entries');
-            if (!response.ok) throw new Error('Failed to load entries');
+              const response = await fetch('/api/entries');
+              if (!response.ok) throw new Error('Failed to load entries');
 
-            const data = await response.json();
+              const data = await response.json();
 
-            // Group by project
-            const grouped = data.reduce((acc, entry) => {
-              if (!acc[entry.project]) {
-                acc[entry.project] = {
-                  path: entry.project,
-                  name: entry.project.split('/').pop(),
-                  open: false,
-                  entries: []
-                };
-              }
-
-              // Only show latest version of each key
-              const existing = acc[entry.project].entries.find(e => e.key === entry.key);
-              if (!existing || existing.version < entry.version) {
-                if (existing) {
-                  acc[entry.project].entries = acc[entry.project].entries.filter(e => e.key !== entry.key);
+              // Group by project
+              const grouped = data.reduce((acc, entry) => {
+                if (!acc[entry.project]) {
+                  acc[entry.project] = {
+                    path: entry.project,
+                    name: entry.project.split('/').pop(),
+                    open: false,
+                    entries: []
+                  };
                 }
-                acc[entry.project].entries.push({
-                  key: entry.key,
-                  version: entry.version,
-                  description: entry.description
-                });
-              }
 
-              return acc;
-            }, {});
+                // Only show latest version of each key
+                const existing = acc[entry.project].entries.find(e => e.key === entry.key);
+                if (!existing || existing.version < entry.version) {
+                  if (existing) {
+                    acc[entry.project].entries = acc[entry.project].entries.filter(e => e.key !== entry.key);
+                  }
+                  acc[entry.project].entries.push({
+                    key: entry.key,
+                    version: entry.version,
+                    description: entry.description
+                  });
+                }
 
-            this.projects = Object.values(grouped);
-          } catch (err) {
-            this.error = err.message;
-          } finally {
-            this.loading = false;
-          }
-        },
+                return acc;
+              }, {});
 
-        // Select and load entry content
-        async selectEntry(project, key) {
-          try {
-            this.contentLoading = true;
-            this.error = null;
-            this.selectedKey = key;
-            this.selectedProject = project;
+              this.projects = Object.values(grouped);
+            } catch (err) {
+              this.error = err.message;
+            } finally {
+              this.loading = false;
+            }
+          },
 
-            const response = await fetch(`/api/entry/${encodeURIComponent(project)}/${encodeURIComponent(key)}`);
-            if (!response.ok) throw new Error('Failed to load content');
+          // Select and load entry content
+          async selectEntry(project, key) {
+            try {
+              this.contentLoading = true;
+              this.error = null;
+              this.selectedKey = key;
+              this.selectedProject = project;
+              this.selectedVersion = null;
 
-            const data = await response.json();
-            this.content = data.content;
+              const response = await fetch(`/api/entry/${encodeURIComponent(project)}/${encodeURIComponent(key)}`);
+              if (!response.ok) throw new Error('Failed to load content');
 
-            // Render markdown
-            this.renderedContent = marked.parse(this.content);
-          } catch (err) {
-            this.error = err.message;
-            this.content = null;
-          } finally {
-            this.contentLoading = false;
-          }
-        },
+              const data = await response.json();
+              this.content = data.content;
 
-        // Load specific version
-        async loadVersion(project, key, version) {
-          try {
-            this.contentLoading = true;
-            this.error = null;
+              // Render markdown
+              this.renderedContent = marked.parse(this.content);
 
-            const response = await fetch(`/api/entry/${encodeURIComponent(project)}/${encodeURIComponent(key)}/${version}`);
-            if (!response.ok) throw new Error('Failed to load version');
+              // Apply syntax highlighting after DOM update
+              this.$nextTick(() => {
+                Prism.highlightAll();
+              });
+            } catch (err) {
+              this.error = err.message;
+              this.content = null;
+            } finally {
+              this.contentLoading = false;
+            }
+          },
 
-            const data = await response.json();
-            this.content = data.content;
-            this.renderedContent = marked.parse(this.content);
-          } catch (err) {
-            this.error = err.message;
-          } finally {
-            this.contentLoading = false;
+          // Load specific version
+          async loadVersion(project, key, version) {
+            try {
+              this.contentLoading = true;
+              this.error = null;
+
+              const response = await fetch(`/api/entry/${encodeURIComponent(project)}/${encodeURIComponent(key)}/${version}`);
+              if (!response.ok) throw new Error('Failed to load version');
+
+              const data = await response.json();
+              this.content = data.content;
+              this.renderedContent = marked.parse(this.content);
+            } catch (err) {
+              this.error = err.message;
+            } finally {
+              this.contentLoading = false;
+            }
           }
         }
       }
-    }
-  </script>
+    </script>
 </body>
 
 </html>
