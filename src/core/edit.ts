@@ -34,14 +34,8 @@ export function editEntry(vault: VaultContext, key: string, options: EditOptions
   // Get editor from environment
   const editor = process.env.EDITOR || process.env.VISUAL || 'vi'
 
-  // For GUI editors that return immediately, we need special handling
-  const guiEditors = ['code', 'subl', 'atom', 'mate', 'open']
-  const editorName = editor.split(' ')[0].split('/').pop() || ''
-  const isGuiEditor = guiEditors.some((gui) => editorName.includes(gui))
-
   // Open editor
-  const args = isGuiEditor && editorName === 'code' ? ['-w', tempFile] : [tempFile]
-  const result = spawnSync(editor, args, {
+  const result = spawnSync(editor, [tempFile], {
     stdio: 'inherit',
     shell: true,
   })
