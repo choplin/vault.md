@@ -1,0 +1,321 @@
+/* GitHub-style Markdown CSS */
+.markdown-body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  word-wrap: break-word;
+  color: #1F2328;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.markdown-body h1 {
+  font-size: 1.75em;
+  font-weight: 600;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #d1d9e0;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  color: #1F2328;
+}
+
+.markdown-body h2 {
+  font-size: 1.25em;
+  font-weight: 600;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #d1d9e0;
+  margin-top: 16px;
+  margin-bottom: 12px;
+  color: #1F2328;
+}
+
+.markdown-body h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 12px;
+  color: #1F2328;
+}
+
+.markdown-body h4 {
+  font-size: 0.95em;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 12px;
+  color: #1F2328;
+}
+
+.markdown-body h5 {
+  font-size: 0.875em;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 12px;
+  color: #1F2328;
+}
+
+.markdown-body h6 {
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 12px;
+  color: #656d76;
+}
+
+.markdown-body p {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #1F2328;
+}
+
+.markdown-body a {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.markdown-body code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(175,184,193,0.2);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.markdown-body pre {
+  padding: 12px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  margin-top: 0;
+  margin-bottom: 12px;
+  border: 1px solid #d1d9e0;
+}
+
+.markdown-body pre code {
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  background-color: transparent;
+  border-radius: 0;
+}
+
+.markdown-body blockquote {
+  padding: 0 1em;
+  color: #656d76;
+  border-left: 0.25em solid #d1d9e0;
+  margin: 0 0 12px 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding-left: 1.5em;
+}
+
+.markdown-body li {
+  color: #1F2328;
+}
+
+.markdown-body li + li {
+  margin-top: 0.25em;
+}
+
+.markdown-body li > p {
+  margin-top: 16px;
+}
+
+.markdown-body dl {
+  padding: 0;
+}
+
+.markdown-body dl dt {
+  padding: 0;
+  margin-top: 16px;
+  font-size: 1em;
+  font-style: italic;
+  font-weight: 600;
+}
+
+.markdown-body dl dd {
+  padding: 0 16px;
+  margin-bottom: 16px;
+}
+
+.markdown-body table {
+  display: block;
+  width: 100%;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  border-spacing: 0;
+  border-collapse: collapse;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-body table th {
+  font-weight: 600;
+  padding: 6px 13px;
+  border: 1px solid #d1d9e0;
+  background-color: #f6f8fa;
+}
+
+.markdown-body table td {
+  padding: 6px 13px;
+  border: 1px solid #d1d9e0;
+  color: #1F2328;
+}
+
+.markdown-body table tr {
+  background-color: #ffffff;
+  border-top: 1px solid #d1d9e0;
+}
+
+.markdown-body table tr:nth-child(2n) {
+  background-color: #f6f8fa;
+}
+
+.markdown-body hr {
+  height: 1px;
+  padding: 0;
+  margin: 16px 0;
+  background-color: #d1d9e0;
+  border: 0;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  box-sizing: content-box;
+  background-color: #ffffff;
+}
+
+.markdown-body kbd {
+  display: inline-block;
+  padding: 3px 5px;
+  font-size: 11px;
+  line-height: 10px;
+  color: #1F2328;
+  vertical-align: middle;
+  background-color: #f6f8fa;
+  border: solid 1px rgba(175,184,193,0.4);
+  border-bottom-color: rgba(175,184,193,0.4);
+  border-radius: 6px;
+  box-shadow: inset 0 -1px 0 rgba(175,184,193,0.4);
+}
+
+.markdown-body strong {
+  font-weight: 600;
+  color: #1F2328;
+}
+
+.markdown-body em {
+  font-style: italic;
+  color: #1F2328;
+}
+
+.markdown-body del {
+  text-decoration: line-through;
+}
+
+.markdown-body input[type="checkbox"] {
+  margin: 0 0.2em 0.25em -1.4em;
+  vertical-align: middle;
+}
+
+.markdown-body .task-list-item {
+  list-style-type: none;
+}
+
+.markdown-body .task-list-item + .task-list-item {
+  margin-top: 0.25em;
+}
+
+.markdown-body .task-list-item input {
+  margin: 0 0.2em 0.25em -1.6em;
+  vertical-align: middle;
+}
+
+/* Dark mode support - currently forcing light mode */
+[data-theme="dark"] .markdown-body {
+  /* Dark mode styles will be applied here when enabled */
+  color: #e6edf3;
+}
+
+[data-theme="dark"] .markdown-body h1,
+[data-theme="dark"] .markdown-body h2,
+[data-theme="dark"] .markdown-body h3,
+[data-theme="dark"] .markdown-body h4,
+[data-theme="dark"] .markdown-body h5 {
+  color: #e6edf3;
+}
+
+[data-theme="dark"] .markdown-body h6 {
+  color: #848d97;
+}
+
+[data-theme="dark"] .markdown-body p,
+[data-theme="dark"] .markdown-body li,
+[data-theme="dark"] .markdown-body strong,
+[data-theme="dark"] .markdown-body em {
+  color: #e6edf3;
+}
+
+[data-theme="dark"] .markdown-body h1,
+[data-theme="dark"] .markdown-body h2 {
+  border-bottom-color: #30363d;
+}
+
+[data-theme="dark"] .markdown-body a {
+  color: #4493f8;
+}
+
+[data-theme="dark"] .markdown-body code {
+  background-color: rgba(110,118,129,0.2);
+}
+
+[data-theme="dark"] .markdown-body pre {
+  background-color: #161b22;
+}
+
+[data-theme="dark"] .markdown-body blockquote {
+  color: #848d97;
+  border-left-color: #30363d;
+}
+
+[data-theme="dark"] .markdown-body table th {
+  background-color: #161b22;
+  border-color: #30363d;
+}
+
+[data-theme="dark"] .markdown-body table td {
+  border-color: #30363d;
+  color: #e6edf3;
+}
+
+[data-theme="dark"] .markdown-body table tr {
+  background-color: #0d1117;
+  border-top-color: #30363d;
+}
+
+[data-theme="dark"] .markdown-body table tr:nth-child(2n) {
+  background-color: #161b22;
+}
+
+[data-theme="dark"] .markdown-body hr {
+  background-color: #30363d;
+}
+
+[data-theme="dark"] .markdown-body kbd {
+  color: #e6edf3;
+  background-color: #161b22;
+  border-color: rgba(110,118,129,0.4);
+  border-bottom-color: rgba(110,118,129,0.4);
+  box-shadow: inset 0 -1px 0 rgba(110,118,129,0.4);
+}

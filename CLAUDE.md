@@ -14,7 +14,7 @@ All checks must pass before creating a commit. Fix any errors before proceeding.
 ## Project Structure
 
 - **CLI**: TypeScript CLI tool built with Commander.js
-- **Web UI**: Svelte + Vite frontend with Tailwind CSS and daisyUI
+- **Web UI**: SolidJS + Vite frontend with Tailwind CSS and daisyUI
 - **Storage**: SQLite database with content-addressed storage
 - **MCP Server**: Model Context Protocol integration
 
@@ -27,6 +27,20 @@ All checks must pass before creating a commit. Fix any errors before proceeding.
 
 ## Development
 
-- `npm run dev` - Run CLI in development mode
-- `npm run dev:web` - Run Vite dev server for web UI
-- `npm run dev:mcp` - Run MCP server in development mode
+### Web UI Development
+
+- `npm run dev:web` - APIサーバー(8080)とVite開発サーバー(5173)を同時起動
+  - ログは色分けされて表示（API: マゼンタ、Vite: シアン）
+  - Ctrl+Cで両方のサーバーを停止
+
+### CLI Development
+
+- `npm run dev` - CLIを実行（引数を追加可能）
+  - 例: `npm run dev -- set key -d "description"`
+  - 例: `npm run dev -- mcp` (MCPサーバー起動)
+  - 例: `npm run dev -- web` (APIサーバー起動)
+
+### Individual Servers
+
+- `npm run dev:api` - APIサーバーのみ起動 (port 8080)
+- `vite` - Vite開発サーバーのみ起動 (port 5173)

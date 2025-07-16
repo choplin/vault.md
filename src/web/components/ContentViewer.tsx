@@ -9,6 +9,7 @@ import {
   setEntryContent,
   setError,
 } from '../stores/vault'
+import './github-markdown.css'
 
 export default function ContentViewer() {
   let contentElement: HTMLElement
@@ -46,6 +47,12 @@ export default function ContentViewer() {
     // 動的インポート
     const [{ marked }, Prism] = await Promise.all([import('marked'), import('prismjs')])
 
+    // GitHub風の設定
+    marked.setOptions({
+      gfm: true,
+      breaks: true,
+    })
+
     // Prism言語の動的インポート
     await Promise.all([
       import('prismjs/components/prism-typescript'),
@@ -53,7 +60,7 @@ export default function ContentViewer() {
       import('prismjs/components/prism-json'),
       import('prismjs/components/prism-bash'),
       import('prismjs/components/prism-python'),
-      import('prismjs/themes/prism-tomorrow.css'),
+      import('prismjs/themes/prism.css'), // GitHub風のライトテーマ
     ])
 
     const html = await marked.parse(entryContent())
@@ -105,8 +112,8 @@ export default function ContentViewer() {
       </Show>
 
       {/* Content Area */}
-      <div class="flex-1 p-8 overflow-y-auto">
-        <div class="max-w-4xl mx-auto">
+      <div class="flex-1 overflow-y-auto content-area">
+        <div class="max-w-5xl mx-auto px-8 py-6">
           {/* Error State */}
           <Show when={error()}>
             <div class="alert alert-error mb-4">
@@ -116,9 +123,9 @@ export default function ContentViewer() {
 
           {/* Content */}
           <Show when={!contentLoading() && entryContent()}>
-            <div class="card bg-base-100 shadow-xl">
-              <div class="card-body">
-                <article ref={contentElement!} class="prose prose-lg max-w-none prose-pre:bg-base-200"></article>
+            <div class="bg-base-100 rounded-lg shadow-sm">
+              <div class="px-8 py-6">
+                <article ref={contentElement!} class="markdown-body"></article>
               </div>
             </div>
           </Show>

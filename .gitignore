@@ -11,7 +11,7 @@ out/
 *.js
 *.d.ts
 *.js.map
-src/web/static/assets/
+src/web/static/
 
 # Keep TypeScript source files
 !src/**/*.ts
