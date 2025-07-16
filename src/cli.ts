@@ -23,9 +23,16 @@ program
   .description('Save content to vault (reads from stdin by default)')
   .option('-f, --file <path>', 'Read content from file')
   .option('-d, --description <desc>', 'Add description')
+  .option('--global', 'Save to global scope')
+  .option('--repo <path>', 'Save to specific repository')
+  .option('--branch <name>', 'Save to specific branch')
   .action((key, options) => {
     try {
-      const vault = createVault()
+      const vault = createVault({
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
+      })
       // Show prompt for interactive TTY input
       if (!options.file && isatty(0)) {
         console.error('Enter content (Ctrl-D when done):')
@@ -45,13 +52,21 @@ program
   .command('get <key>')
   .description('Get file path from vault')
   .option('--version <version>', 'Get specific version', parseInt)
-  .option('--project <path>', 'Get from different project')
+  .option('--global', 'Get from global scope')
+  .option('--repo <path>', 'Get from specific repository')
+  .option('--branch <name>', 'Get from specific branch')
   .action((key, options) => {
     try {
-      const vault = createVault(options.project)
+      const vault = createVault({
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
+      })
       const path = getEntry(vault, key, {
         version: options.version,
-        project: options.project,
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
       })
 
       if (path) {
@@ -71,13 +86,21 @@ program
   .command('cat <key>')
   .description('Output file content')
   .option('--version <version>', 'Get specific version', parseInt)
-  .option('--project <path>', 'Get from different project')
+  .option('--global', 'Get from global scope')
+  .option('--repo <path>', 'Get from specific repository')
+  .option('--branch <name>', 'Get from specific branch')
   .action((key, options) => {
     try {
-      const vault = createVault(options.project)
+      const vault = createVault({
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
+      })
       const content = catEntry(vault, key, {
         version: options.version,
-        project: options.project,
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
       })
 
       if (content !== undefined) {
@@ -98,13 +121,21 @@ program
   .description('List keys in vault')
   .option('--all-versions', 'Show all versions')
   .option('--json', 'Output as JSON')
-  .option('--project <path>', 'List from different project')
+  .option('--global', 'List from global scope')
+  .option('--repo <path>', 'List from specific repository')
+  .option('--branch <name>', 'List from specific branch')
   .action((options) => {
     try {
-      const vault = createVault(options.project)
+      const vault = createVault({
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
+      })
       const entries = listEntries(vault, {
         allVersions: options.allVersions,
-        project: options.project,
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
       })
 
       if (options.json) {
@@ -143,13 +174,21 @@ program
   .command('delete <key>')
   .description('Delete key from vault')
   .option('--version <version>', 'Delete specific version', parseInt)
-  .option('--project <path>', 'Delete from different project')
+  .option('--global', 'Delete from global scope')
+  .option('--repo <path>', 'Delete from specific repository')
+  .option('--branch <name>', 'Delete from specific branch')
   .action((key, options) => {
     try {
-      const vault = createVault(options.project)
+      const vault = createVault({
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
+      })
       const deleted = deleteEntry(vault, key, {
         version: options.version,
-        project: options.project,
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
       })
 
       if (deleted) {
@@ -169,13 +208,21 @@ program
   .command('info <key>')
   .description('Show key metadata')
   .option('--version <version>', 'Show specific version', parseInt)
-  .option('--project <path>', 'Show from different project')
+  .option('--global', 'Show from global scope')
+  .option('--repo <path>', 'Show from specific repository')
+  .option('--branch <name>', 'Show from specific branch')
   .action((key, options) => {
     try {
-      const vault = createVault(options.project)
+      const vault = createVault({
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
+      })
       const entry = getInfo(vault, key, {
         version: options.version,
-        project: options.project,
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
       })
 
       if (entry) {
@@ -208,10 +255,17 @@ program
   .command('web')
   .description('Start web UI server')
   .option('-p, --port <port>', 'Port to listen on', '8080')
+  .option('--global', 'Use global scope')
+  .option('--repo <path>', 'Use specific repository')
+  .option('--branch <name>', 'Use specific branch')
   .action(async (options) => {
     try {
       const { startWebServer } = await import('./web/server.js')
-      const vault = createVault()
+      const vault = createVault({
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
+      })
       const port = parseInt(options.port)
       startWebServer(vault, port)
     } catch (error) {
@@ -224,12 +278,20 @@ program
   .command('edit <key>')
   .description('Edit entry with $EDITOR')
   .option('--version <version>', 'Edit specific version', parseInt)
-  .option('--project <path>', 'Edit from different project')
+  .option('--global', 'Edit from global scope')
+  .option('--repo <path>', 'Edit from specific repository')
+  .option('--branch <name>', 'Edit from specific branch')
   .action((key, options) => {
     try {
-      const vault = createVault(options.project)
+      const vault = createVault({
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
+      })
       const changed = editEntry(vault, key, {
-        project: options.project,
+        global: options.global,
+        repo: options.repo,
+        branch: options.branch,
         version: options.version,
       })
 

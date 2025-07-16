@@ -1,6 +1,7 @@
 export interface VaultEntry {
   id: number
-  project: string
+  scopeId: number
+  scope: string // Formatted scope string
   version: number
   key: string
   filePath: string
@@ -10,7 +11,12 @@ export interface VaultEntry {
 }
 
 export interface VaultOptions {
-  project?: string
+  // Scope options
+  global?: boolean
+  repo?: string
+  branch?: string
+
+  // Version option
   version?: number
 }
 
@@ -19,6 +25,6 @@ export interface ListOptions extends VaultOptions {
   json?: boolean
 }
 
-export interface SetOptions {
+export interface SetOptions extends VaultOptions {
   description?: string
 }

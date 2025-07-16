@@ -1,36 +1,36 @@
 export interface VaultEntry {
   key: string
   description: string
-  project: string
+  scope: string
   created_at: string
   updated_at: string
   versions?: VaultEntry[]
 }
 
-export interface ProjectGroup {
-  project: string
+export interface ScopeGroup {
+  scope: string
   entries: VaultEntry[]
 }
 
 export const api = {
-  async getCurrentProject(): Promise<string> {
-    const res = await fetch('/api/current-project')
-    if (!res.ok) throw new Error('Failed to fetch current project')
-    const data = (await res.json()) as { project: string }
-    return data.project
+  async getCurrentScope(): Promise<string> {
+    const res = await fetch('/api/current-scope')
+    if (!res.ok) throw new Error('Failed to fetch current scope')
+    const data = (await res.json()) as { scope: string }
+    return data.scope
   },
 
-  async getAllEntries(): Promise<{ currentProject: string; projects: ProjectGroup[] }> {
+  async getAllEntries(): Promise<{ currentScope: string; scopes: ScopeGroup[] }> {
     const res = await fetch('/api/entries/all')
     if (!res.ok) throw new Error('Failed to fetch entries')
-    const data = (await res.json()) as { currentProject: string; projects: ProjectGroup[] }
+    const data = (await res.json()) as { currentScope: string; scopes: ScopeGroup[] }
     return data
   },
 
-  async getEntry(project: string, key: string, version?: number): Promise<string> {
+  async getEntry(scope: string, key: string, version?: number): Promise<string> {
     const path = version
-      ? `/api/entry/${encodeURIComponent(project)}/${encodeURIComponent(key)}/${version}`
-      : `/api/entry/${encodeURIComponent(project)}/${encodeURIComponent(key)}`
+      ? `/api/entry/${encodeURIComponent(scope)}/${encodeURIComponent(key)}/${version}`
+      : `/api/entry/${encodeURIComponent(scope)}/${encodeURIComponent(key)}`
 
     const res = await fetch(path)
     if (!res.ok) throw new Error('Failed to fetch entry content')

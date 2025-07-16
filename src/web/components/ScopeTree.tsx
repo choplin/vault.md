@@ -1,25 +1,25 @@
 import { createSignal, For, Show } from 'solid-js'
-import type { ProjectGroup, VaultEntry } from '../lib/api'
+import type { ScopeGroup, VaultEntry } from '../lib/api'
 import { selectedEntry, setSelectedEntry } from '../stores/vault'
 
-interface ProjectTreeProps {
-  project: ProjectGroup
-  isCurrentProject: boolean
+interface ScopeTreeProps {
+  scope: ScopeGroup
+  isCurrentScope: boolean
 }
 
-export default function ProjectTree(props: ProjectTreeProps) {
+export default function ScopeTree(props: ScopeTreeProps) {
   const [open, setOpen] = createSignal(true)
 
   function selectEntry(entry: VaultEntry) {
     setSelectedEntry({
-      project: entry.project,
+      scope: entry.scope,
       key: entry.key,
     })
   }
 
   function isSelected(entry: VaultEntry): boolean {
     const selected = selectedEntry()
-    return selected !== null && selected.project === entry.project && selected.key === entry.key && !selected.version
+    return selected !== null && selected.scope === entry.scope && selected.key === entry.key && !selected.version
   }
 
   return (
@@ -40,7 +40,7 @@ export default function ProjectTree(props: ProjectTreeProps) {
         </svg>
         <svg
           aria-hidden="true"
-          class={`w-4 h-4 mr-2 flex-shrink-0 ${props.isCurrentProject ? 'text-primary' : 'text-base-content/60'}`}
+          class={`w-4 h-4 mr-2 flex-shrink-0 ${props.isCurrentScope ? 'text-primary' : 'text-base-content/60'}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -52,15 +52,15 @@ export default function ProjectTree(props: ProjectTreeProps) {
             d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
           ></path>
         </svg>
-        <span class="font-medium text-base-content truncate">{props.project.project.split('/').pop()}</span>
-        <span class={`ml-auto badge badge-sm ${props.isCurrentProject ? 'badge-primary' : ''}`}>
-          {props.project.entries.length}
+        <span class="font-medium text-base-content truncate">{props.scope.scope}</span>
+        <span class={`ml-auto badge badge-sm ${props.isCurrentScope ? 'badge-primary' : ''}`}>
+          {props.scope.entries.length}
         </span>
       </button>
 
       <Show when={open()}>
         <div class="ml-5 mt-1">
-          <For each={props.project.entries}>
+          <For each={props.scope.entries}>
             {(entry) => (
               <div class="w-full">
                 <button

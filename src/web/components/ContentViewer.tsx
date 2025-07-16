@@ -29,7 +29,7 @@ export default function ContentViewer() {
     setError(null)
 
     try {
-      const content = await api.getEntry(selected.project, selected.key, selected.version)
+      const content = await api.getEntry(selected.scope, selected.key, selected.version)
       setEntryContent(content)
 
       // 次のティックでレンダリング
@@ -76,8 +76,8 @@ export default function ContentViewer() {
     const selected = selectedEntry()
     if (selected) {
       const editUrl = selected.version
-        ? `vault://edit/${selected.project}/${selected.key}/${selected.version}`
-        : `vault://edit/${selected.project}/${selected.key}`
+        ? `vault://edit/${selected.scope}/${selected.key}/${selected.version}`
+        : `vault://edit/${selected.scope}/${selected.key}`
       window.location.href = editUrl
     }
   }
@@ -91,7 +91,7 @@ export default function ContentViewer() {
             <div>
               <h2 class="text-xl font-semibold text-base-content">{selectedEntry()!.key}</h2>
               <p class="text-sm text-base-content/60 mt-1">
-                {selectedEntry()!.project.split('/').pop()} • Version {selectedEntry()!.version || 'latest'}
+                {selectedEntry()!.scope} • Version {selectedEntry()!.version || 'latest'}
               </p>
             </div>
             <div class="flex gap-2">

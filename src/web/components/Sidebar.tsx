@@ -1,6 +1,6 @@
 import { For, Show } from 'solid-js'
-import { currentProject, loading, projects } from '../stores/vault'
-import ProjectTree from './ProjectTree'
+import { currentScope, loading, scopes } from '../stores/vault'
+import ScopeTree from './ScopeTree'
 
 export default function Sidebar() {
   return (
@@ -24,32 +24,32 @@ export default function Sidebar() {
         when={loading()}
         fallback={
           <div class="px-2 pb-4">
-            {/* Current Project Section */}
-            <Show when={currentProject()}>
+            {/* Current Scope Section */}
+            <Show when={currentScope()}>
               <div>
                 <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wider px-3 py-2">
-                  Current Project
+                  Current Scope
                 </div>
-                <For each={projects() || []}>
-                  {(project) => (
-                    <Show when={project.project === currentProject()}>
-                      <ProjectTree project={project} isCurrentProject={true} />
+                <For each={scopes() || []}>
+                  {(scope) => (
+                    <Show when={scope.scope === currentScope()}>
+                      <ScopeTree scope={scope} isCurrentScope={true} />
                     </Show>
                   )}
                 </For>
               </div>
             </Show>
 
-            {/* Other Projects Section */}
-            <Show when={projects() && projects().filter((p) => p.project !== currentProject()).length > 0}>
+            {/* Other Scopes Section */}
+            <Show when={scopes() && scopes().filter((s) => s.scope !== currentScope()).length > 0}>
               <div class="mt-4">
                 <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wider px-3 py-2">
-                  Other Projects
+                  Other Scopes
                 </div>
-                <For each={projects() || []}>
-                  {(project) => (
-                    <Show when={project.project !== currentProject()}>
-                      <ProjectTree project={project} isCurrentProject={false} />
+                <For each={scopes() || []}>
+                  {(scope) => (
+                    <Show when={scope.scope !== currentScope()}>
+                      <ScopeTree scope={scope} isCurrentScope={false} />
                     </Show>
                   )}
                 </For>

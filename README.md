@@ -8,11 +8,11 @@ vault.md is a context engineering tool that provides persistent storage for know
 
 ## Features
 
-- 🗂️ **Multi-dimensional key structure** - Organized by project, key, and version
+- 🗂️ **Scope-based organization** - Global entries or repository-specific knowledge
 - 📝 **Text file storage** - Human-readable and AI-editable files
 - 🔄 **Automatic versioning** - Track changes over time
 - 🖥️ **CLI and MCP interfaces** - Use from terminal or Claude Code
-- 🔍 **Project isolation** - Keep knowledge separated by project
+- 🔍 **Context awareness** - Automatically uses current git repository and branch
 
 ## Installation
 
@@ -31,11 +31,11 @@ npx vault.md <command>
 ### CLI Usage
 
 ```bash
-# Save content from stdin (default)
+# Save content from stdin (in current repository)
 echo "API design notes" | vault set api-notes
 
-# Save interactively
-vault set notes
+# Save to global scope (accessible from anywhere)
+vault set notes --global
 # Enter content (Ctrl-D when done):
 # Type your content here...
 # ^D
@@ -52,8 +52,14 @@ vim $(vault get architecture)
 # View content directly
 vault cat architecture
 
-# List all keys in current project
+# List all keys in current scope
 vault list
+
+# List global entries
+vault list --global
+
+# List entries from specific repository
+vault list --repo /path/to/repo
 
 # Get specific version
 vault get architecture --version=1
@@ -99,27 +105,47 @@ Once configured, Claude Desktop can use these tools:
   - `key` (required): The key for the vault entry
   - `content` (required): The content to store
   - `description` (optional): Description for the entry
+  - `global` (optional): Use global scope instead of current repository
+  - `repo` (optional): Use specific repository path
+  - `branch` (optional): Use specific branch (with repo option)
 
 - `vault_get` - Retrieve content from the vault
   - `key` (required): The key to retrieve
   - `version` (optional): Specific version (latest if not specified)
+  - `global` (optional): Use global scope instead of current repository
+  - `repo` (optional): Use specific repository path
+  - `branch` (optional): Use specific branch (with repo option)
 
 - `vault_list` - List all entries in the vault
   - `allVersions` (optional): Include all versions, not just latest
+  - `global` (optional): Use global scope instead of current repository
+  - `repo` (optional): Use specific repository path
+  - `branch` (optional): Use specific branch (with repo option)
 
 - `vault_delete` - Delete an entry from the vault
   - `key` (required): The key to delete
   - `version` (optional): Specific version to delete (all if not specified)
+  - `global` (optional): Use global scope instead of current repository
+  - `repo` (optional): Use specific repository path
+  - `branch` (optional): Use specific branch (with repo option)
 
 - `vault_info` - Get metadata about a vault entry
   - `key` (required): The key to get info for
   - `version` (optional): Specific version (latest if not specified)
+  - `global` (optional): Use global scope instead of current repository
+  - `repo` (optional): Use specific repository path
+  - `branch` (optional): Use specific branch (with repo option)
 
 ## Key Concepts
 
-### Projects
+### Scopes
 
-Each project (identified by its full path) maintains its own isolated knowledge base.
+vault.md organizes knowledge into scopes:
+
+- **Global Scope**: Accessible from anywhere, perfect for personal notes, templates, and cross-project knowledge
+- **Repository Scope**: Tied to a specific git repository and branch, ideal for project-specific documentation and context
+
+When you're in a git repository, vault.md automatically uses the repository scope. Use `--global` to explicitly use the global scope.
 
 ### Keys
 
@@ -143,7 +169,10 @@ Structure:
 ~/.local/share/vault.md/
 ├── index.db                              # SQLite metadata
 └── objects/
-    └── -Users-yourname-project/         # Project directory
+    ├── global/                           # Global scope entries
+    │   ├── templates_1.txt
+    │   └── personal-notes_1.txt
+    └── -path-to-repo-main/              # Repository scope (repo path + branch)
         ├── architecture_1.txt            # Version 1
         ├── architecture_2.txt            # Version 2
         └── api-notes_1.txt

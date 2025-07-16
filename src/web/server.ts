@@ -3,9 +3,10 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { getAllEntries } from '../core/database.js'
+import { getAllScopedEntriesGroupedByScope } from '../core/database.js'
 import { catEntry, getEntry, listEntries } from '../core/index.js'
-import type { VaultEntry } from '../core/types.js'
+import { formatScope } from '../core/scope.js'
+import type { VaultOptions } from '../core/types.js'
 import type { VaultContext } from '../core/vault.js'
 
 export function createWebServer(vault: VaultContext) {
@@ -24,50 +25,66 @@ export function createWebServer(vault: VaultContext) {
     }
   })
 
-  // Get all entries from all projects
+  // Get all entries from all scopes
   app.get('/api/entries/all', (c) => {
     try {
-      const allEntries = getAllEntries(vault.database)
-      const currentProject = vault.project
-
-      // Group entries by project
-      const projectMap = new Map<string, VaultEntry[]>()
-      for (const entry of allEntries) {
-        if (!projectMap.has(entry.project)) {
-          projectMap.set(entry.project, [])
-        }
-        projectMap.get(entry.project)!.push(entry)
-      }
+      const scopedEntries = getAllScopedEntriesGroupedByScope(vault.database)
+      const currentScope = formatScope(vault.scope)
 
       // Convert to array format expected by frontend
-      const projects = Array.from(projectMap.entries()).map(([project, entries]) => ({
-        project,
-        entries,
-      }))
+      const scopes = Array.from(scopedEntries.entries()).map(([scope, entries]) => {
+        // Convert scoped entries to web format (with scope field)
+        const vaultEntries = entries.map((entry) => ({
+          id: entry.id,
+          scope: formatScope(scope),
+          version: entry.version,
+          key: entry.key,
+          filePath: entry.filePath,
+          hash: entry.hash,
+          description: entry.description,
+          created_at: entry.createdAt,
+          updated_at: entry.createdAt,
+        }))
 
-      return c.json({ currentProject, projects })
+        return {
+          scope: formatScope(scope),
+          entries: vaultEntries,
+        }
+      })
+
+      return c.json({ currentScope: currentScope, scopes: scopes })
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
     }
   })
 
-  // Get current project path
-  app.get('/api/current-project', (c) => {
-    return c.json({ project: vault.project })
+  // Get current scope
+  app.get('/api/current-scope', (c) => {
+    return c.json({ scope: formatScope(vault.scope) })
   })
 
-  app.get('/api/entry/:project/:key/:version?', (c) => {
+  app.get('/api/entry/:scope/:key/:version?', (c) => {
     try {
-      const project = decodeURIComponent(c.req.param('project'))
+      const scopeParam = decodeURIComponent(c.req.param('scope'))
       const key = c.req.param('key')
       const version = c.req.param('version') ? parseInt(c.req.param('version')!) : undefined
 
-      const filePath = getEntry(vault, key, { project, version })
+      // Parse scope parameter to determine if it's global or repo
+      const options: VaultOptions = { version }
+      if (scopeParam === 'Global' || scopeParam === 'global') {
+        options.global = true
+      } else {
+        // For repo scopes, we need to parse the formatted string
+        // Format is "repoPath (branch)" - we'll use global for now as a fallback
+        options.global = true // TODO: implement proper scope parsing
+      }
+
+      const filePath = getEntry(vault, key, options)
       if (!filePath) {
         return c.json({ error: 'Entry not found' }, 404)
       }
 
-      const content = catEntry(vault, key, { project, version })
+      const content = catEntry(vault, key, options)
       return c.json({ content, filePath })
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)

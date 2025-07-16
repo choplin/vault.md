@@ -11,20 +11,40 @@ const SetEntrySchema = z.object({
   key: z.string().describe('The key for the vault entry'),
   content: z.string().describe('The content to store'),
   description: z.string().optional().describe('Optional description for the entry'),
+  global: z.boolean().optional().describe('Use global scope instead of current repository'),
+  repo: z.string().optional().describe('Use specific repository path'),
+  branch: z.string().optional().describe('Use specific branch (with repo option)'),
 })
 
 const GetEntrySchema = z.object({
   key: z.string().describe('The key for the vault entry'),
   version: z.number().optional().describe('Specific version to retrieve (latest if not specified)'),
+  global: z.boolean().optional().describe('Use global scope instead of current repository'),
+  repo: z.string().optional().describe('Use specific repository path'),
+  branch: z.string().optional().describe('Use specific branch (with repo option)'),
 })
 
 const ListEntriesSchema = z.object({
   allVersions: z.boolean().optional().describe('Include all versions, not just latest'),
+  global: z.boolean().optional().describe('Use global scope instead of current repository'),
+  repo: z.string().optional().describe('Use specific repository path'),
+  branch: z.string().optional().describe('Use specific branch (with repo option)'),
 })
 
 const DeleteEntrySchema = z.object({
   key: z.string().describe('The key for the vault entry to delete'),
   version: z.number().optional().describe('Specific version to delete (all versions if not specified)'),
+  global: z.boolean().optional().describe('Use global scope instead of current repository'),
+  repo: z.string().optional().describe('Use specific repository path'),
+  branch: z.string().optional().describe('Use specific branch (with repo option)'),
+})
+
+const InfoEntrySchema = z.object({
+  key: z.string().describe('The key for the vault entry'),
+  version: z.number().optional().describe('Specific version (latest if not specified)'),
+  global: z.boolean().optional().describe('Use global scope instead of current repository'),
+  repo: z.string().optional().describe('Use specific repository path'),
+  branch: z.string().optional().describe('Use specific branch (with repo option)'),
 })
 
 // Server implementation
@@ -45,8 +65,8 @@ export class VaultMCPServer {
       },
     )
 
-    // Initialize vault context
-    this.vaultContext = createVault()
+    // Initialize vault context with global scope by default for MCP
+    this.vaultContext = createVault({ global: true })
 
     this.setupHandlers()
   }
@@ -64,6 +84,9 @@ export class VaultMCPServer {
               key: { type: 'string', description: 'The key for the vault entry' },
               content: { type: 'string', description: 'The content to store' },
               description: { type: 'string', description: 'Optional description for the entry' },
+              global: { type: 'boolean', description: 'Use global scope instead of current repository' },
+              repo: { type: 'string', description: 'Use specific repository path' },
+              branch: { type: 'string', description: 'Use specific branch (with repo option)' },
             },
             required: ['key', 'content'],
           },
@@ -76,6 +99,9 @@ export class VaultMCPServer {
             properties: {
               key: { type: 'string', description: 'The key for the vault entry' },
               version: { type: 'number', description: 'Specific version to retrieve (latest if not specified)' },
+              global: { type: 'boolean', description: 'Use global scope instead of current repository' },
+              repo: { type: 'string', description: 'Use specific repository path' },
+              branch: { type: 'string', description: 'Use specific branch (with repo option)' },
             },
             required: ['key'],
           },
@@ -87,6 +113,9 @@ export class VaultMCPServer {
             type: 'object',
             properties: {
               allVersions: { type: 'boolean', description: 'Include all versions, not just latest' },
+              global: { type: 'boolean', description: 'Use global scope instead of current repository' },
+              repo: { type: 'string', description: 'Use specific repository path' },
+              branch: { type: 'string', description: 'Use specific branch (with repo option)' },
             },
           },
         },
@@ -98,6 +127,9 @@ export class VaultMCPServer {
             properties: {
               key: { type: 'string', description: 'The key for the vault entry to delete' },
               version: { type: 'number', description: 'Specific version to delete (all versions if not specified)' },
+              global: { type: 'boolean', description: 'Use global scope instead of current repository' },
+              repo: { type: 'string', description: 'Use specific repository path' },
+              branch: { type: 'string', description: 'Use specific branch (with repo option)' },
             },
             required: ['key'],
           },
@@ -110,6 +142,9 @@ export class VaultMCPServer {
             properties: {
               key: { type: 'string', description: 'The key for the vault entry' },
               version: { type: 'number', description: 'Specific version (latest if not specified)' },
+              global: { type: 'boolean', description: 'Use global scope instead of current repository' },
+              repo: { type: 'string', description: 'Use specific repository path' },
+              branch: { type: 'string', description: 'Use specific branch (with repo option)' },
             },
             required: ['key'],
           },
@@ -131,7 +166,12 @@ export class VaultMCPServer {
 
             try {
               writeFileSync(tmpFile, params.content)
-              const path = vault.setEntry(this.vaultContext, params.key, tmpFile, { description: params.description })
+              const path = vault.setEntry(this.vaultContext, params.key, tmpFile, {
+                description: params.description,
+                global: params.global,
+                repo: params.repo,
+                branch: params.branch,
+              })
               unlinkSync(tmpFile)
 
               return {
@@ -153,7 +193,12 @@ export class VaultMCPServer {
 
           case 'vault_get': {
             const params = GetEntrySchema.parse(args)
-            const content = vault.catEntry(this.vaultContext, params.key, { version: params.version })
+            const content = vault.catEntry(this.vaultContext, params.key, {
+              version: params.version,
+              global: params.global,
+              repo: params.repo,
+              branch: params.branch,
+            })
 
             if (!content) {
               return {
@@ -178,7 +223,12 @@ export class VaultMCPServer {
 
           case 'vault_list': {
             const params = ListEntriesSchema.parse(args)
-            const entries = vault.listEntries(this.vaultContext, { allVersions: params.allVersions })
+            const entries = vault.listEntries(this.vaultContext, {
+              allVersions: params.allVersions,
+              global: params.global,
+              repo: params.repo,
+              branch: params.branch,
+            })
 
             if (entries.length === 0) {
               return {
@@ -207,7 +257,12 @@ export class VaultMCPServer {
 
           case 'vault_delete': {
             const params = DeleteEntrySchema.parse(args)
-            const success = vault.deleteEntry(this.vaultContext, params.key, { version: params.version })
+            const success = vault.deleteEntry(this.vaultContext, params.key, {
+              version: params.version,
+              global: params.global,
+              repo: params.repo,
+              branch: params.branch,
+            })
 
             return {
               content: [
@@ -222,8 +277,13 @@ export class VaultMCPServer {
           }
 
           case 'vault_info': {
-            const params = GetEntrySchema.parse(args)
-            const info = vault.getInfo(this.vaultContext, params.key, { version: params.version })
+            const params = InfoEntrySchema.parse(args)
+            const info = vault.getInfo(this.vaultContext, params.key, {
+              version: params.version,
+              global: params.global,
+              repo: params.repo,
+              branch: params.branch,
+            })
 
             if (!info) {
               return {

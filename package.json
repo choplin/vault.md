@@ -24,6 +24,7 @@
     "dev": "tsx src/cli.ts",
     "dev:web": "concurrently -n api,vite -c magenta,cyan \"npm run dev:api\" \"vite\"",
     "dev:api": "tsx src/cli.ts web",
+    "reset": "rm -rf ~/.local/share/vault.md/index.db ~/.local/share/vault.md/objects && echo 'Vault has been reset'",
     "build": "npm run build:web && npm run build:bundle && npm run build:types",
     "build:bundle": "esbuild src/cli.ts --bundle --platform=node --target=node18 --format=cjs --outfile=dist/cli.js --external:better-sqlite3 --banner:js='#!/usr/bin/env node'",
     "build:types": "tsc --emitDeclarationOnly",

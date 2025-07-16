@@ -1,10 +1,10 @@
 import { createMemo, createSignal } from 'solid-js'
-import type { ProjectGroup } from '../lib/api'
+import type { ScopeGroup } from '../lib/api'
 
-export const [currentProject, setCurrentProject] = createSignal<string>('')
-export const [projects, setProjects] = createSignal<ProjectGroup[]>([])
+export const [currentScope, setCurrentScope] = createSignal<string>('')
+export const [scopes, setScopes] = createSignal<ScopeGroup[]>([])
 export const [selectedEntry, setSelectedEntry] = createSignal<{
-  project: string
+  scope: string
   key: string
   version?: number
 } | null>(null)
@@ -15,12 +15,12 @@ export const [error, setError] = createSignal<string | null>(null)
 
 export const selectedEntryInfo = createMemo(() => {
   const selected = selectedEntry()
-  const projectsList = projects()
+  const scopesList = scopes()
 
   if (!selected) return null
 
-  for (const project of projectsList) {
-    const entry = project.entries.find((e) => e.project === selected.project && e.key === selected.key)
+  for (const scope of scopesList) {
+    const entry = scope.entries.find((e) => e.scope === selected.scope && e.key === selected.key)
     if (entry) return entry
   }
   return null

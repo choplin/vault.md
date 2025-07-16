@@ -6,15 +6,18 @@ import {
   clearDatabase,
   closeDatabase,
   createDatabase,
-  deleteEntry,
-  getEntry,
-  getLatestEntry,
-  getNextVersion,
-  insertEntry,
-  listEntries,
+  deleteScopedEntry,
+  getScopedEntry,
+  getLatestScopedEntry,
+  getNextScopedVersion,
+  insertScopedEntry,
+  listScopedEntries,
+  getOrCreateScope,
+  getScopeById,
   type DatabaseContext,
+  type ScopedEntry,
 } from '../src/core/database.js'
-import type { VaultEntry } from '../src/core/types.js'
+import type { GlobalScope, RepoScope } from '../src/core/scope.js'
 
 describe('database functions', () => {
   let ctx: DatabaseContext
@@ -41,19 +44,29 @@ describe('database functions', () => {
     delete process.env.VAULT_DIR
   })
 
-  describe('getNextVersion', () => {
+  describe('getNextScopedVersion', () => {
     it('should return 1 for new key', () => {
-      const version = getNextVersion(ctx, 'project', 'new-key')
+      // Create a test scope first
+      const scope: GlobalScope = { type: 'global' }
+      const scopeId = getOrCreateScope(ctx, scope)
+
+      const version = getNextScopedVersion(ctx, scopeId, 'new-key')
       expect(version).toBe(1)
     })
 
     it('should increment version for existing key', () => {
-      // Use unique project and key to avoid conflicts
-      const uniqueProject = `test-project-${Date.now()}`
+      // Create a test scope
+      const scope: RepoScope = {
+        type: 'repo',
+        identifier: '/test/repo',
+        branch: 'main',
+        remoteUrl: 'https://github.com/test/repo',
+      }
+      const scopeId = getOrCreateScope(ctx, scope)
       const uniqueKey = `test-key-${Math.random()}`
 
-      const entry: Omit<VaultEntry, 'id' | 'createdAt'> = {
-        project: uniqueProject,
+      const entry: Omit<ScopedEntry, 'id' | 'createdAt'> = {
+        scopeId,
         version: 1,
         key: uniqueKey,
         filePath: '/tmp/file.txt',
@@ -61,17 +74,21 @@ describe('database functions', () => {
         description: 'Test entry',
       }
 
-      insertEntry(ctx, entry)
+      insertScopedEntry(ctx, entry)
 
-      const nextVersion = getNextVersion(ctx, uniqueProject, uniqueKey)
+      const nextVersion = getNextScopedVersion(ctx, scopeId, uniqueKey)
       expect(nextVersion).toBe(2)
     })
   })
 
-  describe('insertEntry', () => {
+  describe('insertScopedEntry', () => {
     it('should insert entry and return id', () => {
-      const entry: Omit<VaultEntry, 'id' | 'createdAt'> = {
-        project: 'test-project',
+      // Create a test scope
+      const scope: GlobalScope = { type: 'global' }
+      const scopeId = getOrCreateScope(ctx, scope)
+
+      const entry: Omit<ScopedEntry, 'id' | 'createdAt'> = {
+        scopeId,
         version: 1,
         key: 'test-key',
         filePath: '/tmp/file.txt',
@@ -79,51 +96,68 @@ describe('database functions', () => {
         description: 'Test entry',
       }
 
-      const id = insertEntry(ctx, entry)
+      const id = insertScopedEntry(ctx, entry)
 
       expect(id).toBeGreaterThan(0)
     })
 
     it('should insert entry without description', () => {
-      const entry: Omit<VaultEntry, 'id' | 'createdAt'> = {
-        project: 'test-project',
+      // Create a test scope
+      const scope: GlobalScope = { type: 'global' }
+      const scopeId = getOrCreateScope(ctx, scope)
+
+      const entry: Omit<ScopedEntry, 'id' | 'createdAt'> = {
+        scopeId,
         version: 1,
         key: 'test-key',
         filePath: '/tmp/file.txt',
         hash: 'hash123',
       }
 
-      const id = insertEntry(ctx, entry)
+      const id = insertScopedEntry(ctx, entry)
 
       expect(id).toBeGreaterThan(0)
     })
   })
 
-  describe('getLatestEntry', () => {
+  describe('getLatestScopedEntry', () => {
     it('should return undefined for non-existent key', () => {
-      const entry = getLatestEntry(ctx, 'project', 'non-existent')
+      // Create a test scope
+      const scope: GlobalScope = { type: 'global' }
+      const scopeId = getOrCreateScope(ctx, scope)
+
+      const entry = getLatestScopedEntry(ctx, scopeId, 'non-existent')
       expect(entry).toBeUndefined()
     })
 
     it('should return latest version of entry', () => {
+      // Create a test scope
+      const scope: RepoScope = {
+        type: 'repo',
+        identifier: '/test/repo',
+        branch: 'main',
+        remoteUrl: 'https://github.com/test/repo',
+      }
+      const scopeId = getOrCreateScope(ctx, scope)
+
       // Insert multiple versions
-      insertEntry(ctx, {
-        project: 'test-project',
+      insertScopedEntry(ctx, {
+        scopeId,
         version: 1,
         key: 'test-key',
         filePath: '/tmp/v1.txt',
         hash: 'hash1',
       })
 
-      insertEntry(ctx, {
-        project: 'test-project',
+      insertScopedEntry(ctx, {
+        scopeId,
         version: 2,
         key: 'test-key',
         filePath: '/tmp/v2.txt',
         hash: 'hash2',
       })
 
-      const entry = getLatestEntry(ctx, 'test-project', 'test-key')
+      const entry = getLatestScopedEntry(ctx, scopeId, 'test-key')
 
       expect(entry).toBeDefined()
       expect(entry?.version).toBe(2)
@@ -131,25 +165,34 @@ describe('database functions', () => {
     })
   })
 
-  describe('getEntry', () => {
+  describe('getScopedEntry', () => {
     it('should return specific version', () => {
-      insertEntry(ctx, {
-        project: 'test-project',
+      // Create a test scope
+      const scope: RepoScope = {
+        type: 'repo',
+        identifier: '/test/repo',
+        branch: 'main',
+        remoteUrl: 'https://github.com/test/repo',
+      }
+      const scopeId = getOrCreateScope(ctx, scope)
+
+      insertScopedEntry(ctx, {
+        scopeId,
         version: 1,
         key: 'test-key',
         filePath: '/tmp/v1.txt',
         hash: 'hash1',
       })
 
-      insertEntry(ctx, {
-        project: 'test-project',
+      insertScopedEntry(ctx, {
+        scopeId,
         version: 2,
         key: 'test-key',
         filePath: '/tmp/v2.txt',
         hash: 'hash2',
       })
 
-      const entry = getEntry(ctx, 'test-project', 'test-key', 1)
+      const entry = getScopedEntry(ctx, scopeId, 'test-key', 1)
 
       expect(entry).toBeDefined()
       expect(entry?.version).toBe(1)
@@ -157,44 +200,68 @@ describe('database functions', () => {
     })
 
     it('should return undefined for non-existent version', () => {
-      const entry = getEntry(ctx, 'project', 'key', 999)
+      // Create a test scope
+      const scope: GlobalScope = { type: 'global' }
+      const scopeId = getOrCreateScope(ctx, scope)
+
+      const entry = getScopedEntry(ctx, scopeId, 'key', 999)
       expect(entry).toBeUndefined()
     })
   })
 
-  describe('listEntries', () => {
+  describe('listScopedEntries', () => {
     let isolatedCtx: DatabaseContext
+    let testScopeId: number
+    let otherScopeId: number
 
     beforeEach(() => {
       // Create isolated context for listEntries tests
       isolatedCtx = createDatabase()
+
+      // Create test scopes
+      const testScope: RepoScope = {
+        type: 'repo',
+        identifier: '/test/list-repo',
+        branch: 'main',
+        remoteUrl: 'https://github.com/test/repo',
+      }
+      testScopeId = getOrCreateScope(isolatedCtx, testScope)
+
+      const otherScope: RepoScope = {
+        type: 'repo',
+        identifier: '/other/list-repo',
+        branch: 'main',
+        remoteUrl: 'https://github.com/other/repo',
+      }
+      otherScopeId = getOrCreateScope(isolatedCtx, otherScope)
+
       // Add test data
-      insertEntry(isolatedCtx, {
-        project: 'list-test-project',
+      insertScopedEntry(isolatedCtx, {
+        scopeId: testScopeId,
         version: 1,
         key: 'key1',
         filePath: '/tmp/key1_v1.txt',
         hash: 'hash1',
       })
 
-      insertEntry(isolatedCtx, {
-        project: 'list-test-project',
+      insertScopedEntry(isolatedCtx, {
+        scopeId: testScopeId,
         version: 2,
         key: 'key1',
         filePath: '/tmp/key1_v2.txt',
         hash: 'hash2',
       })
 
-      insertEntry(isolatedCtx, {
-        project: 'list-test-project',
+      insertScopedEntry(isolatedCtx, {
+        scopeId: testScopeId,
         version: 1,
         key: 'key2',
         filePath: '/tmp/key2_v1.txt',
         hash: 'hash3',
       })
 
-      insertEntry(isolatedCtx, {
-        project: 'other-list-project',
+      insertScopedEntry(isolatedCtx, {
+        scopeId: otherScopeId,
         version: 1,
         key: 'key1',
         filePath: '/tmp/other_v1.txt',
@@ -207,7 +274,7 @@ describe('database functions', () => {
     })
 
     it('should list latest entries only by default', () => {
-      const entries = listEntries(isolatedCtx, 'list-test-project')
+      const entries = listScopedEntries(isolatedCtx, testScopeId)
 
       expect(entries).toHaveLength(2)
       expect(entries.map(e => e.key).sort()).toEqual(['key1', 'key2'])
@@ -215,38 +282,53 @@ describe('database functions', () => {
     })
 
     it('should list all versions when requested', () => {
-      const entries = listEntries(isolatedCtx, 'list-test-project', true)
+      const entries = listScopedEntries(isolatedCtx, testScopeId, true)
 
       expect(entries).toHaveLength(3)
       expect(entries.filter(e => e.key === 'key1')).toHaveLength(2)
     })
 
-    it('should filter by project', () => {
-      const entries = listEntries(isolatedCtx, 'other-list-project')
+    it('should filter by scope', () => {
+      const entries = listScopedEntries(isolatedCtx, otherScopeId)
 
       expect(entries).toHaveLength(1)
       expect(entries[0].key).toBe('key1')
-      expect(entries[0].project).toBe('other-list-project')
+      expect(entries[0].scopeId).toBe(otherScopeId)
     })
 
-    it('should return empty array for project with no entries', () => {
-      const entries = listEntries(isolatedCtx, 'empty-project')
+    it('should return empty array for scope with no entries', () => {
+      // Create an empty scope
+      const emptyScope: GlobalScope = { type: 'global' }
+      const emptyScopeId = getOrCreateScope(isolatedCtx, emptyScope)
+
+      const entries = listScopedEntries(isolatedCtx, emptyScopeId)
       expect(entries).toEqual([])
     })
   })
 
-  describe('deleteEntry', () => {
+  describe('deleteScopedEntry', () => {
+    let deleteScopeId: number
+
     beforeEach(() => {
-      insertEntry(ctx, {
-        project: 'test-project',
+      // Create a test scope
+      const scope: RepoScope = {
+        type: 'repo',
+        identifier: '/test/delete-repo',
+        branch: 'main',
+        remoteUrl: 'https://github.com/test/repo',
+      }
+      deleteScopeId = getOrCreateScope(ctx, scope)
+
+      insertScopedEntry(ctx, {
+        scopeId: deleteScopeId,
         version: 1,
         key: 'test-key',
         filePath: '/tmp/v1.txt',
         hash: 'hash1',
       })
 
-      insertEntry(ctx, {
-        project: 'test-project',
+      insertScopedEntry(ctx, {
+        scopeId: deleteScopeId,
         version: 2,
         key: 'test-key',
         filePath: '/tmp/v2.txt',
@@ -255,23 +337,64 @@ describe('database functions', () => {
     })
 
     it('should delete all versions when no version specified', () => {
-      const result = deleteEntry(ctx, 'test-project', 'test-key')
+      const result = deleteScopedEntry(ctx, deleteScopeId, 'test-key')
 
       expect(result).toBe(true)
-      expect(getLatestEntry(ctx, 'test-project', 'test-key')).toBeUndefined()
+      expect(getLatestScopedEntry(ctx, deleteScopeId, 'test-key')).toBeUndefined()
     })
 
     it('should delete specific version only', () => {
-      const result = deleteEntry(ctx, 'test-project', 'test-key', 1)
+      const result = deleteScopedEntry(ctx, deleteScopeId, 'test-key', 1)
 
       expect(result).toBe(true)
-      expect(getEntry(ctx, 'test-project', 'test-key', 1)).toBeUndefined()
-      expect(getEntry(ctx, 'test-project', 'test-key', 2)).toBeDefined()
+      expect(getScopedEntry(ctx, deleteScopeId, 'test-key', 1)).toBeUndefined()
+      expect(getScopedEntry(ctx, deleteScopeId, 'test-key', 2)).toBeDefined()
     })
 
     it('should return false for non-existent entry', () => {
-      const result = deleteEntry(ctx, 'test-project', 'non-existent')
+      const result = deleteScopedEntry(ctx, deleteScopeId, 'non-existent')
       expect(result).toBe(false)
+    })
+  })
+
+  describe('scope functions', () => {
+    it('should create and retrieve global scope', () => {
+      const scope: GlobalScope = { type: 'global' }
+      const scopeId = getOrCreateScope(ctx, scope)
+
+      expect(scopeId).toBeGreaterThan(0)
+
+      const retrieved = getScopeById(ctx, scopeId)
+      expect(retrieved).toBeDefined()
+      expect(retrieved?.type).toBe('global')
+    })
+
+    it('should create and retrieve repo scope', () => {
+      const scope: RepoScope = {
+        type: 'repo',
+        identifier: '/test/repo',
+        branch: 'main',
+        remoteUrl: 'https://github.com/test/repo',
+      }
+      const scopeId = getOrCreateScope(ctx, scope)
+
+      expect(scopeId).toBeGreaterThan(0)
+
+      const retrieved = getScopeById(ctx, scopeId)
+      expect(retrieved).toBeDefined()
+      expect(retrieved?.type).toBe('repo')
+      if (retrieved?.type === 'repo') {
+        expect(retrieved.identifier).toBe('/test/repo')
+        expect(retrieved.branch).toBe('main')
+      }
+    })
+
+    it('should return existing scope if already exists', () => {
+      const scope: GlobalScope = { type: 'global' }
+      const scopeId1 = getOrCreateScope(ctx, scope)
+      const scopeId2 = getOrCreateScope(ctx, scope)
+
+      expect(scopeId1).toBe(scopeId2)
     })
   })
 })
