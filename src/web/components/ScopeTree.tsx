@@ -1,96 +1,99 @@
-import { createSignal, For, Show } from 'solid-js'
-import type { ScopeGroup, VaultEntry } from '../lib/api'
-import { selectedEntry, setSelectedEntry } from '../stores/vault'
+import { Check, ChevronRight, Folder, GitBranch, Globe } from 'lucide-solid'
+import { For, Show } from 'solid-js'
+import { api } from '../lib/api'
+import { collapsedRepos, setViewMode, toggleRepoCollapse } from '../stores/ui'
+import type { RepositoryGroup } from '../stores/vault'
+import { currentScope, setSelectedScope } from '../stores/vault'
 
 interface ScopeTreeProps {
-  scope: ScopeGroup
-  isCurrentScope: boolean
+  repository: RepositoryGroup
 }
 
 export default function ScopeTree(props: ScopeTreeProps) {
-  const [open, setOpen] = createSignal(true)
+  const isCollapsed = () => collapsedRepos().has(props.repository.identifier)
+  const isGlobal = () => props.repository.identifier === 'global'
 
-  function selectEntry(entry: VaultEntry) {
-    setSelectedEntry({
-      scope: entry.scope,
-      key: entry.key,
-    })
+  function toggleCollapse() {
+    if (!isGlobal()) {
+      toggleRepoCollapse(props.repository.identifier)
+    }
   }
 
-  function isSelected(entry: VaultEntry): boolean {
-    const selected = selectedEntry()
-    return selected !== null && selected.scope === entry.scope && selected.key === entry.key && !selected.version
+  async function selectBranch(branch: string) {
+    setSelectedScope({ identifier: props.repository.identifier, branch })
+    setViewMode('table')
+
+    // Load entries for this scope
+    try {
+      await api.getScopeEntries(props.repository.identifier, branch)
+      // This will be handled by the parent component watching selectedScope
+    } catch (error) {
+      console.error('Failed to load scope entries:', error)
+    }
+  }
+
+  function isCurrentBranch(branch: string): boolean {
+    const current = currentScope()
+    const scopeStr = props.repository.branches.find((b) => b.branch === branch)?.scope
+    return current === scopeStr
   }
 
   return (
-    <div class="mb-2">
-      <button
-        type="button"
-        onClick={() => setOpen(!open())}
-        class="btn btn-ghost btn-sm w-full justify-start normal-case"
+    <div class="mb-1">
+      {/* Repository header */}
+      <Show
+        when={!isGlobal()}
+        fallback={
+          // Global scope - direct clickable item
+          <button
+            type="button"
+            onClick={() => selectBranch('global')}
+            class={`btn btn-ghost btn-sm w-full justify-start normal-case ${
+              isCurrentBranch('global') ? 'btn-active' : ''
+            }`}
+          >
+            <Globe class="w-4 h-4 mr-2 flex-shrink-0 text-base-content/60" />
+            <span class="font-medium text-base-content truncate">{props.repository.displayName}</span>
+            <span class={`ml-auto badge badge-sm ${isCurrentBranch('global') ? 'badge-primary' : ''}`}>
+              {props.repository.branches[0]?.entries.length || 0}
+            </span>
+          </button>
+        }
       >
-        <svg
-          aria-hidden="true"
-          class={`w-4 h-4 mr-2 flex-shrink-0 transition-transform text-base-content/40 ${open() ? 'rotate-90' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-        <svg
-          aria-hidden="true"
-          class={`w-4 h-4 mr-2 flex-shrink-0 ${props.isCurrentScope ? 'text-primary' : 'text-base-content/60'}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-          ></path>
-        </svg>
-        <span class="font-medium text-base-content truncate">{props.scope.scope}</span>
-        <span class={`ml-auto badge badge-sm ${props.isCurrentScope ? 'badge-primary' : ''}`}>
-          {props.scope.entries.length}
-        </span>
-      </button>
+        {/* Repository with branches */}
+        <button type="button" onClick={toggleCollapse} class="btn btn-ghost btn-sm w-full justify-start normal-case">
+          <ChevronRight
+            class={`w-4 h-4 mr-1 flex-shrink-0 transition-transform text-base-content/40 ${
+              !isCollapsed() ? 'rotate-90' : ''
+            }`}
+          />
+          <Folder class="w-4 h-4 mr-2 flex-shrink-0 text-base-content/60" />
+          <span class="font-medium text-base-content truncate">{props.repository.displayName}</span>
+          <span class={`ml-auto badge badge-sm`}>{props.repository.branches.length}</span>
+        </button>
+      </Show>
 
-      <Show when={open()}>
+      {/* Branches */}
+      <Show when={!isGlobal() && !isCollapsed()}>
         <div class="ml-5 mt-1">
-          <For each={props.scope.entries}>
-            {(entry) => (
-              <div class="w-full">
-                <button
-                  type="button"
-                  onClick={() => selectEntry(entry)}
-                  class={`btn btn-ghost btn-sm w-full justify-start ml-4 normal-case ${isSelected(entry) ? 'btn-active' : ''}`}
-                >
-                  <svg
-                    aria-hidden="true"
-                    class={`w-4 h-4 mr-2 flex-shrink-0 ${isSelected(entry) ? 'text-primary' : 'text-base-content/40'}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                    ></path>
-                  </svg>
-                  <div class="flex-1 text-left min-w-0">
-                    <span class="text-base-content font-medium">{entry.key}</span>
-                    <Show when={entry.description}>
-                      <p class="text-xs text-base-content/60 truncate">{entry.description}</p>
-                    </Show>
-                  </div>
-                  <span class="ml-2 text-xs opacity-60 flex-shrink-0">v{entry.versions?.[0]?.version || 1}</span>
-                </button>
-              </div>
+          <For each={props.repository.branches}>
+            {(branch) => (
+              <button
+                type="button"
+                onClick={() => selectBranch(branch.branch)}
+                class={`btn btn-ghost btn-sm w-full justify-start normal-case ${
+                  isCurrentBranch(branch.branch) ? 'btn-active' : ''
+                }`}
+              >
+                <GitBranch class="w-4 h-4 mr-2 flex-shrink-0 text-base-content/60" />
+                <span class="font-medium text-base-content truncate">{branch.branch}</span>
+                <Show when={isCurrentBranch(branch.branch)}>
+                  <Check class="w-3 h-3 ml-2 text-primary" />
+                </Show>
+                <span class={`ml-auto badge badge-sm ${isCurrentBranch(branch.branch) ? 'badge-primary' : ''}`}>
+                  {branch.entries.length}
+                </span>
+              </button>
             )}
           </For>
         </div>

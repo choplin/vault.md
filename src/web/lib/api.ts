@@ -27,6 +27,16 @@ export const api = {
     return data
   },
 
+  async getScopeEntries(identifier: string, branch: string, allVersions = false): Promise<ScopeGroup> {
+    const path = `/api/scopes/${encodeURIComponent(identifier)}/${encodeURIComponent(branch)}/entries${
+      allVersions ? '?allVersions=true' : ''
+    }`
+    const res = await fetch(path)
+    if (!res.ok) throw new Error('Failed to fetch scope entries')
+    const data = (await res.json()) as ScopeGroup
+    return data
+  },
+
   async getEntry(scope: string, key: string, version?: number): Promise<string> {
     const path = version
       ? `/api/entry/${encodeURIComponent(scope)}/${encodeURIComponent(key)}/${version}`

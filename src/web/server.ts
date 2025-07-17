@@ -3,7 +3,7 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { getAllScopedEntriesGroupedByScope } from '../core/database.js'
+import { getAllScopedEntriesGroupedByScope, listScopedEntries } from '../core/database.js'
 import { catEntry, getEntry, listEntries } from '../core/index.js'
 import { formatScope } from '../core/scope.js'
 import type { VaultOptions } from '../core/types.js'
@@ -61,6 +61,65 @@ export function createWebServer(vault: VaultContext) {
   // Get current scope
   app.get('/api/current-scope', (c) => {
     return c.json({ scope: formatScope(vault.scope) })
+  })
+
+  // Get entries for a specific scope
+  app.get('/api/scopes/:identifier/:branch/entries', (c) => {
+    try {
+      const identifier = decodeURIComponent(c.req.param('identifier'))
+      const branch = decodeURIComponent(c.req.param('branch'))
+
+      // Parse query parameters
+      const allVersions = c.req.query('allVersions') === 'true'
+
+      // Build scope based on identifier and branch
+      const scope =
+        identifier === 'global' && branch === 'global'
+          ? { type: 'global' as const }
+          : {
+              type: 'repo' as const,
+              identifier,
+              branch,
+              workPath:
+                vault.scope.type === 'repo' && vault.scope.identifier === identifier ? vault.scope.workPath : undefined,
+              remoteUrl:
+                vault.scope.type === 'repo' && vault.scope.identifier === identifier
+                  ? vault.scope.remoteUrl
+                  : undefined,
+            }
+
+      // Get scope ID
+      const scopeId = vault.database.db
+        .prepare('SELECT id FROM scopes WHERE identifier = ? AND branch = ?')
+        .get(identifier, branch) as { id: number } | undefined
+
+      if (!scopeId) {
+        return c.json({ entries: [] })
+      }
+
+      // Get entries for this scope
+      const entries = listScopedEntries(vault.database, scopeId.id, allVersions)
+
+      // Convert to web format
+      const vaultEntries = entries.map((entry) => ({
+        id: entry.id,
+        scopeId: entry.scopeId,
+        scope: formatScope(scope),
+        version: entry.version,
+        key: entry.key,
+        filePath: entry.filePath,
+        hash: entry.hash,
+        description: entry.description,
+        createdAt: entry.createdAt,
+      }))
+
+      return c.json({
+        scope: formatScope(scope),
+        entries: vaultEntries,
+      })
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
+    }
   })
 
   app.get('/api/entry/:scope/:key/:version?', (c) => {

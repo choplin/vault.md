@@ -1,8 +1,41 @@
+import { ChevronRight, MapPin } from 'lucide-solid'
 import { For, Show } from 'solid-js'
-import { currentScope, loading, scopes } from '../stores/vault'
+import { allScopesCollapsed, setAllScopesCollapsed, setViewMode } from '../stores/ui'
+import { currentScope, groupedScopes, loading, setSelectedScope } from '../stores/vault'
 import ScopeTree from './ScopeTree'
 
 export default function Sidebar() {
+  function getCurrentScopeDisplay() {
+    const current = currentScope()
+
+    if (!current) return null
+
+    // Parse current scope to find matching repository and branch
+    const groups = groupedScopes()
+    for (const group of groups) {
+      for (const branch of group.branches) {
+        if (branch.scope === current) {
+          return {
+            displayName: group.displayName,
+            branch: branch.branch,
+            identifier: group.identifier,
+            isGlobal: group.identifier === 'global',
+          }
+        }
+      }
+    }
+
+    return null
+  }
+
+  function selectCurrentScope() {
+    const display = getCurrentScopeDisplay()
+    if (display) {
+      setSelectedScope({ identifier: display.identifier, branch: display.branch })
+      setViewMode('table')
+    }
+  }
+
   return (
     <div class="w-80 bg-base-100 border-r border-base-300 overflow-y-auto">
       <div class="p-4 border-b border-base-200">
@@ -21,45 +54,52 @@ export default function Sidebar() {
       </div>
 
       <Show
-        when={loading()}
+        when={!loading()}
         fallback={
-          <div class="px-2 pb-4">
-            {/* Current Scope Section */}
-            <Show when={currentScope()}>
-              <div>
-                <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wider px-3 py-2">
-                  Current Scope
-                </div>
-                <For each={scopes() || []}>
-                  {(scope) => (
-                    <Show when={scope.scope === currentScope()}>
-                      <ScopeTree scope={scope} isCurrentScope={true} />
-                    </Show>
-                  )}
-                </For>
-              </div>
-            </Show>
-
-            {/* Other Scopes Section */}
-            <Show when={scopes() && scopes().filter((s) => s.scope !== currentScope()).length > 0}>
-              <div class="mt-4">
-                <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wider px-3 py-2">
-                  Other Scopes
-                </div>
-                <For each={scopes() || []}>
-                  {(scope) => (
-                    <Show when={scope.scope !== currentScope()}>
-                      <ScopeTree scope={scope} isCurrentScope={false} />
-                    </Show>
-                  )}
-                </For>
-              </div>
-            </Show>
+          <div class="flex justify-center items-center p-8">
+            <span class="loading loading-spinner loading-md"></span>
           </div>
         }
       >
-        <div class="flex justify-center items-center p-8">
-          <span class="loading loading-spinner loading-md"></span>
+        <div class="px-2 pb-4">
+          {/* Current Scope Section */}
+          <Show when={getCurrentScopeDisplay()}>
+            {(display) => (
+              <div class="mb-3">
+                <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wider px-3 py-1 flex items-center">
+                  <MapPin class="w-3 h-3 mr-2" /> Current
+                </div>
+                <button
+                  type="button"
+                  onClick={selectCurrentScope}
+                  class="btn btn-ghost btn-sm w-full justify-start normal-case text-primary"
+                >
+                  <span class="font-medium">{display().displayName}</span>
+                  <Show when={!display().isGlobal}>
+                    <span class="text-sm text-base-content/60">({display().branch})</span>
+                  </Show>
+                </button>
+              </div>
+            )}
+          </Show>
+
+          {/* All Scopes Section */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setAllScopesCollapsed(!allScopesCollapsed())}
+              class="w-full text-xs font-semibold text-base-content/60 uppercase tracking-wider px-3 py-2 flex items-center justify-between hover:bg-base-200 rounded"
+            >
+              <span>All Scopes</span>
+              <ChevronRight class={`w-4 h-4 transition-transform ${allScopesCollapsed() ? '' : 'rotate-90'}`} />
+            </button>
+
+            <Show when={!allScopesCollapsed()}>
+              <div class="mt-2">
+                <For each={groupedScopes()}>{(repository) => <ScopeTree repository={repository} />}</For>
+              </div>
+            </Show>
+          </div>
         </div>
       </Show>
     </div>
