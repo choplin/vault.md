@@ -8,18 +8,13 @@ package-lock.json
 dist/
 build/
 out/
-*.js
 *.d.ts
 *.js.map
 src/web/static/
+!vite.config.mts
 
 # Keep TypeScript source files
 !src/**/*.ts
-
-# Keep configuration files
-!commitlint.config.js
-!svelte.config.js
-!vite.config.ts
 
 # IDE
 .vscode/
