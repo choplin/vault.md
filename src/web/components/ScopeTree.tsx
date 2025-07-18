@@ -69,7 +69,9 @@ export default function ScopeTree(props: ScopeTreeProps) {
           />
           <Folder class="w-4 h-4 mr-2 flex-shrink-0 text-base-content/60" />
           <span class="font-medium text-base-content truncate">{props.repository.displayName}</span>
-          <span class={`ml-auto badge badge-sm`}>{props.repository.branches.length}</span>
+          <span class={`ml-auto badge badge-sm`}>
+            {props.repository.branches.reduce((sum, branch) => sum + branch.entries.length, 0)}
+          </span>
         </button>
       </Show>
 
