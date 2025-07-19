@@ -102,16 +102,3 @@ export function getMainRepoRoot(worktreeDir: string): string | undefined {
     return undefined
   }
 }
-
-/**
- * Ensure the current directory is a git repository
- */
-export function ensureGitRepo(dir: string = process.cwd()): GitInfo {
-  const info = getGitInfo(dir)
-  if (!info.isGitRepo) {
-    throw new Error(
-      'Not in a git repository. Use --global flag for global scope, or run this command in a git repository.',
-    )
-  }
-  return info
-}

@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import type { DatabaseContext } from './database.js'
 import * as db from './database.js'
 import * as fs from './filesystem.js'
-import { ensureGitRepo } from './git.js'
+import { getGitInfo } from './git.js'
 import { formatScope, isGlobalScope, type Scope } from './scope.js'
 import type { ListOptions, SetOptions, VaultEntry, VaultOptions } from './types.js'
 
@@ -28,23 +29,45 @@ export function createVault(options: CreateVaultOptions = {}): VaultContext {
     scope = { type: 'global' }
   } else if (options.repo) {
     // Specific repo provided
-    const gitInfo = ensureGitRepo(options.repo)
-    scope = {
-      type: 'repo',
-      identifier: gitInfo.repoRoot!,
-      branch: options.branch || gitInfo.currentBranch!,
-      workPath: process.cwd(),
-      remoteUrl: gitInfo.remoteUrl,
+    const gitInfo = getGitInfo(options.repo)
+    if (gitInfo.isGitRepo) {
+      scope = {
+        type: 'repo',
+        identifier: gitInfo.repoRoot!,
+        branch: options.branch || gitInfo.currentBranch!,
+        workPath: process.cwd(),
+        remoteUrl: gitInfo.remoteUrl,
+      }
+    } else {
+      // Not a git repo - use directory as scope
+      scope = {
+        type: 'repo',
+        identifier: resolve(options.repo),
+        branch: options.branch || 'default',
+        workPath: process.cwd(),
+        remoteUrl: undefined,
+      }
     }
   } else {
     // Current directory
-    const gitInfo = ensureGitRepo()
-    scope = {
-      type: 'repo',
-      identifier: gitInfo.repoRoot!,
-      branch: options.branch || gitInfo.currentBranch!,
-      workPath: process.cwd(),
-      remoteUrl: gitInfo.remoteUrl,
+    const gitInfo = getGitInfo()
+    if (gitInfo.isGitRepo) {
+      scope = {
+        type: 'repo',
+        identifier: gitInfo.repoRoot!,
+        branch: options.branch || gitInfo.currentBranch!,
+        workPath: process.cwd(),
+        remoteUrl: gitInfo.remoteUrl,
+      }
+    } else {
+      // Not a git repo - use current directory as scope
+      scope = {
+        type: 'repo',
+        identifier: process.cwd(),
+        branch: options.branch || 'default',
+        workPath: process.cwd(),
+        remoteUrl: undefined,
+      }
     }
   }
 
@@ -224,7 +247,30 @@ function resolveScope(options: VaultOptions): Scope {
   }
 
   if (options.repo) {
-    const gitInfo = ensureGitRepo(options.repo)
+    const gitInfo = getGitInfo(options.repo)
+    if (gitInfo.isGitRepo) {
+      return {
+        type: 'repo',
+        identifier: gitInfo.repoRoot!,
+        branch: options.branch || gitInfo.currentBranch!,
+        workPath: process.cwd(),
+        remoteUrl: gitInfo.remoteUrl,
+      }
+    } else {
+      // Not a git repo - use directory as scope
+      return {
+        type: 'repo',
+        identifier: resolve(options.repo),
+        branch: options.branch || 'default',
+        workPath: process.cwd(),
+        remoteUrl: undefined,
+      }
+    }
+  }
+
+  // Current directory with different branch
+  const gitInfo = getGitInfo()
+  if (gitInfo.isGitRepo) {
     return {
       type: 'repo',
       identifier: gitInfo.repoRoot!,
@@ -232,16 +278,15 @@ function resolveScope(options: VaultOptions): Scope {
       workPath: process.cwd(),
       remoteUrl: gitInfo.remoteUrl,
     }
-  }
-
-  // Current directory with different branch
-  const gitInfo = ensureGitRepo()
-  return {
-    type: 'repo',
-    identifier: gitInfo.repoRoot!,
-    branch: options.branch || gitInfo.currentBranch!,
-    workPath: process.cwd(),
-    remoteUrl: gitInfo.remoteUrl,
+  } else {
+    // Not a git repo - use current directory as scope
+    return {
+      type: 'repo',
+      identifier: process.cwd(),
+      branch: options.branch || 'default',
+      workPath: process.cwd(),
+      remoteUrl: undefined,
+    }
   }
 }
 

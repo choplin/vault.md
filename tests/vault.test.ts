@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -58,6 +58,49 @@ describe('vault functions', () => {
       expect(customCtx.scope.type).toBe('repo')
       expect(customCtx.scopeId).toBeGreaterThan(0)
       closeVault(customCtx)
+    })
+
+    it('should create vault with directory scope when not in git repo', () => {
+      const nonGitDir = realpathSync(mkdtempSync(join(tmpdir(), 'non-git-')))
+      const originalCwd = process.cwd()
+
+      try {
+        process.chdir(nonGitDir)
+        const ctx = createVault()
+
+        expect(ctx.scope.type).toBe('repo')
+        if (ctx.scope.type === 'repo') {
+          expect(ctx.scope.identifier).toBe(nonGitDir)
+          expect(ctx.scope.branch).toBe('default')
+          expect(ctx.scope.remoteUrl).toBeUndefined()
+        }
+
+        closeVault(ctx)
+      } finally {
+        process.chdir(originalCwd)
+        rmSync(nonGitDir, { recursive: true, force: true })
+      }
+    })
+
+    it('should use custom branch for non-git directory', () => {
+      const nonGitDir = realpathSync(mkdtempSync(join(tmpdir(), 'non-git-')))
+      const originalCwd = process.cwd()
+
+      try {
+        process.chdir(nonGitDir)
+        const ctx = createVault({ branch: 'custom' })
+
+        expect(ctx.scope.type).toBe('repo')
+        if (ctx.scope.type === 'repo') {
+          expect(ctx.scope.identifier).toBe(nonGitDir)
+          expect(ctx.scope.branch).toBe('custom')
+        }
+
+        closeVault(ctx)
+      } finally {
+        process.chdir(originalCwd)
+        rmSync(nonGitDir, { recursive: true, force: true })
+      }
     })
   })
 
