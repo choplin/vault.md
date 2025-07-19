@@ -1,0 +1,36 @@
+# Source files
+src/
+tests/
+*.ts
+!dist/**/*.d.ts
+
+# Development files
+.claude/
+backlog/
+docs/
+coverage/
+node_modules/
+test-install/
+
+# Config files
+.gitignore
+biome.json
+lefthook.yml
+commitlint.config.js
+tailwind.config.js
+tsconfig.json
+tsconfig.web.json
+vite.config.mts
+vitest.config.ts
+CLAUDE.md
+
+# Build artifacts
+*.tgz
+.DS_Store
+*.log
+.env
+.env.*
+
+# Git
+.git/
+.github/

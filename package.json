@@ -1,7 +1,7 @@
 {
   "name": "vault.md",
   "version": "0.1.0",
-  "description": "A knowledge vault for AI-assisted development - Store and version your context with a simple CLI",
+  "description": "Context-Aware Storage for AI-Driven Development - Store and version your context with a simple CLI",
   "keywords": [
     "context-engineering",
     "ai-development",
@@ -32,11 +32,11 @@
     "test": "vitest",
     "lint": "npm run lint:biome && npm run lint:md",
     "lint:biome": "biome check .",
-    "lint:md": "markdownlint-cli2 '**/*.md' '#node_modules'",
-    "format": "biome check . --write && markdownlint-cli2 --fix '**/*.md' '#node_modules'",
+    "lint:md": "markdownlint-cli2 '**/*.md' '#node_modules' '#.claude'",
+    "format": "biome check . --write && markdownlint-cli2 --fix '**/*.md' '#node_modules' '#.claude'",
     "prepare": "lefthook install",
     "prepublishOnly": "npm run lint && npm run build",
-    "precommit": "npm run format && npm run lint && npm run build && npm test"
+    "check": "npm run format && npm run lint && npm run build && npm test"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -76,5 +76,11 @@
     "typescript": "^5.8.3",
     "vite": "^7.0.4",
     "vitest": "^3.2.4"
+  },
+  "markdownlint-cli2": {
+    "config": {
+      "MD036": false,
+      "MD013": false
+    }
   }
 }

@@ -6,12 +6,21 @@
   - After making changes, always show what was changed and wait for user confirmation
   - Do not automatically run `git commit` unless explicitly told to
 
+## Changelog Management
+
+- **Follow Keep a Changelog format** (<https://keepachangelog.com/>)
+  - Group changes under: Added, Changed, Deprecated, Removed, Fixed, Security
+  - Keep an [Unreleased] section at the top for ongoing work
+  - Date releases in ISO format: YYYY-MM-DD
+  - Link versions at the bottom of the file
+  - Each version should compare to the previous one
+
 ## Pre-Commit Checks
 
 **ALWAYS run before committing:**
 
 ```bash
-npm run precommit
+npm run check
 ```
 
 This command runs all necessary checks (format, lint, build, test) in one go.

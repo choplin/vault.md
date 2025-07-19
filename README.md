@@ -1,10 +1,14 @@
 # vault.md
 
-A knowledge vault for AI-assisted development - Store and version your context with a simple CLI.
+> Context-Aware Storage for AI-Driven Development
+
+A persistent knowledge vault that bridges the gap between AI sessions - Store, version, and retrieve context with a simple CLI and Web UI.
 
 ## Overview
 
 vault.md is a context engineering tool that provides persistent storage for knowledge, context, and work artifacts across AI development sessions. Like Markdown for your AI's memory.
+
+Built for the era of [Context Engineering](https://x.com/karpathy/status/1937902205765607626), vault.md ensures your carefully crafted prompts, architectural decisions, and domain knowledge are never lost between sessions.
 
 ## Features
 
@@ -170,12 +174,12 @@ Structure:
 ├── index.db                              # SQLite metadata
 └── objects/
     ├── global/                           # Global scope entries
-    │   ├── templates_1.txt
-    │   └── personal-notes_1.txt
+    │   ├── templates_v1.txt
+    │   └── personal-notes_v1.txt
     └── -path-to-repo-main/              # Repository scope (repo path + branch)
-        ├── architecture_1.txt            # Version 1
-        ├── architecture_2.txt            # Version 2
-        └── api-notes_1.txt
+        ├── architecture_v1.txt           # Version 1
+        ├── architecture_v2.txt           # Version 2
+        └── api-notes_v1.txt
 ```
 
 ## License
