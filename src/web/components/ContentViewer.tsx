@@ -32,7 +32,7 @@ export default function ContentViewer() {
       const content = await api.getEntry(selected.scope, selected.key, selected.version)
       setEntryContent(content)
 
-      // 次のティックでレンダリング
+      // Render on next tick
       setTimeout(renderMarkdown, 0)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load content')
@@ -44,29 +44,29 @@ export default function ContentViewer() {
   async function renderMarkdown() {
     if (!contentElement || !entryContent()) return
 
-    // 動的インポート
+    // Dynamic imports
     const [{ marked }, Prism] = await Promise.all([import('marked'), import('prismjs')])
 
-    // GitHub風の設定
+    // GitHub-style configuration
     marked.setOptions({
       gfm: true,
       breaks: true,
     })
 
-    // Prism言語の動的インポート
+    // Dynamic import of Prism languages
     await Promise.all([
       import('prismjs/components/prism-typescript'),
       import('prismjs/components/prism-javascript'),
       import('prismjs/components/prism-json'),
       import('prismjs/components/prism-bash'),
       import('prismjs/components/prism-python'),
-      import('prismjs/themes/prism.css'), // GitHub風のライトテーマ
+      import('prismjs/themes/prism.css'), // GitHub-style light theme
     ])
 
     const html = await marked.parse(entryContent())
     contentElement.innerHTML = html
 
-    // シンタックスハイライト適用
+    // Apply syntax highlighting
     contentElement.querySelectorAll('pre code').forEach((block) => {
       Prism.highlightElement(block as HTMLElement)
     })
