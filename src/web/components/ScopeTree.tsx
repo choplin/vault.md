@@ -61,7 +61,11 @@ export default function ScopeTree(props: ScopeTreeProps) {
         }
       >
         {/* Repository with branches */}
-        <button type="button" onClick={toggleCollapse} class="btn btn-ghost w-full justify-start normal-case h-auto min-h-[2.5rem] py-2">
+        <button
+          type="button"
+          onClick={toggleCollapse}
+          class="btn btn-ghost w-full justify-start normal-case h-auto min-h-[2.5rem] py-2"
+        >
           <ChevronRight
             class={`w-5 h-5 mr-1 flex-shrink-0 transition-transform text-base-content/40 ${
               !isCollapsed() ? 'rotate-90' : ''
