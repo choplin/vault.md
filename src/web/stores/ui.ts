@@ -54,6 +54,19 @@ export const [showAllVersions, setShowAllVersions] = createSignal(false)
 export type ViewMode = 'table' | 'content'
 export const [viewMode, setViewMode] = createSignal<ViewMode>('table')
 
+// Display mode state
+export type DisplayMode = 'table' | 'grouped'
+const DISPLAY_MODE_KEY = 'vault-md-display-mode'
+
+export const [displayMode, setDisplayModeRaw] = createSignal<DisplayMode>(
+  (localStorage.getItem(DISPLAY_MODE_KEY) as DisplayMode) || 'table',
+)
+
+export function setDisplayMode(mode: DisplayMode) {
+  setDisplayModeRaw(mode)
+  localStorage.setItem(DISPLAY_MODE_KEY, mode)
+}
+
 // All Scopes section collapse state
 const ALL_SCOPES_COLLAPSED_KEY = 'vault-md-all-scopes-collapsed'
 

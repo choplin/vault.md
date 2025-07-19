@@ -125,25 +125,39 @@ export function createWebServer(vault: VaultContext) {
   app.get('/api/entry/:scope/:key/:version?', (c) => {
     try {
       const scopeParam = decodeURIComponent(c.req.param('scope'))
-      const key = c.req.param('key')
+      const key = decodeURIComponent(c.req.param('key'))
       const version = c.req.param('version') ? parseInt(c.req.param('version')!) : undefined
+
+      console.log('API entry request:', { scopeParam, key, version })
 
       // Parse scope parameter to determine if it's global or repo
       const options: VaultOptions = { version }
       if (scopeParam === 'Global' || scopeParam === 'global') {
         options.global = true
       } else {
-        // For repo scopes, we need to parse the formatted string
-        // Format is "repoPath (branch)" - we'll use global for now as a fallback
-        options.global = true // TODO: implement proper scope parsing
+        // For repo scopes, the frontend sends the formatted string "repoPath (branch)"
+        // We need to parse this to extract the repo path and branch
+        const match = scopeParam.match(/^(.+) \((.+)\)$/)
+        if (match) {
+          options.repo = match[1]
+          options.branch = match[2]
+        } else {
+          // Fallback to current repo
+          options.repo = vault.scope.type === 'repo' ? vault.scope.identifier : undefined
+          options.branch = vault.scope.type === 'repo' ? vault.scope.branch : undefined
+        }
       }
 
       const filePath = getEntry(vault, key, options)
+      console.log('Got filePath:', filePath)
+
       if (!filePath) {
         return c.json({ error: 'Entry not found' }, 404)
       }
 
       const content = catEntry(vault, key, options)
+      console.log('Got content length:', content?.length)
+
       return c.json({ content, filePath })
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)

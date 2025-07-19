@@ -120,7 +120,7 @@ export default function EntryTable(props: EntryTableProps) {
 
   return (
     <div class="overflow-x-auto">
-      <table class="table table-sm">
+      <table class="table">
         <thead>
           <tr>
             <th>
