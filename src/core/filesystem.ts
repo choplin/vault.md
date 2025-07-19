@@ -19,7 +19,7 @@ function getProjectDir(project: string): string {
 
 function getFilePath(project: string, key: string, version: number): string {
   const projectDir = getProjectDir(project)
-  return join(projectDir, `${key}_${version}.txt`)
+  return join(projectDir, `${key}_v${version}.txt`)
 }
 
 export function saveFile(

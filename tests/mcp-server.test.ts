@@ -39,7 +39,7 @@ describe('MCP Server Operations', () => {
         description: 'test description',
       })
 
-      expect(path).toContain('test-key_1.txt')
+      expect(path).toContain('test-key_v1.txt')
     })
   })
 

@@ -69,7 +69,7 @@ describe('vault functions', () => {
 
       const path = setEntry(ctx, 'test-key', testFile)
 
-      expect(path).toContain('test-key_1.txt')
+      expect(path).toContain('test-key_v1.txt')
       expect(path).toContain('global')
     })
 
@@ -91,8 +91,8 @@ describe('vault functions', () => {
       writeFileSync(testFile, 'v2')
       const path2 = setEntry(ctx, 'test-key', testFile)
 
-      expect(path1).toContain('test-key_1.txt')
-      expect(path2).toContain('test-key_2.txt')
+      expect(path1).toContain('test-key_v1.txt')
+      expect(path2).toContain('test-key_v2.txt')
     })
   })
 
@@ -107,7 +107,7 @@ describe('vault functions', () => {
       const path = getEntry(ctx, 'test-key')
 
       expect(path).toBeDefined()
-      expect(path).toContain('test-key_1.txt')
+      expect(path).toContain('test-key_v1.txt')
     })
 
     it('should return undefined for non-existent key', () => {
