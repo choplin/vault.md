@@ -50,7 +50,7 @@ export default function Sidebar() {
           </svg>
           vault.md
         </h1>
-        <p class="text-sm text-base-content/60 mt-1">Knowledge vault for AI development</p>
+        <p class="text-base text-base-content/60 mt-1">Knowledge vault for AI development</p>
       </div>
 
       <Show
@@ -66,17 +66,17 @@ export default function Sidebar() {
           <Show when={getCurrentScopeDisplay()}>
             {(display) => (
               <div class="mb-3">
-                <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wider px-3 py-1 flex items-center">
-                  <MapPin class="w-3 h-3 mr-2" /> Current
+                <div class="text-sm font-semibold text-base-content/60 uppercase tracking-wider px-3 py-1 flex items-center">
+                  <MapPin class="w-4 h-4 mr-2" /> Current
                 </div>
                 <button
                   type="button"
                   onClick={selectCurrentScope}
-                  class="btn btn-ghost btn-sm w-full justify-start normal-case text-primary"
+                  class="btn btn-ghost w-full justify-start normal-case text-primary h-auto min-h-[2.5rem] py-2"
                 >
-                  <span class="font-medium">{display().displayName}</span>
+                  <span class="font-medium text-base">{display().displayName}</span>
                   <Show when={!display().isGlobal}>
-                    <span class="text-sm text-base-content/60">({display().branch})</span>
+                    <span class="text-base text-base-content/60">({display().branch})</span>
                   </Show>
                 </button>
               </div>
@@ -88,7 +88,7 @@ export default function Sidebar() {
             <button
               type="button"
               onClick={() => setAllScopesCollapsed(!allScopesCollapsed())}
-              class="w-full text-xs font-semibold text-base-content/60 uppercase tracking-wider px-3 py-2 flex items-center justify-between hover:bg-base-200 rounded"
+              class="w-full text-sm font-semibold text-base-content/60 uppercase tracking-wider px-3 py-2 flex items-center justify-between hover:bg-base-200 rounded"
             >
               <span>All Scopes</span>
               <ChevronRight class={`w-4 h-4 transition-transform ${allScopesCollapsed() ? '' : 'rotate-90'}`} />

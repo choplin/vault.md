@@ -48,28 +48,28 @@ export default function ScopeTree(props: ScopeTreeProps) {
           <button
             type="button"
             onClick={() => selectBranch('global')}
-            class={`btn btn-ghost btn-sm w-full justify-start normal-case ${
+            class={`btn btn-ghost w-full justify-start normal-case h-auto min-h-[2.5rem] py-2 ${
               isCurrentBranch('global') ? 'btn-active' : ''
             }`}
           >
-            <Globe class="w-4 h-4 mr-2 flex-shrink-0 text-base-content/60" />
-            <span class="font-medium text-base-content truncate">{props.repository.displayName}</span>
-            <span class={`ml-auto badge badge-sm ${isCurrentBranch('global') ? 'badge-primary' : ''}`}>
+            <Globe class="w-5 h-5 mr-2 flex-shrink-0 text-base-content/60" />
+            <span class="font-medium text-base text-base-content truncate">{props.repository.displayName}</span>
+            <span class={`ml-auto badge ${isCurrentBranch('global') ? 'badge-primary' : ''}`}>
               {props.repository.branches[0]?.entries.length || 0}
             </span>
           </button>
         }
       >
         {/* Repository with branches */}
-        <button type="button" onClick={toggleCollapse} class="btn btn-ghost btn-sm w-full justify-start normal-case">
+        <button type="button" onClick={toggleCollapse} class="btn btn-ghost w-full justify-start normal-case h-auto min-h-[2.5rem] py-2">
           <ChevronRight
-            class={`w-4 h-4 mr-1 flex-shrink-0 transition-transform text-base-content/40 ${
+            class={`w-5 h-5 mr-1 flex-shrink-0 transition-transform text-base-content/40 ${
               !isCollapsed() ? 'rotate-90' : ''
             }`}
           />
-          <Folder class="w-4 h-4 mr-2 flex-shrink-0 text-base-content/60" />
-          <span class="font-medium text-base-content truncate">{props.repository.displayName}</span>
-          <span class={`ml-auto badge badge-sm`}>
+          <Folder class="w-5 h-5 mr-2 flex-shrink-0 text-base-content/60" />
+          <span class="font-medium text-base text-base-content truncate">{props.repository.displayName}</span>
+          <span class={`ml-auto badge`}>
             {props.repository.branches.reduce((sum, branch) => sum + branch.entries.length, 0)}
           </span>
         </button>
@@ -77,22 +77,22 @@ export default function ScopeTree(props: ScopeTreeProps) {
 
       {/* Branches */}
       <Show when={!isGlobal() && !isCollapsed()}>
-        <div class="ml-5 mt-1">
+        <div class="ml-6 mt-1">
           <For each={props.repository.branches}>
             {(branch) => (
               <button
                 type="button"
                 onClick={() => selectBranch(branch.branch)}
-                class={`btn btn-ghost btn-sm w-full justify-start normal-case ${
+                class={`btn btn-ghost w-full justify-start normal-case h-auto min-h-[2.5rem] py-2 ${
                   isCurrentBranch(branch.branch) ? 'btn-active' : ''
                 }`}
               >
-                <GitBranch class="w-4 h-4 mr-2 flex-shrink-0 text-base-content/60" />
-                <span class="font-medium text-base-content truncate">{branch.branch}</span>
+                <GitBranch class="w-5 h-5 mr-2 flex-shrink-0 text-base-content/60" />
+                <span class="font-medium text-base text-base-content truncate">{branch.branch}</span>
                 <Show when={isCurrentBranch(branch.branch)}>
-                  <Check class="w-3 h-3 ml-2 text-primary" />
+                  <Check class="w-4 h-4 ml-2 text-primary" />
                 </Show>
-                <span class={`ml-auto badge badge-sm ${isCurrentBranch(branch.branch) ? 'badge-primary' : ''}`}>
+                <span class={`ml-auto badge ${isCurrentBranch(branch.branch) ? 'badge-primary' : ''}`}>
                   {branch.entries.length}
                 </span>
               </button>
