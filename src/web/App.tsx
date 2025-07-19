@@ -1,4 +1,4 @@
-import { createEffect, onMount, Show } from 'solid-js'
+import { createEffect, createSignal, onMount, Show } from 'solid-js'
 import ContentViewer from './components/ContentViewer'
 import EntryTable from './components/EntryTable'
 import Sidebar from './components/Sidebar'
@@ -7,7 +7,7 @@ import { searchQuery, setSearchQuery, setShowAllVersions, showAllVersions, viewM
 import { groupedScopes, selectedScope, setCurrentScope, setError, setLoading, setScopes } from './stores/vault'
 
 export default function App() {
-  let scopeEntries: () => VaultEntry[] = () => []
+  const [scopeEntries, setScopeEntries] = createSignal<VaultEntry[]>([])
 
   onMount(async () => {
     try {
@@ -29,20 +29,11 @@ export default function App() {
     if (!scope) return
 
     try {
-      await api.getScopeEntries(scope.identifier, scope.branch, showAllVersions())
-
-      // Find the matching scope in grouped data to get entries
-      const groups = groupedScopes()
-      for (const group of groups) {
-        for (const branch of group.branches) {
-          if (group.identifier === scope.identifier && branch.branch === scope.branch) {
-            scopeEntries = () => branch.entries
-            break
-          }
-        }
-      }
+      const result = await api.getScopeEntries(scope.identifier, scope.branch, showAllVersions())
+      setScopeEntries(result.entries || [])
     } catch (error) {
       console.error('Failed to load scope entries:', error)
+      setScopeEntries([])
     }
   })
 

@@ -1,9 +1,15 @@
 export interface VaultEntry {
+  id?: number
+  scopeId?: number
   key: string
-  description: string
+  description?: string
   scope: string
-  created_at: string
-  updated_at: string
+  version?: number
+  filePath?: string
+  hash?: string
+  createdAt?: string
+  created_at?: string
+  updated_at?: string
   versions?: VaultEntry[]
 }
 

@@ -54,8 +54,8 @@ export default function EntryTable(props: EntryTableProps) {
           bVal = b.description || ''
           break
         case 'createdAt':
-          aVal = new Date(a.created_at)
-          bVal = new Date(b.created_at)
+          aVal = new Date(a.createdAt || a.created_at || '')
+          bVal = new Date(b.createdAt || b.created_at || '')
           break
       }
 
@@ -170,7 +170,7 @@ export default function EntryTable(props: EntryTableProps) {
                   <td class="font-medium">{entry.key}</td>
                   <td>{entry.version || 1}</td>
                   <td class="max-w-md truncate text-base-content/80">{entry.description || '-'}</td>
-                  <td class="text-base-content/60">{formatDate(entry.created_at)}</td>
+                  <td class="text-base-content/60">{formatDate(entry.createdAt || entry.created_at || '')}</td>
                 </tr>
               )}
             </For>
