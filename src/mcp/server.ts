@@ -65,8 +65,8 @@ export class VaultMCPServer {
       },
     )
 
-    // Initialize vault context with global scope by default for MCP
-    this.vaultContext = createVault({ global: true })
+    // Initialize vault context with default scope (current repository)
+    this.vaultContext = createVault({})
 
     this.setupHandlers()
   }
