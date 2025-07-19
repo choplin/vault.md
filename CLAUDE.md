@@ -5,6 +5,11 @@
 - **NEVER commit changes without user approval**
   - After making changes, always show what was changed and wait for user confirmation
   - Do not automatically run `git commit` unless explicitly told to
+- **English only in codebase**
+  - All code comments must be in English
+  - Test descriptions and test data must be in English
+  - Error messages and console outputs must be in English
+  - No Japanese text anywhere in the repository
 
 ## Changelog Management
 

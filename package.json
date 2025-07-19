@@ -15,7 +15,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "vault": "./dist/cli.js"
+    "vault": "./dist/cli.js",
+    "vault.md": "./dist/cli.js"
   },
   "files": [
     "dist"
