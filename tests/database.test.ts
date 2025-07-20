@@ -7,6 +7,10 @@ import {
   closeDatabase,
   createDatabase,
   deleteScopedEntry,
+  deleteEntryVersion,
+  deleteEntryAllVersions,
+  deleteScope,
+  deleteIdentifierAllBranches,
   getScopedEntry,
   getLatestScopedEntry,
   getNextScopedVersion,
@@ -354,6 +358,86 @@ describe('database functions', () => {
     it('should return false for non-existent entry', () => {
       const result = deleteScopedEntry(ctx, deleteScopeId, 'non-existent')
       expect(result).toBe(false)
+    })
+  })
+
+  describe('new deletion functions', () => {
+    let testScopeId: number
+    let testScope2Id: number
+
+    beforeEach(() => {
+      // Create test scopes
+      const scope1: RepoScope = {
+        type: 'repo',
+        identifier: '/test/delete-func',
+        branch: 'main',
+        remoteUrl: 'https://github.com/test/repo',
+      }
+      testScopeId = getOrCreateScope(ctx, scope1)
+
+      const scope2: RepoScope = {
+        type: 'repo',
+        identifier: '/test/delete-func',
+        branch: 'dev',
+        remoteUrl: 'https://github.com/test/repo',
+      }
+      testScope2Id = getOrCreateScope(ctx, scope2)
+
+      // Add test entries
+      insertScopedEntry(ctx, {
+        scopeId: testScopeId,
+        version: 1,
+        key: 'test-key',
+        filePath: '/tmp/v1.txt',
+        hash: 'hash1',
+      })
+      insertScopedEntry(ctx, {
+        scopeId: testScopeId,
+        version: 2,
+        key: 'test-key',
+        filePath: '/tmp/v2.txt',
+        hash: 'hash2',
+      })
+      insertScopedEntry(ctx, {
+        scopeId: testScope2Id,
+        version: 1,
+        key: 'test-key2',
+        filePath: '/tmp/v3.txt',
+        hash: 'hash3',
+      })
+    })
+
+    it('should delete specific version with deleteEntryVersion', () => {
+      const result = deleteEntryVersion(ctx, testScopeId, 'test-key', 1)
+
+      expect(result).toBe(1)
+      expect(getScopedEntry(ctx, testScopeId, 'test-key', 1)).toBeUndefined()
+      expect(getScopedEntry(ctx, testScopeId, 'test-key', 2)).toBeDefined()
+    })
+
+    it('should delete all versions with deleteEntryAllVersions', () => {
+      const result = deleteEntryAllVersions(ctx, testScopeId, 'test-key')
+
+      expect(result).toBe(2)
+      expect(getScopedEntry(ctx, testScopeId, 'test-key', 1)).toBeUndefined()
+      expect(getScopedEntry(ctx, testScopeId, 'test-key', 2)).toBeUndefined()
+    })
+
+    it('should delete entire scope with deleteScope', () => {
+      const result = deleteScope(ctx, '/test/delete-func', 'main')
+
+      expect(result).toBe(2)
+      expect(listScopedEntries(ctx, testScopeId)).toEqual([])
+      // Other branch should still exist
+      expect(listScopedEntries(ctx, testScope2Id).length).toBe(1)
+    })
+
+    it('should delete all branches with deleteIdentifierAllBranches', () => {
+      const result = deleteIdentifierAllBranches(ctx, '/test/delete-func')
+
+      expect(result).toBe(3)
+      expect(listScopedEntries(ctx, testScopeId)).toEqual([])
+      expect(listScopedEntries(ctx, testScope2Id)).toEqual([])
     })
   })
 

@@ -5,7 +5,11 @@ import {
   catEntry,
   closeVault,
   createVault,
-  deleteEntry,
+  deleteAllBranches,
+  deleteBranch,
+  deleteCurrentScope,
+  deleteKey,
+  deleteVersion,
   editEntry,
   getEntry,
   getInfo,
@@ -171,32 +175,141 @@ program
   })
 
 program
-  .command('delete <key>')
-  .description('Delete key from vault')
+  .command('delete [key]')
+  .description('Delete entries from vault')
   .option('--version <version>', 'Delete specific version', parseInt)
   .option('--global', 'Delete from global scope')
   .option('--repo <path>', 'Delete from specific repository')
   .option('--branch <name>', 'Delete from specific branch')
-  .action((key, options) => {
+  .option('--current-scope', 'Delete vault for current scope (identifier + branch)')
+  .option('--delete-branch <branch>', 'Delete vault for specific branch')
+  .option('--all-branches', 'Delete entire vault (all branches) of current identifier')
+  .option('--force', 'Skip confirmation prompt')
+  .action(async (key, options) => {
     try {
       const vault = createVault({
         global: options.global,
         repo: options.repo,
         branch: options.branch,
       })
-      const deleted = deleteEntry(vault, key, {
-        version: options.version,
-        global: options.global,
-        repo: options.repo,
-        branch: options.branch,
-      })
 
-      if (deleted) {
-        console.log(`Deleted: ${key}`)
+      // Determine what to delete
+      if (options.currentScope) {
+        // Delete current scope
+        if (!options.force) {
+          const readline = await import('node:readline/promises')
+          const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+          })
+          const answer = await rl.question(
+            `Delete scope '${vault.scope.type === 'repo' ? `${vault.scope.identifier} (${vault.scope.branch})` : 'global'}' with all entries? This action cannot be undone. (y/N) `,
+          )
+          rl.close()
+          if (answer.toLowerCase() !== 'y') {
+            console.log('Deletion cancelled')
+            closeVault(vault)
+            return
+          }
+        }
+        const deletedCount = deleteCurrentScope(vault)
+        console.log(`Deleted scope with ${deletedCount} entries`)
+      } else if (options.deleteBranch) {
+        // Delete vault for specific branch
+        if (!options.force) {
+          const readline = await import('node:readline/promises')
+          const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+          })
+          const answer = await rl.question(
+            `Delete vault for branch '${options.deleteBranch}' of '${vault.scope.type === 'repo' ? vault.scope.identifier : 'global'}'? This action cannot be undone. (y/N) `,
+          )
+          rl.close()
+          if (answer.toLowerCase() !== 'y') {
+            console.log('Deletion cancelled')
+            closeVault(vault)
+            return
+          }
+        }
+        const deletedCount = deleteBranch(vault, options.deleteBranch)
+        console.log(`Deleted vault for branch with ${deletedCount} entries`)
+      } else if (options.allBranches) {
+        // Delete entire vault
+        if (!options.force) {
+          const readline = await import('node:readline/promises')
+          const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+          })
+          const answer = await rl.question(
+            `Delete entire vault for '${vault.scope.type === 'repo' ? vault.scope.identifier : 'global'}'? This will remove all data across all branches. (y/N) `,
+          )
+          rl.close()
+          if (answer.toLowerCase() !== 'y') {
+            console.log('Deletion cancelled')
+            closeVault(vault)
+            return
+          }
+        }
+        const deletedCount = deleteAllBranches(vault)
+        console.log(`Deleted entire vault with ${deletedCount} total entries`)
+      } else if (key) {
+        // Delete key or version
+        if (options.version) {
+          // Delete specific version
+          if (!options.force) {
+            const readline = await import('node:readline/promises')
+            const rl = readline.createInterface({
+              input: process.stdin,
+              output: process.stdout,
+            })
+            const answer = await rl.question(`Delete version ${options.version} of '${key}'? (y/N) `)
+            rl.close()
+            if (answer.toLowerCase() !== 'y') {
+              console.log('Deletion cancelled')
+              closeVault(vault)
+              return
+            }
+          }
+          const deleted = deleteVersion(vault, key, options.version)
+          if (deleted) {
+            console.log(`Deleted version ${options.version} of key '${key}'`)
+          } else {
+            console.error(`Version ${options.version} of key '${key}' not found`)
+            process.exit(1)
+          }
+        } else {
+          // Delete all versions of key
+          if (!options.force) {
+            const readline = await import('node:readline/promises')
+            const rl = readline.createInterface({
+              input: process.stdin,
+              output: process.stdout,
+            })
+            const answer = await rl.question(
+              `Delete all versions of key '${key}'? This key will be permanently removed. (y/N) `,
+            )
+            rl.close()
+            if (answer.toLowerCase() !== 'y') {
+              console.log('Deletion cancelled')
+              closeVault(vault)
+              return
+            }
+          }
+          const deletedCount = deleteKey(vault, key)
+          if (deletedCount > 0) {
+            console.log(`Deleted ${deletedCount} versions of key '${key}'`)
+          } else {
+            console.error(`Key '${key}' not found`)
+            process.exit(1)
+          }
+        }
       } else {
-        console.error(`Key not found: ${key}`)
+        console.error('Please specify a key or use --current-scope, --delete-branch, or --all-branches')
         process.exit(1)
       }
+
       closeVault(vault)
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : String(error))

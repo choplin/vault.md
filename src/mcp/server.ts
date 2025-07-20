@@ -39,6 +39,28 @@ const DeleteEntrySchema = z.object({
   branch: z.string().optional().describe('Use specific branch (with repo option)'),
 })
 
+const DeleteVersionSchema = z.object({
+  key: z.string().describe('The key for the vault entry'),
+  version: z.number().describe('Specific version to delete'),
+  force: z.boolean().optional().describe('Skip confirmation (always true for MCP)'),
+})
+
+const DeleteKeySchema = z.object({
+  key: z.string().describe('The key to delete completely'),
+  force: z.boolean().optional().describe('Skip confirmation (always true for MCP)'),
+})
+
+const DeleteBranchSchema = z.object({
+  branch: z.string().optional().describe('Branch to delete (current branch if not specified)'),
+  scope: z.string().optional().describe('Scope identifier (current scope if not specified)'),
+  force: z.boolean().optional().describe('Skip confirmation (always true for MCP)'),
+})
+
+const DeleteScopeSchema = z.object({
+  scope: z.string().optional().describe('Scope identifier (current scope if not specified)'),
+  force: z.boolean().optional().describe('Skip confirmation (always true for MCP)'),
+})
+
 const InfoEntrySchema = z.object({
   key: z.string().describe('The key for the vault entry'),
   version: z.number().optional().describe('Specific version (latest if not specified)'),
@@ -147,6 +169,54 @@ export class VaultMCPServer {
               branch: { type: 'string', description: 'Use specific branch (with repo option)' },
             },
             required: ['key'],
+          },
+        },
+        {
+          name: 'vault_delete_version',
+          description: 'Delete a specific version of an entry',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              key: { type: 'string', description: 'The key for the vault entry' },
+              version: { type: 'number', description: 'Specific version to delete' },
+              force: { type: 'boolean', description: 'Skip confirmation (always true for MCP)' },
+            },
+            required: ['key', 'version'],
+          },
+        },
+        {
+          name: 'vault_delete_key',
+          description: 'Delete all versions of a key',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              key: { type: 'string', description: 'The key to delete completely' },
+              force: { type: 'boolean', description: 'Skip confirmation (always true for MCP)' },
+            },
+            required: ['key'],
+          },
+        },
+        {
+          name: 'vault_delete_branch',
+          description: 'Delete vault for a specific branch and all its entries',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              branch: { type: 'string', description: 'Branch to delete (current branch if not specified)' },
+              scope: { type: 'string', description: 'Scope identifier (current scope if not specified)' },
+              force: { type: 'boolean', description: 'Skip confirmation (always true for MCP)' },
+            },
+          },
+        },
+        {
+          name: 'vault_delete_scope',
+          description: 'Delete current scope (identifier + branch)',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              scope: { type: 'string', description: 'Scope identifier (current scope if not specified)' },
+              force: { type: 'boolean', description: 'Skip confirmation (always true for MCP)' },
+            },
           },
         },
       ],
@@ -273,6 +343,91 @@ export class VaultMCPServer {
                     : `Entry not found: ${params.key}`,
                 },
               ],
+            }
+          }
+
+          case 'vault_delete_version': {
+            const params = DeleteVersionSchema.parse(args)
+            const success = vault.deleteVersion(this.vaultContext, params.key, params.version)
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: success
+                    ? `Deleted version ${params.version} of key '${params.key}'`
+                    : `Version ${params.version} of key '${params.key}' not found`,
+                },
+              ],
+            }
+          }
+
+          case 'vault_delete_key': {
+            const params = DeleteKeySchema.parse(args)
+            const deletedCount = vault.deleteKey(this.vaultContext, params.key)
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text:
+                    deletedCount > 0
+                      ? `Deleted ${deletedCount} versions of key '${params.key}'`
+                      : `Key '${params.key}' not found`,
+                },
+              ],
+            }
+          }
+
+          case 'vault_delete_branch': {
+            const params = DeleteBranchSchema.parse(args)
+            try {
+              const deletedCount = params.branch
+                ? vault.deleteBranch(this.vaultContext, params.branch)
+                : vault.deleteCurrentScope(this.vaultContext)
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Deleted ${params.branch ? `branch '${params.branch}'` : 'current scope'} with ${deletedCount} entries`,
+                  },
+                ],
+              }
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Error: ${error instanceof Error ? error.message : 'Failed to delete branch'}`,
+                  },
+                ],
+              }
+            }
+          }
+
+          case 'vault_delete_scope': {
+            DeleteScopeSchema.parse(args) // Validate args but we don't need params
+            try {
+              const deletedCount = vault.deleteCurrentScope(this.vaultContext)
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Deleted current scope with ${deletedCount} entries`,
+                  },
+                ],
+              }
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Error: ${error instanceof Error ? error.message : 'Failed to delete scope'}`,
+                  },
+                ],
+              }
             }
           }
 

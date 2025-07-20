@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { encodeProjectPath, getObjectsDir } from './config.js'
 
@@ -12,7 +12,7 @@ function ensureObjectsDir(): void {
   }
 }
 
-function getProjectDir(project: string): string {
+export function getProjectDir(project: string): string {
   const encodedProject = encodeProjectPath(project)
   return join(getObjectsDir(), encodedProject)
 }
@@ -67,4 +67,35 @@ export function verifyFile(filePath: string, expectedHash: string): boolean {
   const content = readFile(filePath)
   const actualHash = calculateHash(content)
   return actualHash === expectedHash
+}
+
+// Delete all files for a project (scope)
+export function deleteProjectFiles(project: string): void {
+  const projectDir = getProjectDir(project)
+  if (existsSync(projectDir)) {
+    rmSync(projectDir, { recursive: true, force: true })
+  }
+}
+
+// Delete all files matching a key pattern
+export function deleteKeyFiles(project: string, key: string): number {
+  const projectDir = getProjectDir(project)
+  if (!existsSync(projectDir)) {
+    return 0
+  }
+
+  const encodedKey = encodeURIComponent(key)
+  const files = readdirSync(projectDir)
+  let deletedCount = 0
+
+  for (const file of files) {
+    // Match files like "encodedKey_v1.txt", "encodedKey_v2.txt", etc.
+    if (file.startsWith(`${encodedKey}_v`) && file.endsWith('.txt')) {
+      const filePath = join(projectDir, file)
+      deleteFile(filePath)
+      deletedCount++
+    }
+  }
+
+  return deletedCount
 }

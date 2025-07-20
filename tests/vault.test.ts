@@ -8,6 +8,11 @@ import {
   closeVault,
   createVault,
   deleteEntry,
+  deleteVersion,
+  deleteKey,
+  deleteCurrentScope,
+  deleteBranch,
+  deleteAllBranches,
   getEntry,
   getInfo,
   listEntries,
@@ -248,6 +253,47 @@ describe('vault functions', () => {
     it('should return false for non-existent key', () => {
       const result = deleteEntry(ctx, 'non-existent')
       expect(result).toBe(false)
+    })
+  })
+
+  describe('new deletion functions', () => {
+    beforeEach(() => {
+      const testFile = join(tempDir, 'test.txt')
+      writeFileSync(testFile, 'v1')
+      setEntry(ctx, 'delete-test', testFile)
+      writeFileSync(testFile, 'v2')
+      setEntry(ctx, 'delete-test', testFile)
+
+      const testFile2 = join(tempDir, 'test2.txt')
+      writeFileSync(testFile2, 'content')
+      setEntry(ctx, 'delete-test2', testFile2)
+    })
+
+    it('should delete specific version with deleteVersion', () => {
+      const result = deleteVersion(ctx, 'delete-test', 1)
+
+      expect(result).toBe(1)
+      expect(getEntry(ctx, 'delete-test', { version: 1 })).toBeUndefined()
+      expect(getEntry(ctx, 'delete-test', { version: 2 })).toBeDefined()
+    })
+
+    it('should delete all versions with deleteKey', () => {
+      const result = deleteKey(ctx, 'delete-test')
+
+      expect(result).toBe(2)
+      expect(getEntry(ctx, 'delete-test')).toBeUndefined()
+    })
+
+    it.skip('should delete current scope with deleteCurrentScope', () => {
+      // Skip this test as it would delete the global scope
+    })
+
+    it.skip('should delete branch with deleteBranch', () => {
+      // This requires a repo context setup
+    })
+
+    it.skip('should delete all branches with deleteAllBranches', () => {
+      // This requires a repo context setup
     })
   })
 

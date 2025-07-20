@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
@@ -10,7 +10,9 @@ process.env.VAULT_DIR = testDir
 import {
   calculateHash,
   deleteFile,
+  deleteProjectFiles,
   fileExists,
+  getProjectDir,
   readFile,
   saveFile,
   verifyFile,
@@ -81,6 +83,30 @@ describe('filesystem functions', () => {
   describe('deleteFile', () => {
     it('should not throw error for non-existent file', () => {
       expect(() => deleteFile('/non/existent/file.txt')).not.toThrow()
+    })
+  })
+
+  describe('deleteProjectFiles', () => {
+    it('should delete entire project directory', () => {
+      // Create test files in a project
+      const content = 'Test content'
+      saveFile('test-project-del', 'key1', 1, content)
+      saveFile('test-project-del', 'key2', 1, content)
+      saveFile('test-project-del', 'key2', 2, content)
+
+      // Verify project exists
+      const projectDir = getProjectDir('test-project-del')
+      expect(existsSync(projectDir)).toBe(true)
+
+      // Delete project
+      deleteProjectFiles('test-project-del')
+
+      // Verify project is deleted
+      expect(existsSync(projectDir)).toBe(false)
+    })
+
+    it('should not throw error for non-existent project', () => {
+      expect(() => deleteProjectFiles('non-existent-project')).not.toThrow()
     })
   })
 

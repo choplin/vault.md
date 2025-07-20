@@ -201,6 +201,89 @@ export function deleteEntry(ctx: VaultContext, key: string, options: VaultOption
   return db.deleteScopedEntry(ctx.database, scopeId, key, options.version)
 }
 
+// Delete a specific version
+export function deleteVersion(ctx: VaultContext, key: string, version: number): number {
+  const entry = db.getScopedEntry(ctx.database, ctx.scopeId, key, version)
+  if (!entry) {
+    return 0
+  }
+
+  // Delete file
+  fs.deleteFile(entry.filePath)
+
+  // Delete from database
+  return db.deleteEntryVersion(ctx.database, ctx.scopeId, key, version)
+}
+
+// Delete all versions of a key
+export function deleteKey(ctx: VaultContext, key: string): number {
+  // Get all entries for this key
+  const entries = db.listScopedEntries(ctx.database, ctx.scopeId, true).filter((e) => e.key === key)
+
+  // Delete files
+  entries.forEach((entry) => {
+    fs.deleteFile(entry.filePath)
+  })
+
+  // Delete from database
+  return db.deleteEntryAllVersions(ctx.database, ctx.scopeId, key)
+}
+
+// Delete current scope (identifier + branch)
+export function deleteCurrentScope(ctx: VaultContext): number {
+  if (ctx.scope.type === 'global') {
+    throw new Error('Cannot delete global scope')
+  }
+
+  const scopePath = `${ctx.scope.identifier}/${ctx.scope.branch}`.replace(/[/\\:]/g, '_')
+
+  // Delete all files for this scope
+  fs.deleteProjectFiles(scopePath)
+
+  // Delete from database
+  return db.deleteScope(ctx.database, ctx.scope.identifier, ctx.scope.branch)
+}
+
+// Delete a specific branch of current identifier
+export function deleteBranch(ctx: VaultContext, branch: string): number {
+  if (ctx.scope.type === 'global') {
+    throw new Error('Cannot delete branches from global scope')
+  }
+
+  const scopePath = `${ctx.scope.identifier}/${branch}`.replace(/[/\\:]/g, '_')
+
+  // Delete all files for this branch
+  fs.deleteProjectFiles(scopePath)
+
+  // Delete from database
+  return db.deleteScope(ctx.database, ctx.scope.identifier, branch)
+}
+
+// Delete all branches of current identifier
+export function deleteAllBranches(ctx: VaultContext): number {
+  if (ctx.scope.type === 'global') {
+    throw new Error('Cannot delete branches from global scope')
+  }
+
+  // Get all scopes for this identifier
+  const allScopes = db.getAllScopes(ctx.database)
+  const scopesToDelete = allScopes.filter((s) => {
+    if (ctx.scope.type !== 'repo' || s.type !== 'repo') return false
+    return s.identifier === ctx.scope.identifier
+  })
+
+  // Delete files for each scope
+  scopesToDelete.forEach((scope) => {
+    if (scope.type === 'repo') {
+      const scopePath = `${scope.identifier}/${scope.branch}`.replace(/[/\\:]/g, '_')
+      fs.deleteProjectFiles(scopePath)
+    }
+  })
+
+  // Delete from database
+  return db.deleteIdentifierAllBranches(ctx.database, ctx.scope.identifier)
+}
+
 export function getInfo(ctx: VaultContext, key: string, options: VaultOptions = {}): VaultEntry | undefined {
   // Handle different scope if specified
   let scopeId = ctx.scopeId

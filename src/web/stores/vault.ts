@@ -1,5 +1,5 @@
 import { createMemo, createSignal } from 'solid-js'
-import type { ScopeGroup, VaultEntry } from '../lib/api'
+import { api, type ScopeGroup, type VaultEntry } from '../lib/api'
 
 export interface RepositoryGroup {
   identifier: string
@@ -101,3 +101,27 @@ export const groupedScopes = createMemo(() => {
 
   return groups
 })
+
+// Refresh entries from the server
+export async function refreshEntries() {
+  try {
+    setLoading(true)
+    setError(null)
+
+    const data = await api.getAllEntries()
+    setCurrentScope(data.currentScope)
+    setScopes(data.scopes)
+
+    // Force refresh of selected scope by resetting and re-setting it
+    const current = selectedScope()
+    if (current) {
+      setSelectedScope(null)
+      setTimeout(() => setSelectedScope(current), 0)
+    }
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Failed to fetch entries')
+    console.error('Failed to fetch entries:', err)
+  } finally {
+    setLoading(false)
+  }
+}

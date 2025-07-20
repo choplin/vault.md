@@ -3,7 +3,16 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { getAllScopedEntriesGroupedByScope, listScopedEntries } from '../core/database.js'
+import {
+  deleteEntryAllVersions,
+  deleteEntryVersion,
+  deleteIdentifierAllBranches,
+  deleteScope,
+  getAllScopedEntriesGroupedByScope,
+  getOrCreateScope,
+  listScopedEntries,
+} from '../core/database.js'
+import { deleteFile, deleteProjectFiles } from '../core/filesystem.js'
 import { catEntry, getEntry, listEntries } from '../core/index.js'
 import { formatScope } from '../core/scope.js'
 import type { VaultOptions } from '../core/types.js'
@@ -159,6 +168,113 @@ export function createWebServer(vault: VaultContext) {
       console.log('Got content length:', content?.length)
 
       return c.json({ content, filePath })
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
+    }
+  })
+
+  // Delete endpoints
+  app.delete('/api/entries/:identifier/:branch/:key/:version?', (c) => {
+    try {
+      const identifier = decodeURIComponent(c.req.param('identifier'))
+      const branch = decodeURIComponent(c.req.param('branch'))
+      const key = decodeURIComponent(c.req.param('key'))
+      const version = c.req.param('version') ? parseInt(c.req.param('version')!) : undefined
+
+      // Create scope object for database lookup
+      const scope =
+        identifier === 'global' && branch === 'global'
+          ? { type: 'global' as const }
+          : {
+              type: 'repo' as const,
+              identifier,
+              branch,
+              workPath:
+                vault.scope.type === 'repo' && vault.scope.identifier === identifier ? vault.scope.workPath : undefined,
+              remoteUrl:
+                vault.scope.type === 'repo' && vault.scope.identifier === identifier
+                  ? vault.scope.remoteUrl
+                  : undefined,
+            }
+
+      // Get scope ID
+      const scopeId = getOrCreateScope(vault.database, scope)
+
+      // Get entries to find file paths before deletion
+      const entries = listScopedEntries(vault.database, scopeId, true).filter((e) => e.key === key)
+
+      if (version) {
+        // Delete specific version
+        const entry = entries.find((e) => e.version === version)
+        if (!entry) {
+          return c.json({ error: 'Version not found' }, 404)
+        }
+
+        // Delete file
+        deleteFile(entry.filePath)
+
+        // Delete from database
+        const deleted = deleteEntryVersion(vault.database, scopeId, key, version)
+        if (deleted > 0) {
+          return c.json({ message: `Deleted version ${version} of key '${key}'` })
+        }
+        return c.json({ error: 'Failed to delete version' }, 500)
+      } else {
+        // Delete all versions of key
+        if (entries.length === 0) {
+          return c.json({ error: 'Key not found' }, 404)
+        }
+
+        // Delete files
+        entries.forEach((entry) => {
+          deleteFile(entry.filePath)
+        })
+
+        // Delete from database
+        const deletedCount = deleteEntryAllVersions(vault.database, scopeId, key)
+        if (deletedCount > 0) {
+          return c.json({ message: `Deleted ${deletedCount} versions of key '${key}'` })
+        }
+        return c.json({ error: 'Failed to delete key' }, 500)
+      }
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
+    }
+  })
+
+  app.delete('/api/branches/:identifier/:branch', (c) => {
+    try {
+      const identifier = decodeURIComponent(c.req.param('identifier'))
+      const branch = decodeURIComponent(c.req.param('branch'))
+
+      // Delete project files
+      const scopePath = `${identifier}/${branch}`.replace(/[/\\:]/g, '_')
+      deleteProjectFiles(scopePath)
+
+      // Delete from database
+      const deletedCount = deleteScope(vault.database, identifier, branch)
+      return c.json({ message: `Deleted scope with ${deletedCount} entries` })
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
+    }
+  })
+
+  app.delete('/api/identifiers/:identifier', (c) => {
+    try {
+      const identifier = decodeURIComponent(c.req.param('identifier'))
+
+      // Get all scopes for this identifier to delete files
+      const allScopes = getAllScopedEntriesGroupedByScope(vault.database)
+      for (const [scope, _] of allScopes) {
+        if (scope.type === 'repo' && scope.identifier === identifier) {
+          const scopePath = `${scope.identifier}/${scope.branch}`.replace(/[/\\:]/g, '_')
+          deleteProjectFiles(scopePath)
+        }
+      }
+
+      // Delete from database
+      const deletedCount = deleteIdentifierAllBranches(vault.database, identifier)
+      return c.json({ message: `Deleted all branches with ${deletedCount} total entries` })
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
     }

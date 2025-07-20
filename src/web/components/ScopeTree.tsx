@@ -1,15 +1,18 @@
 import { Check, ChevronRight, Folder, GitBranch, Globe } from 'lucide-solid'
-import { For, Show } from 'solid-js'
-import { api } from '../lib/api'
+import { createSignal, For, Show } from 'solid-js'
+import { api, deleteIdentifier, deleteScope } from '../lib/api'
 import { collapsedRepos, setViewMode, toggleRepoCollapse } from '../stores/ui'
 import type { RepositoryGroup } from '../stores/vault'
-import { currentScope, setSelectedScope } from '../stores/vault'
+import { currentScope, refreshEntries, setSelectedScope } from '../stores/vault'
 
 interface ScopeTreeProps {
   repository: RepositoryGroup
 }
 
 export default function ScopeTree(props: ScopeTreeProps) {
+  const [deleteConfirm, setDeleteConfirm] = createSignal<{ type: 'scope' | 'identifier'; branch?: string } | null>(null)
+  const [deleting, setDeleting] = createSignal(false)
+
   const isCollapsed = () => collapsedRepos().has(props.repository.identifier)
   const isGlobal = () => props.repository.identifier === 'global'
 
@@ -61,22 +64,51 @@ export default function ScopeTree(props: ScopeTreeProps) {
         }
       >
         {/* Repository with branches */}
-        <button
-          type="button"
-          onClick={toggleCollapse}
-          class="btn btn-ghost w-full justify-start normal-case h-auto min-h-[2.5rem] py-2"
-        >
-          <ChevronRight
-            class={`w-5 h-5 mr-1 flex-shrink-0 transition-transform text-base-content/40 ${
-              !isCollapsed() ? 'rotate-90' : ''
-            }`}
-          />
-          <Folder class="w-5 h-5 mr-2 flex-shrink-0 text-base-content/60" />
-          <span class="font-medium text-base text-base-content truncate">{props.repository.displayName}</span>
-          <span class={`ml-auto badge`}>
-            {props.repository.branches.reduce((sum, branch) => sum + branch.entries.length, 0)}
-          </span>
-        </button>
+        <div class="flex items-center">
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            class="btn btn-ghost flex-1 justify-start normal-case h-auto min-h-[2.5rem] py-2"
+          >
+            <ChevronRight
+              class={`w-5 h-5 mr-1 flex-shrink-0 transition-transform text-base-content/40 ${
+                !isCollapsed() ? 'rotate-90' : ''
+              }`}
+            />
+            <Folder class="w-5 h-5 mr-2 flex-shrink-0 text-base-content/60" />
+            <span class="font-medium text-base text-base-content truncate">{props.repository.displayName}</span>
+            <span class={`ml-auto badge`}>
+              {props.repository.branches.reduce((sum, branch) => sum + branch.entries.length, 0)}
+            </span>
+          </button>
+          <div class="dropdown dropdown-end">
+            <button type="button" tabindex="0" class="btn btn-ghost btn-xs ml-1" onClick={(e) => e.stopPropagation()}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-4 h-4"
+                role="img"
+                aria-label="More options"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"
+                />
+              </svg>
+            </button>
+            <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+              <li>
+                <button type="button" onClick={() => setDeleteConfirm({ type: 'identifier' })}>
+                  Delete entire vault
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
       </Show>
 
       {/* Branches */}
@@ -84,25 +116,105 @@ export default function ScopeTree(props: ScopeTreeProps) {
         <div class="ml-6 mt-1">
           <For each={props.repository.branches}>
             {(branch) => (
-              <button
-                type="button"
-                onClick={() => selectBranch(branch.branch)}
-                class={`btn btn-ghost w-full justify-start normal-case h-auto min-h-[2.5rem] py-2 ${
-                  isCurrentBranch(branch.branch) ? 'btn-active' : ''
-                }`}
-              >
-                <GitBranch class="w-5 h-5 mr-2 flex-shrink-0 text-base-content/60" />
-                <span class="font-medium text-base text-base-content truncate">{branch.branch}</span>
-                <Show when={isCurrentBranch(branch.branch)}>
-                  <Check class="w-4 h-4 ml-2 text-primary" />
-                </Show>
-                <span class={`ml-auto badge ${isCurrentBranch(branch.branch) ? 'badge-primary' : ''}`}>
-                  {branch.entries.length}
-                </span>
-              </button>
+              <div class="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => selectBranch(branch.branch)}
+                  class={`btn btn-ghost flex-1 justify-start normal-case h-auto min-h-[2.5rem] py-2 ${
+                    isCurrentBranch(branch.branch) ? 'btn-active' : ''
+                  }`}
+                >
+                  <GitBranch class="w-5 h-5 mr-2 flex-shrink-0 text-base-content/60" />
+                  <span class="font-medium text-base text-base-content truncate">{branch.branch}</span>
+                  <Show when={isCurrentBranch(branch.branch)}>
+                    <Check class="w-4 h-4 ml-2 text-primary" />
+                  </Show>
+                  <span class={`ml-auto badge ${isCurrentBranch(branch.branch) ? 'badge-primary' : ''}`}>
+                    {branch.entries.length}
+                  </span>
+                </button>
+                <div class="dropdown dropdown-end">
+                  <button
+                    type="button"
+                    tabindex="0"
+                    class="btn btn-ghost btn-xs ml-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      stroke="currentColor"
+                      class="w-4 h-4"
+                      role="img"
+                      aria-label="More options"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"
+                      />
+                    </svg>
+                  </button>
+                  <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                    <li>
+                      <button type="button" onClick={() => setDeleteConfirm({ type: 'scope', branch: branch.branch })}>
+                        Delete vault for this branch
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             )}
           </For>
         </div>
+      </Show>
+
+      {/* Delete confirmation modal */}
+      <Show when={deleteConfirm()}>
+        {(confirm) => (
+          <div class="modal modal-open" role="dialog" aria-modal="true">
+            <div class="modal-box">
+              <h3 class="font-bold text-lg">Confirm Deletion</h3>
+              <p class="py-4">
+                {confirm().type === 'scope'
+                  ? `Delete vault for branch '${confirm().branch}' of '${props.repository.displayName}'? This action cannot be undone.`
+                  : `Delete entire vault for '${props.repository.displayName}'? This will remove all data across all branches.`}
+              </p>
+              <div class="modal-action">
+                <button type="button" class="btn" onClick={() => setDeleteConfirm(null)} disabled={deleting()}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-error"
+                  disabled={deleting()}
+                  onClick={async () => {
+                    setDeleting(true)
+                    try {
+                      if (confirm().type === 'scope' && confirm().branch) {
+                        await deleteScope(props.repository.identifier, confirm().branch)
+                      } else {
+                        await deleteIdentifier(props.repository.identifier)
+                      }
+                      setDeleteConfirm(null)
+                      // Refresh the entries list
+                      await refreshEntries()
+                    } catch (error) {
+                      console.error('Failed to delete:', error)
+                      alert(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                    } finally {
+                      setDeleting(false)
+                    }
+                  }}
+                >
+                  {deleting() ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </Show>
     </div>
   )

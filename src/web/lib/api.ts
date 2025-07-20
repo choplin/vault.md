@@ -54,3 +54,51 @@ export const api = {
     return data.content
   },
 }
+
+// Parse scope string to extract identifier and branch
+function parseScopeString(scope: string): { identifier: string; branch: string } {
+  if (scope === 'Global' || scope === 'global') {
+    return { identifier: 'global', branch: 'global' }
+  }
+
+  // Parse "repoPath (branch)" format
+  const match = scope.match(/^(.+) \((.+)\)$/)
+  if (match) {
+    return { identifier: match[1], branch: match[2] }
+  }
+
+  // Fallback
+  return { identifier: scope, branch: 'default' }
+}
+
+export async function deleteEntry(scope: string, key: string, version?: number): Promise<void> {
+  const { identifier, branch } = parseScopeString(scope)
+
+  const path = version
+    ? `/api/entries/${encodeURIComponent(identifier)}/${encodeURIComponent(branch)}/${encodeURIComponent(key)}/${version}`
+    : `/api/entries/${encodeURIComponent(identifier)}/${encodeURIComponent(branch)}/${encodeURIComponent(key)}`
+
+  const res = await fetch(path, { method: 'DELETE' })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.error || 'Failed to delete entry')
+  }
+}
+
+export async function deleteScope(identifier: string, branch: string): Promise<void> {
+  const path = `/api/branches/${encodeURIComponent(identifier)}/${encodeURIComponent(branch)}`
+  const res = await fetch(path, { method: 'DELETE' })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.error || 'Failed to delete scope')
+  }
+}
+
+export async function deleteIdentifier(identifier: string): Promise<void> {
+  const path = `/api/identifiers/${encodeURIComponent(identifier)}`
+  const res = await fetch(path, { method: 'DELETE' })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.error || 'Failed to delete identifier')
+  }
+}

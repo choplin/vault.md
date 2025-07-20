@@ -254,6 +254,77 @@ export function deleteScopedEntry(ctx: DatabaseContext, scopeId: number, key: st
   return result.changes > 0
 }
 
+// Delete a specific version of an entry
+export function deleteEntryVersion(ctx: DatabaseContext, scopeId: number, key: string, version: number): number {
+  const stmt = ctx.db.prepare('DELETE FROM entries WHERE scope_id = ? AND key = ? AND version = ?')
+  const result = stmt.run(scopeId, key, version)
+  return result.changes
+}
+
+// Delete all versions of a key
+export function deleteEntryAllVersions(ctx: DatabaseContext, scopeId: number, key: string): number {
+  const stmt = ctx.db.prepare('DELETE FROM entries WHERE scope_id = ? AND key = ?')
+  const result = stmt.run(scopeId, key)
+  return result.changes
+}
+
+// Delete a scope (identifier + branch) and all its entries
+export function deleteScope(ctx: DatabaseContext, identifier: string, branch: string): number {
+  // Use transaction to ensure consistency
+  const deleteScopeTransaction = ctx.db.transaction(() => {
+    // Get scope id
+    const scope = ctx.db.prepare('SELECT id FROM scopes WHERE identifier = ? AND branch = ?').get(identifier, branch) as
+      | { id: number }
+      | undefined
+
+    if (!scope) {
+      return 0
+    }
+
+    // Delete all entries
+    const entriesStmt = ctx.db.prepare('DELETE FROM entries WHERE scope_id = ?')
+    const entriesResult = entriesStmt.run(scope.id)
+
+    // Delete scope
+    const scopeStmt = ctx.db.prepare('DELETE FROM scopes WHERE id = ?')
+    scopeStmt.run(scope.id)
+
+    return entriesResult.changes
+  })
+
+  return deleteScopeTransaction()
+}
+
+// Delete all branches of an identifier
+export function deleteIdentifierAllBranches(ctx: DatabaseContext, identifier: string): number {
+  // Use transaction to ensure consistency
+  const deleteAllBranchesTransaction = ctx.db.transaction(() => {
+    // Get all scope ids for this identifier
+    const scopes = ctx.db.prepare('SELECT id FROM scopes WHERE identifier = ?').all(identifier) as { id: number }[]
+
+    if (scopes.length === 0) {
+      return 0
+    }
+
+    let totalDeleted = 0
+
+    // Delete entries for each scope
+    const entriesStmt = ctx.db.prepare('DELETE FROM entries WHERE scope_id = ?')
+    for (const scope of scopes) {
+      const result = entriesStmt.run(scope.id)
+      totalDeleted += result.changes
+    }
+
+    // Delete all scopes
+    const scopesStmt = ctx.db.prepare('DELETE FROM scopes WHERE identifier = ?')
+    scopesStmt.run(identifier)
+
+    return totalDeleted
+  })
+
+  return deleteAllBranchesTransaction()
+}
+
 export function getAllScopes(ctx: DatabaseContext): Scope[] {
   const rows = ctx.db.prepare('SELECT * FROM scopes ORDER BY identifier, branch').all() as DbScope[]
   return rows.map(dbToScope)
