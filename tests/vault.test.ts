@@ -35,7 +35,7 @@ describe('vault functions', () => {
     // Create temporary directory for test files
     tempDir = mkdtempSync(join(tmpdir(), 'vault-test-files-'))
     // Use global scope for tests
-    ctx = createVault({ global: true })
+    ctx = createVault({ scope: 'global' })
   })
 
   afterEach(() => {
@@ -51,7 +51,7 @@ describe('vault functions', () => {
 
   describe('createVault', () => {
     it('should create vault with global scope', () => {
-      const defaultCtx = createVault({ global: true })
+      const defaultCtx = createVault({ scope: 'global' })
       expect(defaultCtx.scope.type).toBe('global')
       expect(defaultCtx.scopeId).toBeGreaterThan(0)
       closeVault(defaultCtx)
@@ -73,10 +73,9 @@ describe('vault functions', () => {
         process.chdir(nonGitDir)
         const ctx = createVault()
 
-        expect(ctx.scope.type).toBe('repo')
-        if (ctx.scope.type === 'repo') {
+        expect(ctx.scope.type).toBe('repository')
+        if (ctx.scope.type === 'repository') {
           expect(ctx.scope.identifier).toBe(nonGitDir)
-          expect(ctx.scope.branch).toBe('default')
           expect(ctx.scope.remoteUrl).toBeUndefined()
         }
 
@@ -93,10 +92,10 @@ describe('vault functions', () => {
 
       try {
         process.chdir(nonGitDir)
-        const ctx = createVault({ branch: 'custom' })
+        const ctx = createVault({ scope: 'branch', branch: 'custom' })
 
-        expect(ctx.scope.type).toBe('repo')
-        if (ctx.scope.type === 'repo') {
+        expect(ctx.scope.type).toBe('branch')
+        if (ctx.scope.type === 'branch') {
           expect(ctx.scope.identifier).toBe(nonGitDir)
           expect(ctx.scope.branch).toBe('custom')
         }
@@ -118,7 +117,7 @@ describe('vault functions', () => {
       const path = setEntry(ctx, 'test-key', testFile)
 
       expect(path).toContain('test-key_v1.txt')
-      expect(path).toContain('global')
+      expect(path).toContain('/global/')
     })
 
     it('should save with description', () => {
@@ -311,7 +310,7 @@ describe('vault functions', () => {
       expect(info?.key).toBe('test-key')
       expect(info?.version).toBe(1)
       expect(info?.description).toBe('Test info')
-      expect(info?.scope).toBe('Global')
+      expect(info?.scope).toBe('global')
     })
 
     it('should return undefined for non-existent key', () => {
