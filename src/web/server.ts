@@ -86,13 +86,15 @@ export function createWebServer(vault: VaultContext) {
         identifier === 'global' && branch === 'global'
           ? { type: 'global' as const }
           : {
-              type: 'repo' as const,
+              type: 'branch' as const,
               identifier,
               branch,
               workPath:
-                vault.scope.type === 'repo' && vault.scope.identifier === identifier ? vault.scope.workPath : undefined,
+                vault.scope.type === 'branch' && vault.scope.identifier === identifier
+                  ? vault.scope.workPath
+                  : undefined,
               remoteUrl:
-                vault.scope.type === 'repo' && vault.scope.identifier === identifier
+                vault.scope.type === 'branch' && vault.scope.identifier === identifier
                   ? vault.scope.remoteUrl
                   : undefined,
             }
@@ -142,18 +144,25 @@ export function createWebServer(vault: VaultContext) {
       // Parse scope parameter to determine if it's global or repo
       const options: VaultOptions = { version }
       if (scopeParam === 'Global' || scopeParam === 'global') {
-        options.global = true
+        options.scope = 'global'
       } else {
         // For repo scopes, the frontend sends the formatted string "repoPath (branch)"
         // We need to parse this to extract the repo path and branch
         const match = scopeParam.match(/^(.+) \((.+)\)$/)
         if (match) {
+          options.scope = 'branch'
           options.repo = match[1]
           options.branch = match[2]
+        } else if (scopeParam.includes(':')) {
+          // Handle repository:branch format
+          const [repo, branch] = scopeParam.split(':')
+          options.scope = 'branch'
+          options.repo = repo
+          options.branch = branch
         } else {
-          // Fallback to current repo
-          options.repo = vault.scope.type === 'repo' ? vault.scope.identifier : undefined
-          options.branch = vault.scope.type === 'repo' ? vault.scope.branch : undefined
+          // Assume repository scope
+          options.scope = 'repository'
+          options.repo = scopeParam
         }
       }
 
@@ -186,13 +195,15 @@ export function createWebServer(vault: VaultContext) {
         identifier === 'global' && branch === 'global'
           ? { type: 'global' as const }
           : {
-              type: 'repo' as const,
+              type: 'branch' as const,
               identifier,
               branch,
               workPath:
-                vault.scope.type === 'repo' && vault.scope.identifier === identifier ? vault.scope.workPath : undefined,
+                vault.scope.type === 'branch' && vault.scope.identifier === identifier
+                  ? vault.scope.workPath
+                  : undefined,
               remoteUrl:
-                vault.scope.type === 'repo' && vault.scope.identifier === identifier
+                vault.scope.type === 'branch' && vault.scope.identifier === identifier
                   ? vault.scope.remoteUrl
                   : undefined,
             }
@@ -266,9 +277,14 @@ export function createWebServer(vault: VaultContext) {
       // Get all scopes for this identifier to delete files
       const allScopes = getAllScopedEntriesGroupedByScope(vault.database)
       for (const [scope, _] of allScopes) {
-        if (scope.type === 'repo' && scope.identifier === identifier) {
-          const scopePath = `${scope.identifier}/${scope.branch}`.replace(/[/\\:]/g, '_')
-          deleteProjectFiles(scopePath)
+        if ((scope.type === 'branch' || scope.type === 'repository') && scope.identifier === identifier) {
+          if (scope.type === 'branch') {
+            const scopePath = `${scope.identifier}/${scope.branch}`.replace(/[/\\:]/g, '_')
+            deleteProjectFiles(scopePath)
+          } else {
+            const scopePath = scope.identifier.replace(/[/\\:]/g, '_')
+            deleteProjectFiles(scopePath)
+          }
         }
       }
 

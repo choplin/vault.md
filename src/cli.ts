@@ -16,6 +16,7 @@ import {
   listEntries,
   setEntry,
 } from './core/index.js'
+import type { ScopeType } from './core/types.js'
 import { VaultMCPServer } from './mcp/server.js'
 
 const program = new Command()
@@ -33,7 +34,7 @@ program
   .action((key, options) => {
     try {
       const vault = createVault({
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
       })
@@ -56,21 +57,23 @@ program
   .command('get <key>')
   .description('Get file path from vault')
   .option('--version <version>', 'Get specific version', parseInt)
-  .option('--global', 'Get from global scope')
-  .option('--repo <path>', 'Get from specific repository')
-  .option('--branch <name>', 'Get from specific branch')
+  .option('--scope <type>', 'Scope type: global, repository, or branch')
+  .option('--repo <path>', 'Repository path')
+  .option('--branch <name>', 'Branch name (for branch scope)')
+  .option('--all-scopes', 'Search all scopes in order')
   .action((key, options) => {
     try {
       const vault = createVault({
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
       })
       const path = getEntry(vault, key, {
         version: options.version,
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
+        allScopes: options.allScopes,
       })
 
       if (path) {
@@ -90,21 +93,23 @@ program
   .command('cat <key>')
   .description('Output file content')
   .option('--version <version>', 'Get specific version', parseInt)
-  .option('--global', 'Get from global scope')
-  .option('--repo <path>', 'Get from specific repository')
-  .option('--branch <name>', 'Get from specific branch')
+  .option('--scope <type>', 'Scope type: global, repository, or branch')
+  .option('--repo <path>', 'Repository path')
+  .option('--branch <name>', 'Branch name (for branch scope)')
+  .option('--all-scopes', 'Search all scopes in order')
   .action((key, options) => {
     try {
       const vault = createVault({
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
       })
       const content = catEntry(vault, key, {
         version: options.version,
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
+        allScopes: options.allScopes,
       })
 
       if (content !== undefined) {
@@ -131,15 +136,16 @@ program
   .action((options) => {
     try {
       const vault = createVault({
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
       })
       const entries = listEntries(vault, {
         allVersions: options.allVersions,
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
+        allScopes: options.allScopes,
       })
 
       if (options.json) {
@@ -188,7 +194,7 @@ program
   .action(async (key, options) => {
     try {
       const vault = createVault({
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
       })
@@ -203,7 +209,7 @@ program
             output: process.stdout,
           })
           const answer = await rl.question(
-            `Delete scope '${vault.scope.type === 'repo' ? `${vault.scope.identifier} (${vault.scope.branch})` : 'global'}' with all entries? This action cannot be undone. (y/N) `,
+            `Delete scope '${vault.scope.type === 'branch' ? `${vault.scope.identifier} (${vault.scope.branch})` : 'global'}' with all entries? This action cannot be undone. (y/N) `,
           )
           rl.close()
           if (answer.toLowerCase() !== 'y') {
@@ -223,7 +229,7 @@ program
             output: process.stdout,
           })
           const answer = await rl.question(
-            `Delete vault for branch '${options.deleteBranch}' of '${vault.scope.type === 'repo' ? vault.scope.identifier : 'global'}'? This action cannot be undone. (y/N) `,
+            `Delete vault for branch '${options.deleteBranch}' of '${vault.scope.type === 'branch' ? vault.scope.identifier : 'global'}'? This action cannot be undone. (y/N) `,
           )
           rl.close()
           if (answer.toLowerCase() !== 'y') {
@@ -243,7 +249,7 @@ program
             output: process.stdout,
           })
           const answer = await rl.question(
-            `Delete entire vault for '${vault.scope.type === 'repo' ? vault.scope.identifier : 'global'}'? This will remove all data across all branches. (y/N) `,
+            `Delete entire vault for '${vault.scope.type === 'branch' ? vault.scope.identifier : 'global'}'? This will remove all data across all branches. (y/N) `,
           )
           rl.close()
           if (answer.toLowerCase() !== 'y') {
@@ -327,15 +333,16 @@ program
   .action((key, options) => {
     try {
       const vault = createVault({
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
       })
       const entry = getInfo(vault, key, {
         version: options.version,
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
+        allScopes: options.allScopes,
       })
 
       if (entry) {
@@ -375,7 +382,7 @@ program
     try {
       const { startWebServer } = await import('./web/server.js')
       const vault = createVault({
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
       })
@@ -397,14 +404,15 @@ program
   .action((key, options) => {
     try {
       const vault = createVault({
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
       })
       const changed = editEntry(vault, key, {
-        global: options.global,
+        scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
+        allScopes: options.allScopes,
         version: options.version,
       })
 

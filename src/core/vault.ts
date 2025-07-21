@@ -5,7 +5,7 @@ import * as db from './database.js'
 import * as fs from './filesystem.js'
 import { getGitInfo } from './git.js'
 import { formatScope, isGlobalScope, type Scope } from './scope.js'
-import type { ListOptions, SetOptions, VaultEntry, VaultOptions } from './types.js'
+import type { ListOptions, ScopeType, SetOptions, VaultEntry, VaultOptions } from './types.js'
 
 export interface VaultContext {
   database: DatabaseContext
@@ -14,62 +14,52 @@ export interface VaultContext {
 }
 
 export interface CreateVaultOptions {
-  global?: boolean
+  scope?: ScopeType
   repo?: string
   branch?: string
+}
+
+function resolveScope(options: CreateVaultOptions): Scope {
+  const scopeType = options.scope || 'repository' // Default is repository
+
+  switch (scopeType) {
+    case 'global':
+      return { type: 'global' }
+
+    case 'repository': {
+      const gitInfo = getGitInfo(options.repo)
+      return {
+        type: 'repository',
+        identifier: gitInfo.isGitRepo ? gitInfo.repoRoot! : resolve(options.repo || process.cwd()),
+        workPath: process.cwd(),
+        remoteUrl: gitInfo.remoteUrl,
+      }
+    }
+
+    case 'branch': {
+      const gitInfoBranch = getGitInfo(options.repo)
+      if (!gitInfoBranch.isGitRepo && !options.branch) {
+        throw new Error('Not in a git repository. Branch scope requires git repository')
+      }
+      return {
+        type: 'branch',
+        identifier: gitInfoBranch.isGitRepo ? gitInfoBranch.repoRoot! : resolve(options.repo || process.cwd()),
+        branch: options.branch || gitInfoBranch.currentBranch!,
+        workPath: process.cwd(),
+        remoteUrl: gitInfoBranch.remoteUrl,
+      }
+    }
+
+    default:
+      throw new Error(`Invalid scope: ${scopeType}. Valid scopes are: global, repository, branch`)
+  }
 }
 
 export function createVault(options: CreateVaultOptions = {}): VaultContext {
   const database = db.createDatabase()
 
-  // Determine scope
-  let scope: Scope
-
-  if (options.global) {
-    scope = { type: 'global' }
-  } else if (options.repo) {
-    // Specific repo provided
-    const gitInfo = getGitInfo(options.repo)
-    if (gitInfo.isGitRepo) {
-      scope = {
-        type: 'repo',
-        identifier: gitInfo.repoRoot!,
-        branch: options.branch || gitInfo.currentBranch!,
-        workPath: process.cwd(),
-        remoteUrl: gitInfo.remoteUrl,
-      }
-    } else {
-      // Not a git repo - use directory as scope
-      scope = {
-        type: 'repo',
-        identifier: resolve(options.repo),
-        branch: options.branch || 'default',
-        workPath: process.cwd(),
-        remoteUrl: undefined,
-      }
-    }
-  } else {
-    // Current directory
-    const gitInfo = getGitInfo()
-    if (gitInfo.isGitRepo) {
-      scope = {
-        type: 'repo',
-        identifier: gitInfo.repoRoot!,
-        branch: options.branch || gitInfo.currentBranch!,
-        workPath: process.cwd(),
-        remoteUrl: gitInfo.remoteUrl,
-      }
-    } else {
-      // Not a git repo - use current directory as scope
-      scope = {
-        type: 'repo',
-        identifier: process.cwd(),
-        branch: options.branch || 'default',
-        workPath: process.cwd(),
-        remoteUrl: undefined,
-      }
-    }
-  }
+  // Resolve scope
+  const scope = resolveScope(options)
 
   // Get or create scope in database
   const scopeId = db.getOrCreateScope(database, scope)
@@ -94,9 +84,14 @@ export function setEntry(ctx: VaultContext, key: string, filePath: string, optio
   const version = db.getNextScopedVersion(ctx.database, ctx.scopeId, key)
 
   // Generate scope-specific path for file storage
-  const scopePath = isGlobalScope(ctx.scope)
-    ? 'global'
-    : `${ctx.scope.identifier}/${ctx.scope.branch}`.replace(/[/\\:]/g, '_')
+  let scopePath: string
+  if (isGlobalScope(ctx.scope)) {
+    scopePath = 'global'
+  } else if (ctx.scope.type === 'repository') {
+    scopePath = ctx.scope.identifier.replace(/[/\\:]/g, '_')
+  } else {
+    scopePath = `${ctx.scope.identifier}/${ctx.scope.branch}`.replace(/[/\\:]/g, '_')
+  }
 
   // Save file
   const { path, hash } = fs.saveFile(scopePath, key, version, content)
@@ -114,12 +109,60 @@ export function setEntry(ctx: VaultContext, key: string, filePath: string, optio
   return path
 }
 
+function getSearchOrder(currentScope: Scope): Scope[] {
+  switch (currentScope.type) {
+    case 'global':
+      return [currentScope]
+
+    case 'repository':
+      return [currentScope, { type: 'global' }]
+
+    case 'branch':
+      return [
+        currentScope,
+        {
+          type: 'repository',
+          identifier: currentScope.identifier,
+          workPath: currentScope.workPath,
+          remoteUrl: currentScope.remoteUrl,
+        },
+        { type: 'global' },
+      ]
+  }
+}
+
+function getEntryWithFallback(ctx: VaultContext, key: string, version?: number): string | undefined {
+  const searchOrder = getSearchOrder(ctx.scope)
+
+  for (const scope of searchOrder) {
+    const scopeId = db.getOrCreateScope(ctx.database, scope)
+    const entry = version
+      ? db.getScopedEntry(ctx.database, scopeId, key, version)
+      : db.getLatestScopedEntry(ctx.database, scopeId, key)
+
+    if (entry) {
+      // Verify file integrity
+      if (!fs.verifyFile(entry.filePath, entry.hash)) {
+        throw new Error(`File integrity check failed for ${key}`)
+      }
+      return entry.filePath
+    }
+  }
+
+  return undefined
+}
+
 export function getEntry(ctx: VaultContext, key: string, options: VaultOptions = {}): string | undefined {
   // Handle different scope if specified
   let scopeId = ctx.scopeId
-  if (options.global || options.repo || options.branch) {
-    const altScope = resolveScope(options)
+  const altScope = getAlternativeScope(ctx.scope, options)
+  if (altScope) {
     scopeId = db.getOrCreateScope(ctx.database, altScope)
+  }
+
+  // Handle all scopes search
+  if (options.allScopes) {
+    return getEntryWithFallback(ctx, key, options.version)
   }
 
   const entry = options.version
@@ -152,8 +195,9 @@ export function listEntries(ctx: VaultContext, options: ListOptions = {}): Vault
   // Handle different scope if specified
   let scopeId = ctx.scopeId
   let scope = ctx.scope
-  if (options.global || options.repo || options.branch) {
-    scope = resolveScope(options)
+  const altScope = getAlternativeScope(ctx.scope, options)
+  if (altScope) {
+    scope = altScope
     scopeId = db.getOrCreateScope(ctx.database, scope)
   }
 
@@ -176,8 +220,8 @@ export function listEntries(ctx: VaultContext, options: ListOptions = {}): Vault
 export function deleteEntry(ctx: VaultContext, key: string, options: VaultOptions = {}): boolean {
   // Handle different scope if specified
   let scopeId = ctx.scopeId
-  if (options.global || options.repo || options.branch) {
-    const altScope = resolveScope(options)
+  const altScope = getAlternativeScope(ctx.scope, options)
+  if (altScope) {
     scopeId = db.getOrCreateScope(ctx.database, altScope)
   }
 
@@ -235,13 +279,26 @@ export function deleteCurrentScope(ctx: VaultContext): number {
     throw new Error('Cannot delete global scope')
   }
 
-  const scopePath = `${ctx.scope.identifier}/${ctx.scope.branch}`.replace(/[/\\:]/g, '_')
+  let scopePath: string
+  let deletedCount: number
 
-  // Delete all files for this scope
-  fs.deleteProjectFiles(scopePath)
+  switch (ctx.scope.type) {
+    case 'repository':
+      scopePath = ctx.scope.identifier.replace(/[/\\:]/g, '_')
+      fs.deleteProjectFiles(scopePath)
+      // Delete repository scope (empty branch)
+      deletedCount = db.deleteScope(ctx.database, ctx.scope.identifier, '')
+      break
 
-  // Delete from database
-  return db.deleteScope(ctx.database, ctx.scope.identifier, ctx.scope.branch)
+    case 'branch':
+      scopePath = `${ctx.scope.identifier}/${ctx.scope.branch}`.replace(/[/\\:]/g, '_')
+      fs.deleteProjectFiles(scopePath)
+      // Delete specific branch scope
+      deletedCount = db.deleteScope(ctx.database, ctx.scope.identifier, ctx.scope.branch)
+      break
+  }
+
+  return deletedCount
 }
 
 // Delete a specific branch of current identifier
@@ -250,13 +307,19 @@ export function deleteBranch(ctx: VaultContext, branch: string): number {
     throw new Error('Cannot delete branches from global scope')
   }
 
-  const scopePath = `${ctx.scope.identifier}/${branch}`.replace(/[/\\:]/g, '_')
+  const identifier = ctx.scope.type === 'branch' || ctx.scope.type === 'repository' ? ctx.scope.identifier : null
+
+  if (!identifier) {
+    throw new Error('No identifier found in current scope')
+  }
+
+  const scopePath = `${identifier}/${branch}`.replace(/[/\\:]/g, '_')
 
   // Delete all files for this branch
   fs.deleteProjectFiles(scopePath)
 
   // Delete from database
-  return db.deleteScope(ctx.database, ctx.scope.identifier, branch)
+  return db.deleteScope(ctx.database, identifier, branch)
 }
 
 // Delete all branches of current identifier
@@ -265,31 +328,46 @@ export function deleteAllBranches(ctx: VaultContext): number {
     throw new Error('Cannot delete branches from global scope')
   }
 
+  const identifier = ctx.scope.type === 'branch' || ctx.scope.type === 'repository' ? ctx.scope.identifier : null
+
+  if (!identifier) {
+    throw new Error('No identifier found in current scope')
+  }
+
   // Get all scopes for this identifier
   const allScopes = db.getAllScopes(ctx.database)
   const scopesToDelete = allScopes.filter((s) => {
-    if (ctx.scope.type !== 'repo' || s.type !== 'repo') return false
-    return s.identifier === ctx.scope.identifier
+    if (s.type === 'branch' && s.identifier === identifier) {
+      return true
+    }
+    if (s.type === 'repository' && s.identifier === identifier) {
+      return true
+    }
+    return false
   })
 
   // Delete files for each scope
   scopesToDelete.forEach((scope) => {
-    if (scope.type === 'repo') {
+    if (scope.type === 'branch') {
       const scopePath = `${scope.identifier}/${scope.branch}`.replace(/[/\\:]/g, '_')
+      fs.deleteProjectFiles(scopePath)
+    } else if (scope.type === 'repository') {
+      const scopePath = scope.identifier.replace(/[/\\:]/g, '_')
       fs.deleteProjectFiles(scopePath)
     }
   })
 
   // Delete from database
-  return db.deleteIdentifierAllBranches(ctx.database, ctx.scope.identifier)
+  return db.deleteIdentifierAllBranches(ctx.database, identifier)
 }
 
 export function getInfo(ctx: VaultContext, key: string, options: VaultOptions = {}): VaultEntry | undefined {
   // Handle different scope if specified
   let scopeId = ctx.scopeId
   let scope = ctx.scope
-  if (options.global || options.repo || options.branch) {
-    scope = resolveScope(options)
+  const altScope = getAlternativeScope(ctx.scope, options)
+  if (altScope) {
+    scope = altScope
     scopeId = db.getOrCreateScope(ctx.database, scope)
   }
 
@@ -323,54 +401,21 @@ export function clearVault(ctx: VaultContext): void {
   db.clearDatabase(ctx.database)
 }
 
-// Helper function to resolve scope from options
-function resolveScope(options: VaultOptions): Scope {
-  if (options.global) {
-    return { type: 'global' }
+// Helper function to get alternative scope from options
+function getAlternativeScope(_currentScope: Scope, options: VaultOptions): Scope | null {
+  // If no scope options provided, use current scope
+  if (!options.scope && !options.repo && !options.branch) {
+    return null
   }
 
-  if (options.repo) {
-    const gitInfo = getGitInfo(options.repo)
-    if (gitInfo.isGitRepo) {
-      return {
-        type: 'repo',
-        identifier: gitInfo.repoRoot!,
-        branch: options.branch || gitInfo.currentBranch!,
-        workPath: process.cwd(),
-        remoteUrl: gitInfo.remoteUrl,
-      }
-    } else {
-      // Not a git repo - use directory as scope
-      return {
-        type: 'repo',
-        identifier: resolve(options.repo),
-        branch: options.branch || 'default',
-        workPath: process.cwd(),
-        remoteUrl: undefined,
-      }
-    }
+  // Create alternative scope based on options
+  const createOptions: CreateVaultOptions = {
+    scope: options.scope,
+    repo: options.repo,
+    branch: options.branch,
   }
 
-  // Current directory with different branch
-  const gitInfo = getGitInfo()
-  if (gitInfo.isGitRepo) {
-    return {
-      type: 'repo',
-      identifier: gitInfo.repoRoot!,
-      branch: options.branch || gitInfo.currentBranch!,
-      workPath: process.cwd(),
-      remoteUrl: gitInfo.remoteUrl,
-    }
-  } else {
-    // Not a git repo - use current directory as scope
-    return {
-      type: 'repo',
-      identifier: process.cwd(),
-      branch: options.branch || 'default',
-      workPath: process.cwd(),
-      remoteUrl: undefined,
-    }
-  }
+  return resolveScope(createOptions)
 }
 
 export type { Scope } from './scope.js'
