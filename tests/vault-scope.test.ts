@@ -6,7 +6,7 @@ import * as gitUtils from '../src/core/git.js'
 // Mock git utilities
 vi.mock('../src/core/git.js')
 
-describe('resolveScope function', () => {
+describe('vault scope functions', () => {
   let originalCwd: string
 
   beforeEach(() => {
@@ -295,6 +295,121 @@ describe('resolveScope function', () => {
       expect(() => createVault({ scope: 'invalid' as any })).toThrow(
         'Invalid scope: invalid. Valid scopes are: global, repository, branch'
       )
+    })
+  })
+
+  describe('createVault function integration', () => {
+    it('should create vault context with proper scope and database', () => {
+      vi.mocked(gitUtils.getGitInfo).mockReturnValue({
+        isGitRepo: true,
+        repoRoot: '/test/repo',
+        currentBranch: 'main',
+        remoteUrl: 'https://github.com/test/repo',
+      })
+
+      const ctx = createVault()
+      try {
+        expect(ctx).toHaveProperty('database')
+        expect(ctx).toHaveProperty('scope')
+        expect(ctx).toHaveProperty('scopeId')
+        expect(ctx.scopeId).toBeGreaterThan(0)
+      } finally {
+        closeVault(ctx)
+      }
+    })
+
+    it('should persist scope in database and retrieve same scopeId', () => {
+      vi.mocked(gitUtils.getGitInfo).mockReturnValue({
+        isGitRepo: true,
+        repoRoot: '/test/repo',
+        currentBranch: 'main',
+        remoteUrl: undefined,
+      })
+
+      const ctx1 = createVault({ scope: 'repository' })
+      const scopeId1 = ctx1.scopeId
+      closeVault(ctx1)
+
+      const ctx2 = createVault({ scope: 'repository' })
+      const scopeId2 = ctx2.scopeId
+      try {
+        expect(scopeId2).toBe(scopeId1) // Same scope should have same ID
+      } finally {
+        closeVault(ctx2)
+      }
+    })
+
+    it('should create different scopeIds for different scopes', () => {
+      vi.mocked(gitUtils.getGitInfo).mockReturnValue({
+        isGitRepo: true,
+        repoRoot: '/test/repo',
+        currentBranch: 'main',
+        remoteUrl: undefined,
+      })
+
+      const ctxGlobal = createVault({ scope: 'global' })
+      const ctxRepo = createVault({ scope: 'repository' })
+      const ctxBranch = createVault({ scope: 'branch' })
+
+      try {
+        expect(ctxGlobal.scopeId).not.toBe(ctxRepo.scopeId)
+        expect(ctxGlobal.scopeId).not.toBe(ctxBranch.scopeId)
+        expect(ctxRepo.scopeId).not.toBe(ctxBranch.scopeId)
+      } finally {
+        closeVault(ctxGlobal)
+        closeVault(ctxRepo)
+        closeVault(ctxBranch)
+      }
+    })
+
+    it('should handle different branches as different scopes', () => {
+      vi.mocked(gitUtils.getGitInfo).mockReturnValue({
+        isGitRepo: true,
+        repoRoot: '/test/repo',
+        currentBranch: 'main',
+        remoteUrl: undefined,
+      })
+
+      const ctxMain = createVault({ scope: 'branch', branch: 'main' })
+      const ctxFeature = createVault({ scope: 'branch', branch: 'feature-x' })
+
+      try {
+        expect(ctxMain.scopeId).not.toBe(ctxFeature.scopeId)
+        if (ctxMain.scope.type === 'branch' && ctxFeature.scope.type === 'branch') {
+          expect(ctxMain.scope.branch).toBe('main')
+          expect(ctxFeature.scope.branch).toBe('feature-x')
+        }
+      } finally {
+        closeVault(ctxMain)
+        closeVault(ctxFeature)
+      }
+    })
+
+    it('should create valid vault context for all scope types', () => {
+      vi.mocked(gitUtils.getGitInfo).mockReturnValue({
+        isGitRepo: true,
+        repoRoot: '/test/repo',
+        currentBranch: 'main',
+        remoteUrl: 'https://github.com/test/repo',
+      })
+
+      const testCases = [
+        { options: { scope: 'global' as const }, expectedType: 'global' },
+        { options: { scope: 'repository' as const }, expectedType: 'repository' },
+        { options: { scope: 'branch' as const }, expectedType: 'branch' },
+        { options: {}, expectedType: 'repository' }, // Default
+      ]
+
+      testCases.forEach(({ options, expectedType }) => {
+        const ctx = createVault(options)
+        try {
+          expect(ctx.scope.type).toBe(expectedType)
+          expect(ctx.database).toBeDefined()
+          expect(ctx.scopeId).toBeGreaterThan(0)
+        } finally {
+          closeVault(ctx)
+        }
+      })
     })
   })
 })
