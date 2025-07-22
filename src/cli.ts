@@ -28,11 +28,21 @@ program
   .description('Save content to vault (reads from stdin by default)')
   .option('-f, --file <path>', 'Read content from file')
   .option('-d, --description <desc>', 'Add description')
-  .option('--global', 'Save to global scope')
+  .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Save to specific repository')
   .option('--branch <name>', 'Save to specific branch')
   .action((key, options) => {
     try {
+      // Validate scope value
+      if (options.scope && !['global', 'repository', 'branch'].includes(options.scope)) {
+        throw new Error(`Invalid scope type: ${options.scope}. Must be one of: global, repository, branch`)
+      }
+
+      // Validate scope combinations
+      if (options.branch && options.scope && options.scope !== 'branch') {
+        throw new Error('--branch option can only be used with --scope branch')
+      }
+
       const vault = createVault({
         scope: options.scope as ScopeType,
         repo: options.repo,
@@ -130,7 +140,7 @@ program
   .description('List keys in vault')
   .option('--all-versions', 'Show all versions')
   .option('--json', 'Output as JSON')
-  .option('--global', 'List from global scope')
+  .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'List from specific repository')
   .option('--branch <name>', 'List from specific branch')
   .action((options) => {
@@ -184,7 +194,7 @@ program
   .command('delete [key]')
   .description('Delete entries from vault')
   .option('--version <version>', 'Delete specific version', parseInt)
-  .option('--global', 'Delete from global scope')
+  .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Delete from specific repository')
   .option('--branch <name>', 'Delete from specific branch')
   .option('--current-scope', 'Delete vault for current scope (identifier + branch)')
@@ -327,7 +337,7 @@ program
   .command('info <key>')
   .description('Show key metadata')
   .option('--version <version>', 'Show specific version', parseInt)
-  .option('--global', 'Show from global scope')
+  .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Show from specific repository')
   .option('--branch <name>', 'Show from specific branch')
   .action((key, options) => {
@@ -375,7 +385,7 @@ program
   .command('web')
   .description('Start web UI server')
   .option('-p, --port <port>', 'Port to listen on', '8080')
-  .option('--global', 'Use global scope')
+  .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Use specific repository')
   .option('--branch <name>', 'Use specific branch')
   .action(async (options) => {
@@ -398,7 +408,7 @@ program
   .command('edit <key>')
   .description('Edit entry with $EDITOR')
   .option('--version <version>', 'Edit specific version', parseInt)
-  .option('--global', 'Edit from global scope')
+  .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Edit from specific repository')
   .option('--branch <name>', 'Edit from specific branch')
   .action((key, options) => {
