@@ -66,20 +66,30 @@ program
 program
   .command('get <key>')
   .description('Get file path from vault')
-  .option('--version <version>', 'Get specific version', parseInt)
+  .option('-v, --ver <version>', 'Get specific version', parseInt)
   .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Repository path')
   .option('--branch <name>', 'Branch name (for branch scope)')
   .option('--all-scopes', 'Search all scopes in order')
   .action((key, options) => {
     try {
+      // Validate scope value
+      if (options.scope && !['global', 'repository', 'branch'].includes(options.scope)) {
+        throw new Error(`Invalid scope type: ${options.scope}. Must be one of: global, repository, branch`)
+      }
+
+      // Validate scope combinations
+      if (options.branch && options.scope && options.scope !== 'branch') {
+        throw new Error('--branch option can only be used with --scope branch')
+      }
+
       const vault = createVault({
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
       })
       const path = getEntry(vault, key, {
-        version: options.version,
+        version: options.ver,
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -102,7 +112,7 @@ program
 program
   .command('cat <key>')
   .description('Output file content')
-  .option('--version <version>', 'Get specific version', parseInt)
+  .option('-v, --ver <version>', 'Get specific version', parseInt)
   .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Repository path')
   .option('--branch <name>', 'Branch name (for branch scope)')
@@ -115,7 +125,7 @@ program
         branch: options.branch,
       })
       const content = catEntry(vault, key, {
-        version: options.version,
+        version: options.ver,
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -193,7 +203,7 @@ program
 program
   .command('delete [key]')
   .description('Delete entries from vault')
-  .option('--version <version>', 'Delete specific version', parseInt)
+  .option('-v, --ver <version>', 'Delete specific version', parseInt)
   .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Delete from specific repository')
   .option('--branch <name>', 'Delete from specific branch')
@@ -272,7 +282,7 @@ program
         console.log(`Deleted entire vault with ${deletedCount} total entries`)
       } else if (key) {
         // Delete key or version
-        if (options.version) {
+        if (options.ver) {
           // Delete specific version
           if (!options.force) {
             const readline = await import('node:readline/promises')
@@ -280,7 +290,7 @@ program
               input: process.stdin,
               output: process.stdout,
             })
-            const answer = await rl.question(`Delete version ${options.version} of '${key}'? (y/N) `)
+            const answer = await rl.question(`Delete version ${options.ver} of '${key}'? (y/N) `)
             rl.close()
             if (answer.toLowerCase() !== 'y') {
               console.log('Deletion cancelled')
@@ -288,11 +298,11 @@ program
               return
             }
           }
-          const deleted = deleteVersion(vault, key, options.version)
+          const deleted = deleteVersion(vault, key, options.ver)
           if (deleted) {
-            console.log(`Deleted version ${options.version} of key '${key}'`)
+            console.log(`Deleted version ${options.ver} of key '${key}'`)
           } else {
-            console.error(`Version ${options.version} of key '${key}' not found`)
+            console.error(`Version ${options.ver} of key '${key}' not found`)
             process.exit(1)
           }
         } else {
@@ -336,7 +346,7 @@ program
 program
   .command('info <key>')
   .description('Show key metadata')
-  .option('--version <version>', 'Show specific version', parseInt)
+  .option('-v, --ver <version>', 'Show specific version', parseInt)
   .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Show from specific repository')
   .option('--branch <name>', 'Show from specific branch')
@@ -348,7 +358,7 @@ program
         branch: options.branch,
       })
       const entry = getInfo(vault, key, {
-        version: options.version,
+        version: options.ver,
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -407,7 +417,7 @@ program
 program
   .command('edit <key>')
   .description('Edit entry with $EDITOR')
-  .option('--version <version>', 'Edit specific version', parseInt)
+  .option('-v, --ver <version>', 'Edit specific version', parseInt)
   .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Edit from specific repository')
   .option('--branch <name>', 'Edit from specific branch')
@@ -423,7 +433,7 @@ program
         repo: options.repo,
         branch: options.branch,
         allScopes: options.allScopes,
-        version: options.version,
+        version: options.ver,
       })
 
       if (changed) {
