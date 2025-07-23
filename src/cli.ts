@@ -21,6 +21,19 @@ import { VaultMCPServer } from './mcp/server.js'
 
 const program = new Command()
 
+// Common validation function for scope options
+function validateScopeOptions(options: any): void {
+  // Validate scope value
+  if (options.scope && !['global', 'repository', 'branch'].includes(options.scope)) {
+    throw new Error(`Invalid scope type: ${options.scope}. Must be one of: global, repository, branch`)
+  }
+
+  // Validate scope combinations
+  if (options.branch && (!options.scope || options.scope !== 'branch')) {
+    throw new Error('--branch option can only be used with --scope branch')
+  }
+}
+
 program.name('vault').description('vault.md - A knowledge vault for AI-assisted development').version('0.1.0')
 
 program
@@ -33,15 +46,7 @@ program
   .option('--branch <name>', 'Save to specific branch')
   .action((key, options) => {
     try {
-      // Validate scope value
-      if (options.scope && !['global', 'repository', 'branch'].includes(options.scope)) {
-        throw new Error(`Invalid scope type: ${options.scope}. Must be one of: global, repository, branch`)
-      }
-
-      // Validate scope combinations
-      if (options.branch && options.scope && options.scope !== 'branch') {
-        throw new Error('--branch option can only be used with --scope branch')
-      }
+      validateScopeOptions(options)
 
       const vault = createVault({
         scope: options.scope as ScopeType,
@@ -73,15 +78,7 @@ program
   .option('--all-scopes', 'Search all scopes in order')
   .action((key, options) => {
     try {
-      // Validate scope value
-      if (options.scope && !['global', 'repository', 'branch'].includes(options.scope)) {
-        throw new Error(`Invalid scope type: ${options.scope}. Must be one of: global, repository, branch`)
-      }
-
-      // Validate scope combinations
-      if (options.branch && options.scope && options.scope !== 'branch') {
-        throw new Error('--branch option can only be used with --scope branch')
-      }
+      validateScopeOptions(options)
 
       const vault = createVault({
         scope: options.scope as ScopeType,
@@ -119,6 +116,8 @@ program
   .option('--all-scopes', 'Search all scopes in order')
   .action((key, options) => {
     try {
+      validateScopeOptions(options)
+
       const vault = createVault({
         scope: options.scope as ScopeType,
         repo: options.repo,
@@ -155,6 +154,8 @@ program
   .option('--branch <name>', 'List from specific branch')
   .action((options) => {
     try {
+      validateScopeOptions(options)
+
       const vault = createVault({
         scope: options.scope as ScopeType,
         repo: options.repo,
@@ -213,6 +214,8 @@ program
   .option('--force', 'Skip confirmation prompt')
   .action(async (key, options) => {
     try {
+      validateScopeOptions(options)
+
       const vault = createVault({
         scope: options.scope as ScopeType,
         repo: options.repo,
@@ -352,6 +355,8 @@ program
   .option('--branch <name>', 'Show from specific branch')
   .action((key, options) => {
     try {
+      validateScopeOptions(options)
+
       const vault = createVault({
         scope: options.scope as ScopeType,
         repo: options.repo,
@@ -400,6 +405,8 @@ program
   .option('--branch <name>', 'Use specific branch')
   .action(async (options) => {
     try {
+      validateScopeOptions(options)
+
       const { startWebServer } = await import('./web/server.js')
       const vault = createVault({
         scope: options.scope as ScopeType,
@@ -423,6 +430,8 @@ program
   .option('--branch <name>', 'Edit from specific branch')
   .action((key, options) => {
     try {
+      validateScopeOptions(options)
+
       const vault = createVault({
         scope: options.scope as ScopeType,
         repo: options.repo,
