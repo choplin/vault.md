@@ -109,7 +109,7 @@ export function setEntry(ctx: VaultContext, key: string, filePath: string, optio
   return path
 }
 
-function getSearchOrder(currentScope: Scope): Scope[] {
+export function getSearchOrder(currentScope: Scope): Scope[] {
   switch (currentScope.type) {
     case 'global':
       return [currentScope]
@@ -131,7 +131,7 @@ function getSearchOrder(currentScope: Scope): Scope[] {
   }
 }
 
-function getEntryWithFallback(ctx: VaultContext, key: string, version?: number): string | undefined {
+export function getEntryWithFallback(ctx: VaultContext, key: string, version?: number): string | undefined {
   const searchOrder = getSearchOrder(ctx.scope)
 
   for (const scope of searchOrder) {
