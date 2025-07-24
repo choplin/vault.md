@@ -1,3 +1,4 @@
+import * as fs from 'node:fs'
 import { isatty } from 'node:tty'
 import { Command } from 'commander'
 import { Table } from 'console-table-printer'
@@ -11,9 +12,12 @@ import {
   deleteKey,
   deleteVersion,
   editEntry,
+  formatScopeShort,
   getEntry,
   getInfo,
   listEntries,
+  moveScope,
+  resolveScope,
   setEntry,
 } from './core/index.js'
 import type { ScopeType } from './core/types.js'
@@ -22,7 +26,13 @@ import { VaultMCPServer } from './mcp/server.js'
 const program = new Command()
 
 // Common validation function for scope options
-function validateScopeOptions(options: any): void {
+interface ScopeOptions {
+  scope?: string
+  branch?: string
+  [key: string]: unknown
+}
+
+function validateScopeOptions(options: ScopeOptions): void {
   // Validate scope value
   if (options.scope && !['global', 'repository', 'branch'].includes(options.scope)) {
     throw new Error(`Invalid scope type: ${options.scope}. Must be one of: global, repository, branch`)
@@ -94,7 +104,9 @@ program
       })
 
       if (path) {
-        console.log(path)
+        // Output file content instead of path
+        const content = fs.readFileSync(path, 'utf8')
+        process.stdout.write(content)
       } else {
         console.error(`Key not found: ${key}`)
         process.exit(1)
@@ -170,7 +182,7 @@ program
       })
 
       if (options.json) {
-        console.log(JSON.stringify(entries, null, 2))
+        console.log(JSON.stringify({ entries }, null, 2))
       } else if (entries.length === 0) {
         console.log('No entries found')
       } else {
@@ -452,6 +464,48 @@ program
       }
 
       closeVault(vault)
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : String(error))
+      process.exit(1)
+    }
+  })
+
+program
+  .command('move-scope <key>')
+  .description('Move an entry between scopes')
+  .requiredOption('--from-scope <type>', 'Source scope type')
+  .option('--from-repo <path>', 'Source repository')
+  .option('--from-branch <name>', 'Source branch')
+  .requiredOption('--to-scope <type>', 'Target scope type')
+  .option('--to-repo <path>', 'Target repository')
+  .option('--to-branch <name>', 'Target branch')
+  .action((key, options) => {
+    try {
+      // Validate branch options
+      if (options.fromBranch && options.fromScope !== 'branch') {
+        throw new Error('--from-branch option can only be used with --from-scope branch')
+      }
+      if (options.toBranch && options.toScope !== 'branch') {
+        throw new Error('--to-branch option can only be used with --to-scope branch')
+      }
+
+      const ctx = createVault() // Current context
+
+      const fromScope = resolveScope({
+        scope: options.fromScope as ScopeType,
+        repo: options.fromRepo,
+        branch: options.fromBranch,
+      })
+
+      const toScope = resolveScope({
+        scope: options.toScope as ScopeType,
+        repo: options.toRepo,
+        branch: options.toBranch,
+      })
+
+      moveScope(ctx, key, fromScope, toScope)
+      console.log(`Moved ${key} from ${formatScopeShort(fromScope)} to ${formatScopeShort(toScope)}`)
+      closeVault(ctx)
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : String(error))
       process.exit(1)

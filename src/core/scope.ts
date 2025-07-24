@@ -1,12 +1,5 @@
 // Scope type definitions and utilities
 
-// Scope type enum
-export enum ScopeType {
-  GLOBAL = 'global',
-  REPOSITORY = 'repository',
-  BRANCH = 'branch',
-}
-
 // Discriminated union for type safety
 export type Scope = GlobalScope | RepositoryScope | BranchScope
 

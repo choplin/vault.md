@@ -10,17 +10,20 @@ import {
   isGlobalScope,
   isRepositoryScope,
   type RepositoryScope,
-  ScopeType,
   scopeToDb,
   validateScope,
 } from './scope.js'
+import type { ScopeType } from './types.js'
 
 describe('scope types and interfaces', () => {
   describe('ScopeType enum', () => {
     it('should have three scope types', () => {
-      expect(ScopeType.GLOBAL).toBe('global')
-      expect(ScopeType.REPOSITORY).toBe('repository')
-      expect(ScopeType.BRANCH).toBe('branch')
+      const GLOBAL: ScopeType = 'global'
+      const REPOSITORY: ScopeType = 'repository'
+      const BRANCH: ScopeType = 'branch'
+      expect(GLOBAL).toBe('global')
+      expect(REPOSITORY).toBe('repository')
+      expect(BRANCH).toBe('branch')
     })
   })
 

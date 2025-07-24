@@ -19,7 +19,7 @@ export interface CreateVaultOptions {
   branch?: string
 }
 
-function resolveScope(options: CreateVaultOptions): Scope {
+export function resolveScope(options: CreateVaultOptions): Scope {
   const scopeType = options.scope || 'repository' // Default is repository
 
   switch (scopeType) {
