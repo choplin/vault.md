@@ -4,7 +4,7 @@ import type { DatabaseContext } from './database.js'
 import * as db from './database.js'
 import * as fs from './filesystem.js'
 import { getGitInfo } from './git.js'
-import { formatScope, isGlobalScope, type Scope } from './scope.js'
+import { type BranchScope, formatScope, isGlobalScope, type RepositoryScope, type Scope } from './scope.js'
 import type { ListOptions, ScopeType, SetOptions, VaultEntry, VaultOptions } from './types.js'
 
 export interface VaultContext {
@@ -243,6 +243,66 @@ export function deleteEntry(ctx: VaultContext, key: string, options: VaultOption
 
   // Delete from database
   return db.deleteScopedEntry(ctx.database, scopeId, key, options.version)
+}
+
+// Helper function to check if two scopes are equal
+function areScopesEqual(scope1: Scope, scope2: Scope): boolean {
+  if (scope1.type !== scope2.type) {
+    return false
+  }
+
+  switch (scope1.type) {
+    case 'global':
+      return true // All global scopes are equal
+
+    case 'repository':
+      return scope1.identifier === (scope2 as RepositoryScope).identifier
+
+    case 'branch': {
+      const branch2 = scope2 as BranchScope
+      return scope1.identifier === branch2.identifier && scope1.branch === branch2.branch
+    }
+  }
+}
+
+// Move an entry between scopes
+export function moveScope(ctx: VaultContext, key: string, fromScope: Scope, toScope: Scope): void {
+  // Validate that scopes are different
+  if (areScopesEqual(fromScope, toScope)) {
+    throw new Error('Source and target scopes must be different')
+  }
+
+  // Get scope IDs
+  const fromScopeId = db.getOrCreateScope(ctx.database, fromScope)
+  const toScopeId = db.getOrCreateScope(ctx.database, toScope)
+
+  // Check if key exists in source scope
+  const entries = db.listScopedEntries(ctx.database, fromScopeId, true).filter((e) => e.key === key)
+  if (entries.length === 0) {
+    throw new Error('Key not found in source scope')
+  }
+
+  // Check if key already exists in target scope
+  const targetEntry = db.getLatestScopedEntry(ctx.database, toScopeId, key)
+  if (targetEntry) {
+    throw new Error('Key already exists in target scope')
+  }
+
+  // Move all versions
+  entries.forEach((entry) => {
+    // Insert into target scope with same version
+    db.insertScopedEntry(ctx.database, {
+      scopeId: toScopeId,
+      key: entry.key,
+      version: entry.version,
+      filePath: entry.filePath,
+      hash: entry.hash,
+      description: entry.description,
+    })
+  })
+
+  // Delete from source scope
+  db.deleteScopedEntry(ctx.database, fromScopeId, key)
 }
 
 // Delete a specific version
