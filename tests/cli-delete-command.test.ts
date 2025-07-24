@@ -87,7 +87,7 @@ describe('CLI delete command', () => {
 
       // Should still exist in repository scope
       const repoCheck = await runCommand(['get', 'test-key', '--scope', 'repository'])
-      expect(repoCheck.stdout).toContain('.local/share/vault.md')
+      expect(repoCheck.stdout).toBe('repository content')
     })
 
     it('should delete entry from repository scope when --scope repository', async () => {
@@ -102,7 +102,7 @@ describe('CLI delete command', () => {
 
       // Should still exist in global scope
       const globalCheck = await runCommand(['get', 'test-key', '--scope', 'global'])
-      expect(globalCheck.stdout).toContain('global')
+      expect(globalCheck.stdout).toBe('global content')
     })
 
     it('should delete entry from branch scope when --scope branch', async () => {
@@ -117,7 +117,7 @@ describe('CLI delete command', () => {
 
       // Should still exist in repository scope
       const repoCheck = await runCommand(['get', 'test-key', '--scope', 'repository'])
-      expect(repoCheck.stdout).toContain('.local/share/vault.md')
+      expect(repoCheck.stdout).toBe('repository content')
     })
 
     it('should reject invalid scope values', async () => {
@@ -159,11 +159,11 @@ describe('CLI delete command', () => {
 
       // Version 1 should still exist
       const v1Check = await runCommand(['get', 'versioned-key', '--ver', '1'])
-      expect(v1Check.stdout).toContain('_v1.txt')
+      expect(v1Check.stdout).toBe('version 1')
 
       // Version 3 should still exist (and be the latest)
       const v3Check = await runCommand(['get', 'versioned-key'])
-      expect(v3Check.stdout).toContain('_v3.txt')
+      expect(v3Check.stdout).toBe('version 3')
     })
   })
 
@@ -228,7 +228,7 @@ describe('CLI delete command', () => {
 
       // Verify key still exists
       const check = await runCommand(['get', 'prompt-key'])
-      expect(check.stdout).toContain('.local/share/vault.md')
+      expect(check.stdout).toBe('test content')
     })
 
     it('should delete when user confirms with y', async () => {

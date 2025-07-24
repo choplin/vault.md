@@ -76,35 +76,17 @@ describe('CLI get command', () => {
 
     it('should get entry from global scope when --scope global', async () => {
       const { stdout } = await runCommand(['get', 'test-key', '--scope', 'global'])
-      expect(stdout).toContain('.local/share/vault.md')
-      expect(stdout).toContain('global')
-
-      // Verify content
-      const content = await runCommand(['cat', 'test-key', '--scope', 'global'])
-      expect(content.stdout).toBe('global content')
+      expect(stdout).toBe('global content')
     })
 
     it('should get entry from repository scope when --scope repository', async () => {
       const { stdout } = await runCommand(['get', 'test-key', '--scope', 'repository'])
-      expect(stdout).toContain('.local/share/vault.md')
-      const encodedPath = testDir.replace(/\//g, '-')
-      expect(stdout).toContain(encodedPath)
-
-      // Verify content
-      const content = await runCommand(['cat', 'test-key', '--scope', 'repository'])
-      expect(content.stdout).toBe('repository content')
+      expect(stdout).toBe('repository content')
     })
 
     it('should get entry from branch scope when --scope branch', async () => {
       const { stdout } = await runCommand(['get', 'test-key', '--scope', 'branch'])
-      expect(stdout).toContain('.local/share/vault.md')
-      const encodedPath = testDir.replace(/\//g, '-')
-      expect(stdout).toContain(encodedPath)
-      expect(stdout).toContain('main')
-
-      // Verify content
-      const content = await runCommand(['cat', 'test-key', '--scope', 'branch'])
-      expect(content.stdout).toBe('branch content')
+      expect(stdout).toBe('branch content')
     })
 
     it('should reject invalid scope values', async () => {
@@ -115,10 +97,7 @@ describe('CLI get command', () => {
 
     it('should use repository scope by default when no scope specified', async () => {
       const { stdout } = await runCommand(['get', 'test-key'])
-      expect(stdout).toContain('.local/share/vault.md')
-      const encodedPath = testDir.replace(/\//g, '-')
-      expect(stdout).toContain(encodedPath)
-      expect(stdout).not.toContain('main')
+      expect(stdout).toBe('repository content')
     })
   })
 
@@ -129,8 +108,7 @@ describe('CLI get command', () => {
 
       // Get with all-scopes should find it
       const { stdout } = await runCommand(['get', 'global-only-key', '--all-scopes'])
-      expect(stdout).toContain('.local/share/vault.md')
-      expect(stdout).toContain('global')
+      expect(stdout).toBe('global only content')
     })
 
     it('should return branch scope entry first when --all-scopes and entry exists in multiple scopes', async () => {
@@ -142,11 +120,7 @@ describe('CLI get command', () => {
       // Get with all-scopes should return branch scope (highest priority)
       // Note: When using --all-scopes without specifying scope, it searches from the current default scope
       const { stdout } = await runCommand(['get', 'multi-scope-key', '--all-scopes', '--scope', 'branch'])
-      expect(stdout).toContain('main') // branch scope includes branch name
-
-      // Verify it's branch content
-      const content = await runCommand(['cat', 'multi-scope-key', '--all-scopes', '--scope', 'branch'])
-      expect(content.stdout).toBe('branch content')
+      expect(stdout).toBe('branch content')
     })
 
     it('should fallback to repository scope when not in branch scope', async () => {
@@ -156,13 +130,7 @@ describe('CLI get command', () => {
 
       // Get with all-scopes should return repository scope
       const { stdout } = await runCommand(['get', 'repo-global-key', '--all-scopes'])
-      const encodedPath = testDir.replace(/\//g, '-')
-      expect(stdout).toContain(encodedPath)
-      expect(stdout).not.toContain('main')
-
-      // Verify it's repository content
-      const content = await runCommand(['cat', 'repo-global-key', '--all-scopes'])
-      expect(content.stdout).toBe('repository content')
+      expect(stdout).toBe('repository content')
     })
   })
 
@@ -172,7 +140,7 @@ describe('CLI get command', () => {
       await runCommand(['set', 'custom-key', '--scope', 'repository', '--repo', customRepo], 'custom content')
 
       const { stdout } = await runCommand(['get', 'custom-key', '--scope', 'repository', '--repo', customRepo])
-      expect(stdout).toContain('custom-repo-path')
+      expect(stdout).toBe('custom content')
     })
 
     it('should accept --scope branch with --repo and --branch options', async () => {
@@ -186,8 +154,7 @@ describe('CLI get command', () => {
       const { stdout } = await runCommand(
         ['get', 'custom-key', '--scope', 'branch', '--repo', customRepo, '--branch', customBranch]
       )
-      expect(stdout).toContain('custom-repo-path')
-      expect(stdout).toContain('feature-test')
+      expect(stdout).toBe('custom content')
     })
 
     it('should ignore --repo option when scope is global', async () => {
@@ -196,8 +163,7 @@ describe('CLI get command', () => {
       const { stdout } = await runCommand(
         ['get', 'global-key', '--scope', 'global', '--repo', '/ignored/path']
       )
-      expect(stdout).toContain('global')
-      expect(stdout).not.toContain('ignored')
+      expect(stdout).toBe('global content')
     })
   })
 
@@ -228,15 +194,11 @@ describe('CLI get command', () => {
       await runCommand(['set', 'versioned-key'], 'version 2')
 
       // Get latest version (should be v2)
-      const latestPath = await runCommand(['get', 'versioned-key'])
-      expect(latestPath.stdout).toContain('_v2.txt')
+      const latestContent = await runCommand(['get', 'versioned-key'])
+      expect(latestContent.stdout).toBe('version 2')
 
       // Get version 1
-      const v1Path = await runCommand(['get', 'versioned-key', '--ver', '1'])
-      expect(v1Path.stdout).toContain('_v1.txt')
-
-      // Verify content
-      const v1Content = await runCommand(['cat', 'versioned-key', '--ver', '1'])
+      const v1Content = await runCommand(['get', 'versioned-key', '--ver', '1'])
       expect(v1Content.stdout).toBe('version 1')
     })
   })

@@ -141,7 +141,8 @@ describe('CLI list command', () => {
       await runCommand(['set', 'json-test-key', '-d', 'Test description'], 'test content')
 
       const { stdout } = await runCommand(['list', '--json'])
-      const entries = JSON.parse(stdout)
+      const data = JSON.parse(stdout)
+      const entries = data.entries
 
       expect(Array.isArray(entries)).toBe(true)
       expect(entries).toHaveLength(1)
