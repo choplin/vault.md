@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import type { RepositoryGroup } from '../src/web/stores/vault'
+import type { RepositoryGroup, ScopeGroup } from '../src/web/stores/vault'
 import { parseCurrentScope, formatScopeForDisplay, groupEntriesByScope } from '../src/web/lib/grouping'
+import { groupScopesIntoRepositories } from '../src/web/stores/vault'
 
 describe('Web UI - Scope Selector Logic', () => {
   describe('Requirement 1: Three-tier scope system support', () => {
@@ -296,6 +297,181 @@ describe('Web UI - Scope Selector Logic', () => {
       expect(repoGroup.branches[0].entries.length).toBe(1) // repository
       expect(repoGroup.branches[1].entries.length).toBe(2) // main
       expect(repoGroup.branches[2].entries.length).toBe(1) // feature-x
+    })
+  })
+})
+
+describe('Web UI - Scope Selector Store Integration', () => {
+  describe('groupScopesIntoRepositories function', () => {
+    it('should handle new three-tier scope format from API', () => {
+      const apiResponse: ScopeGroup[] = [
+        {
+          scope: 'global',
+          entries: [
+            {
+              key: 'global-config',
+              scope: 'global',
+              id: 1,
+              scopeId: 1,
+              version: 1,
+              filePath: '/path1',
+              hash: 'hash1',
+              createdAt: '2025-07-24T00:00:00Z',
+            },
+          ],
+        },
+        {
+          scope: 'repository:/Users/aki/workspace/vault.md',
+          entries: [
+            {
+              key: 'repo-config',
+              scope: 'repository:/Users/aki/workspace/vault.md',
+              id: 2,
+              scopeId: 2,
+              version: 1,
+              filePath: '/path2',
+              hash: 'hash2',
+              createdAt: '2025-07-24T00:00:00Z',
+            },
+          ],
+        },
+        {
+          scope: 'vault.md:main',
+          entries: [
+            {
+              key: 'main-key',
+              scope: 'vault.md:main',
+              id: 3,
+              scopeId: 3,
+              version: 1,
+              filePath: '/path3',
+              hash: 'hash3',
+              createdAt: '2025-07-24T00:00:00Z',
+            },
+          ],
+        },
+        {
+          scope: 'vault.md:feature-x',
+          entries: [
+            {
+              key: 'feature-key',
+              scope: 'vault.md:feature-x',
+              id: 4,
+              scopeId: 4,
+              version: 1,
+              filePath: '/path4',
+              hash: 'hash4',
+              createdAt: '2025-07-24T00:00:00Z',
+            },
+          ],
+        },
+      ]
+
+      const groups = groupScopesIntoRepositories(apiResponse)
+
+      // Should have 2 groups: global and vault.md
+      expect(groups).toHaveLength(2)
+
+      // Check global group
+      const globalGroup = groups.find(g => g.identifier === 'global')
+      expect(globalGroup).toBeDefined()
+      expect(globalGroup!.displayName).toBe('Global')
+      expect(globalGroup!.branches).toHaveLength(1)
+      expect(globalGroup!.branches[0].branch).toBe('global')
+      expect(globalGroup!.branches[0].scope).toBe('global')
+      expect(globalGroup!.branches[0].entries).toHaveLength(1)
+
+      // Check vault.md group
+      const vaultGroup = groups.find(g => g.displayName === 'vault.md')
+      expect(vaultGroup).toBeDefined()
+      expect(vaultGroup!.identifier).toContain('vault.md')
+      expect(vaultGroup!.branches).toHaveLength(3) // repository, main, feature-x
+
+      // Check repository scope branch
+      const repoBranch = vaultGroup!.branches.find(b => b.branch === 'repository')
+      expect(repoBranch).toBeDefined()
+      expect(repoBranch!.scope).toBe('repository:/Users/aki/workspace/vault.md')
+      expect(repoBranch!.entries).toHaveLength(1)
+
+      // Check main branch
+      const mainBranch = vaultGroup!.branches.find(b => b.branch === 'main')
+      expect(mainBranch).toBeDefined()
+      expect(mainBranch!.scope).toBe('vault.md:main')
+      expect(mainBranch!.entries).toHaveLength(1)
+
+      // Check feature branch
+      const featureBranch = vaultGroup!.branches.find(b => b.branch === 'feature-x')
+      expect(featureBranch).toBeDefined()
+      expect(featureBranch!.scope).toBe('vault.md:feature-x')
+      expect(featureBranch!.entries).toHaveLength(1)
+    })
+
+    it('should correctly sort scopes with global first, then repository, then branches', () => {
+      const apiResponse: ScopeGroup[] = [
+        {
+          scope: 'vault.md:z-branch',
+          entries: [],
+        },
+        {
+          scope: 'vault.md:a-branch',
+          entries: [],
+        },
+        {
+          scope: 'repository:/Users/aki/workspace/vault.md',
+          entries: [],
+        },
+        {
+          scope: 'global',
+          entries: [],
+        },
+      ]
+
+      const groups = groupScopesIntoRepositories(apiResponse)
+
+      // Global should be first
+      expect(groups[0].identifier).toBe('global')
+
+      // vault.md should be second
+      expect(groups[1].displayName).toBe('vault.md')
+
+      // Within vault.md, repository should be first, then branches alphabetically
+      const vaultBranches = groups[1].branches
+      expect(vaultBranches[0].branch).toBe('repository')
+      expect(vaultBranches[1].branch).toBe('a-branch')
+      expect(vaultBranches[2].branch).toBe('z-branch')
+    })
+
+    it('should handle only new three-tier scope formats', () => {
+      const apiResponse: ScopeGroup[] = [
+        {
+          scope: 'global',
+          entries: [],
+        },
+        {
+          scope: 'repository:/Users/aki/workspace/vault.md',
+          entries: [],
+        },
+        {
+          scope: 'vault.md:main',
+          entries: [],
+        },
+        {
+          scope: 'vault.md:feature',
+          entries: [],
+        },
+      ]
+
+      const groups = groupScopesIntoRepositories(apiResponse)
+
+      // Should have 2 groups: global and vault.md
+      expect(groups).toHaveLength(2)
+
+      const globalGroup = groups.find(g => g.identifier === 'global')
+      expect(globalGroup).toBeDefined()
+
+      const vaultGroup = groups.find(g => g.displayName === 'vault.md')
+      expect(vaultGroup).toBeDefined()
+      expect(vaultGroup!.branches).toHaveLength(3) // repository, main, feature
     })
   })
 })
