@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as db from '../src/core/database.js'
 import * as fs from '../src/core/filesystem.js'
 import { type BranchScope, type GlobalScope, type RepositoryScope } from '../src/core/scope.js'
-import { createVault, moveScope, type VaultContext } from '../src/core/vault.js'
+import { resolveVaultContext, moveScope, type VaultContext } from '../src/core/vault.js'
 
 vi.mock('../src/core/git.js', () => ({
   getGitInfo: vi.fn().mockReturnValue({
@@ -23,7 +23,7 @@ describe('moveScope', () => {
     // Create a unique temporary directory for each test
     tempDir = `/tmp/vault-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
     process.env.VAULT_DIR = tempDir
-    ctx = createVault()
+    ctx = resolveVaultContext()
   })
 
   afterEach(() => {

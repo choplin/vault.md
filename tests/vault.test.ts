@@ -6,7 +6,7 @@ import {
   catEntry,
   clearVault,
   closeVault,
-  createVault,
+  resolveVaultContext,
   deleteEntry,
   deleteVersion,
   deleteKey,
@@ -35,7 +35,7 @@ describe('vault functions', () => {
     // Create temporary directory for test files
     tempDir = mkdtempSync(join(tmpdir(), 'vault-test-files-'))
     // Use global scope for tests
-    ctx = createVault({ scope: 'global' })
+    ctx = resolveVaultContext({ scope: 'global' })
   })
 
   afterEach(() => {
@@ -49,9 +49,9 @@ describe('vault functions', () => {
     delete process.env.VAULT_DIR
   })
 
-  describe('createVault', () => {
+  describe('resolveVaultContext', () => {
     it('should create vault with global scope', () => {
-      const defaultCtx = createVault({ scope: 'global' })
+      const defaultCtx = resolveVaultContext({ scope: 'global' })
       expect(defaultCtx.scope.type).toBe('global')
       expect(defaultCtx.scopeId).toBeGreaterThan(0)
       closeVault(defaultCtx)
@@ -59,7 +59,7 @@ describe('vault functions', () => {
 
     it.skip('should create vault with repo scope', () => {
       // Skip this test as it requires a git repository
-      const customCtx = createVault({ repo: '/custom/repo', branch: 'main' })
+      const customCtx = resolveVaultContext({ repo: '/custom/repo', branch: 'main' })
       expect(customCtx.scope.type).toBe('repo')
       expect(customCtx.scopeId).toBeGreaterThan(0)
       closeVault(customCtx)
@@ -71,7 +71,7 @@ describe('vault functions', () => {
 
       try {
         process.chdir(nonGitDir)
-        const ctx = createVault()
+        const ctx = resolveVaultContext()
 
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
@@ -92,7 +92,7 @@ describe('vault functions', () => {
 
       try {
         process.chdir(nonGitDir)
-        const ctx = createVault({ scope: 'branch', branch: 'custom' })
+        const ctx = resolveVaultContext({ scope: 'branch', branch: 'custom' })
 
         expect(ctx.scope.type).toBe('branch')
         if (ctx.scope.type === 'branch') {
@@ -216,7 +216,7 @@ describe('vault functions', () => {
 
     it.skip('should list entries from different scope', () => {
       // Skip this test as it requires a git repository
-      const otherCtx = createVault({ repo: '/other/repo', branch: 'main' })
+      const otherCtx = resolveVaultContext({ repo: '/other/repo', branch: 'main' })
 
       const entries = listEntries(ctx, { repo: '/other/repo', branch: 'main' })
 

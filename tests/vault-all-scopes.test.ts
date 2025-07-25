@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
-import { createVault, setEntry, getEntry, closeVault } from '../src/core/vault.js'
+import { resolveVaultContext, setEntry, getEntry, closeVault } from '../src/core/vault.js'
 import type { VaultContext } from '../src/core/types.js'
 import * as git from '../src/core/git.js'
 
@@ -45,7 +45,7 @@ describe('getEntry with allScopes option', () => {
 
   describe('basic functionality', () => {
     it('should use allScopes to find entry in current scope', () => {
-      branchContext = createVault({ scope: 'branch' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test file
       const testFile = join(testDir, 'test.txt')
@@ -64,8 +64,8 @@ describe('getEntry with allScopes option', () => {
     })
 
     it('should use allScopes to fall back to repository scope', () => {
-      repoContext = createVault({ scope: 'repository' })
-      branchContext = createVault({ scope: 'branch' })
+      repoContext = resolveVaultContext({ scope: 'repository' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test file
       const repoFile = join(testDir, 'repo.txt')
@@ -84,8 +84,8 @@ describe('getEntry with allScopes option', () => {
     })
 
     it('should use allScopes to fall back to global scope', () => {
-      globalContext = createVault({ scope: 'global' })
-      branchContext = createVault({ scope: 'branch' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test file
       const globalFile = join(testDir, 'global.txt')
@@ -104,7 +104,7 @@ describe('getEntry with allScopes option', () => {
     })
 
     it('should return undefined when not found in any scope with allScopes', () => {
-      branchContext = createVault({ scope: 'branch' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Get non-existent key with allScopes
       const result = getEntry(branchContext, 'non-existent', { allScopes: true })
@@ -114,8 +114,8 @@ describe('getEntry with allScopes option', () => {
 
   describe('comparison with non-allScopes', () => {
     it('should NOT fall back without allScopes option', () => {
-      globalContext = createVault({ scope: 'global' })
-      branchContext = createVault({ scope: 'branch' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test file
       const globalFile = join(testDir, 'global.txt')
@@ -134,9 +134,9 @@ describe('getEntry with allScopes option', () => {
     })
 
     it('should use explicit scope when allScopes is false', () => {
-      globalContext = createVault({ scope: 'global' })
-      repoContext = createVault({ scope: 'repository' })
-      branchContext = createVault({ scope: 'branch' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      repoContext = resolveVaultContext({ scope: 'repository' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test files
       const globalFile = join(testDir, 'global.txt')
@@ -168,9 +168,9 @@ describe('getEntry with allScopes option', () => {
 
   describe('priority order', () => {
     it('should follow branch -> repository -> global order', () => {
-      globalContext = createVault({ scope: 'global' })
-      repoContext = createVault({ scope: 'repository' })
-      branchContext = createVault({ scope: 'branch' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      repoContext = resolveVaultContext({ scope: 'repository' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test files with different content
       const globalFile = join(testDir, 'global.txt')
@@ -201,8 +201,8 @@ describe('getEntry with allScopes option', () => {
 
   describe('version handling with allScopes', () => {
     it('should respect version parameter with allScopes', () => {
-      globalContext = createVault({ scope: 'global' })
-      branchContext = createVault({ scope: 'branch' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test files
       const file1 = join(testDir, 'v1.txt')
@@ -224,8 +224,8 @@ describe('getEntry with allScopes option', () => {
     })
 
     it('should find latest version by default with allScopes', () => {
-      globalContext = createVault({ scope: 'global' })
-      branchContext = createVault({ scope: 'branch' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test files
       const file1 = join(testDir, 'v1.txt')
@@ -249,7 +249,7 @@ describe('getEntry with allScopes option', () => {
 
   describe('edge cases', () => {
     it('should handle allScopes from global scope', () => {
-      globalContext = createVault({ scope: 'global' })
+      globalContext = resolveVaultContext({ scope: 'global' })
 
       // Create test file
       const globalFile = join(testDir, 'global.txt')
@@ -279,7 +279,7 @@ describe('getEntry with allScopes option', () => {
         remoteUrl: 'https://github.com/test/custom.git'
       })
 
-      const customContext = createVault({ scope: 'repository', repo: customRepoPath })
+      const customContext = resolveVaultContext({ scope: 'repository', repo: customRepoPath })
 
       // Create test file
       const customFile = join(testDir, 'custom.txt')
@@ -299,7 +299,7 @@ describe('getEntry with allScopes option', () => {
     })
 
     it('should throw error on file integrity failure even with allScopes', () => {
-      branchContext = createVault({ scope: 'branch' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test file
       const testFile = join(testDir, 'test.txt')

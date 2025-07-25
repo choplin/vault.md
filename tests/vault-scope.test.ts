@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { resolve } from 'node:path'
-import { createVault, closeVault } from '../src/core/vault.js'
+import { resolveVaultContext, closeVault } from '../src/core/vault.js'
 import * as gitUtils from '../src/core/git.js'
 
 // Mock git utilities
@@ -20,7 +20,7 @@ describe('vault scope functions', () => {
 
   describe('global scope', () => {
     it('should create global scope when scope is explicitly set to global', () => {
-      const ctx = createVault({ scope: 'global' })
+      const ctx = resolveVaultContext({ scope: 'global' })
       try {
         expect(ctx.scope.type).toBe('global')
         expect(ctx.scope).toEqual({ type: 'global' })
@@ -38,7 +38,7 @@ describe('vault scope functions', () => {
         remoteUrl: 'https://github.com/test/repo',
       })
 
-      const ctx = createVault({ scope: 'global' })
+      const ctx = resolveVaultContext({ scope: 'global' })
       try {
         expect(ctx.scope.type).toBe('global')
         expect(ctx.scope).toEqual({ type: 'global' })
@@ -48,7 +48,7 @@ describe('vault scope functions', () => {
     })
 
     it('should create global scope even when repo option is provided', () => {
-      const ctx = createVault({ scope: 'global', repo: '/custom/path' })
+      const ctx = resolveVaultContext({ scope: 'global', repo: '/custom/path' })
       try {
         expect(ctx.scope.type).toBe('global')
         expect(ctx.scope).toEqual({ type: 'global' })
@@ -58,7 +58,7 @@ describe('vault scope functions', () => {
     })
 
     it('should create global scope even when branch option is provided', () => {
-      const ctx = createVault({ scope: 'global', branch: 'feature-x' })
+      const ctx = resolveVaultContext({ scope: 'global', branch: 'feature-x' })
       try {
         expect(ctx.scope.type).toBe('global')
         expect(ctx.scope).toEqual({ type: 'global' })
@@ -69,7 +69,7 @@ describe('vault scope functions', () => {
     })
 
     it('should store data in global scope when specified', () => {
-      const ctx = createVault({ scope: 'global' })
+      const ctx = resolveVaultContext({ scope: 'global' })
       try {
         expect(ctx.scopeId).toBeGreaterThan(0)
         expect(ctx.scope.type).toBe('global')
@@ -88,7 +88,7 @@ describe('vault scope functions', () => {
         remoteUrl: 'https://github.com/test/repo',
       })
 
-      const ctx = createVault()
+      const ctx = resolveVaultContext()
       try {
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
@@ -109,7 +109,7 @@ describe('vault scope functions', () => {
         remoteUrl: 'https://github.com/test/repo',
       })
 
-      const ctx = createVault({ scope: 'repository' })
+      const ctx = resolveVaultContext({ scope: 'repository' })
       try {
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
@@ -133,7 +133,7 @@ describe('vault scope functions', () => {
         remoteUrl: undefined,
       })
 
-      const ctx = createVault({ scope: 'repository' })
+      const ctx = resolveVaultContext({ scope: 'repository' })
       try {
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
@@ -155,7 +155,7 @@ describe('vault scope functions', () => {
         remoteUrl: 'https://github.com/custom/repo',
       })
 
-      const ctx = createVault({ scope: 'repository', repo: '/custom/repo' })
+      const ctx = resolveVaultContext({ scope: 'repository', repo: '/custom/repo' })
       try {
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
@@ -174,7 +174,7 @@ describe('vault scope functions', () => {
         remoteUrl: undefined,
       })
 
-      const ctx = createVault({ scope: 'repository', branch: 'feature-x' })
+      const ctx = resolveVaultContext({ scope: 'repository', branch: 'feature-x' })
       try {
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
@@ -196,7 +196,7 @@ describe('vault scope functions', () => {
         remoteUrl: 'https://github.com/test/repo',
       })
 
-      const ctx = createVault({ scope: 'branch' })
+      const ctx = resolveVaultContext({ scope: 'branch' })
       try {
         expect(ctx.scope.type).toBe('branch')
         if (ctx.scope.type === 'branch') {
@@ -218,7 +218,7 @@ describe('vault scope functions', () => {
         remoteUrl: undefined,
       })
 
-      const ctx = createVault({ scope: 'branch', branch: 'feature-x' })
+      const ctx = resolveVaultContext({ scope: 'branch', branch: 'feature-x' })
       try {
         expect(ctx.scope.type).toBe('branch')
         if (ctx.scope.type === 'branch') {
@@ -238,7 +238,7 @@ describe('vault scope functions', () => {
         remoteUrl: undefined,
       })
 
-      expect(() => createVault({ scope: 'branch' })).toThrow(
+      expect(() => resolveVaultContext({ scope: 'branch' })).toThrow(
         'Not in a git repository. Branch scope requires git repository'
       )
     })
@@ -255,7 +255,7 @@ describe('vault scope functions', () => {
         remoteUrl: undefined,
       })
 
-      const ctx = createVault({ scope: 'branch', branch: 'custom' })
+      const ctx = resolveVaultContext({ scope: 'branch', branch: 'custom' })
       try {
         expect(ctx.scope.type).toBe('branch')
         if (ctx.scope.type === 'branch') {
@@ -277,7 +277,7 @@ describe('vault scope functions', () => {
         remoteUrl: 'https://github.com/custom/repo',
       })
 
-      const ctx = createVault({ scope: 'branch', repo: '/custom/repo' })
+      const ctx = resolveVaultContext({ scope: 'branch', repo: '/custom/repo' })
       try {
         expect(ctx.scope.type).toBe('branch')
         if (ctx.scope.type === 'branch') {
@@ -292,13 +292,13 @@ describe('vault scope functions', () => {
 
   describe('invalid scope', () => {
     it('should throw error for invalid scope type', () => {
-      expect(() => createVault({ scope: 'invalid' as any })).toThrow(
+      expect(() => resolveVaultContext({ scope: 'invalid' as any })).toThrow(
         'Invalid scope: invalid. Valid scopes are: global, repository, branch'
       )
     })
   })
 
-  describe('createVault function integration', () => {
+  describe('resolveVaultContext function integration', () => {
     it('should create vault context with proper scope and database', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
@@ -307,7 +307,7 @@ describe('vault scope functions', () => {
         remoteUrl: 'https://github.com/test/repo',
       })
 
-      const ctx = createVault()
+      const ctx = resolveVaultContext()
       try {
         expect(ctx).toHaveProperty('database')
         expect(ctx).toHaveProperty('scope')
@@ -326,11 +326,11 @@ describe('vault scope functions', () => {
         remoteUrl: undefined,
       })
 
-      const ctx1 = createVault({ scope: 'repository' })
+      const ctx1 = resolveVaultContext({ scope: 'repository' })
       const scopeId1 = ctx1.scopeId
       closeVault(ctx1)
 
-      const ctx2 = createVault({ scope: 'repository' })
+      const ctx2 = resolveVaultContext({ scope: 'repository' })
       const scopeId2 = ctx2.scopeId
       try {
         expect(scopeId2).toBe(scopeId1) // Same scope should have same ID
@@ -347,9 +347,9 @@ describe('vault scope functions', () => {
         remoteUrl: undefined,
       })
 
-      const ctxGlobal = createVault({ scope: 'global' })
-      const ctxRepo = createVault({ scope: 'repository' })
-      const ctxBranch = createVault({ scope: 'branch' })
+      const ctxGlobal = resolveVaultContext({ scope: 'global' })
+      const ctxRepo = resolveVaultContext({ scope: 'repository' })
+      const ctxBranch = resolveVaultContext({ scope: 'branch' })
 
       try {
         expect(ctxGlobal.scopeId).not.toBe(ctxRepo.scopeId)
@@ -370,8 +370,8 @@ describe('vault scope functions', () => {
         remoteUrl: undefined,
       })
 
-      const ctxMain = createVault({ scope: 'branch', branch: 'main' })
-      const ctxFeature = createVault({ scope: 'branch', branch: 'feature-x' })
+      const ctxMain = resolveVaultContext({ scope: 'branch', branch: 'main' })
+      const ctxFeature = resolveVaultContext({ scope: 'branch', branch: 'feature-x' })
 
       try {
         expect(ctxMain.scopeId).not.toBe(ctxFeature.scopeId)
@@ -401,7 +401,7 @@ describe('vault scope functions', () => {
       ]
 
       testCases.forEach(({ options, expectedType }) => {
-        const ctx = createVault(options)
+        const ctx = resolveVaultContext(options)
         try {
           expect(ctx.scope.type).toBe(expectedType)
           expect(ctx.database).toBeDefined()

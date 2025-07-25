@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
-import { createVault, setEntry, getEntryWithFallback, closeVault, catEntry } from '../src/core/vault.js'
+import { resolveVaultContext, setEntry, getEntryWithFallback, closeVault, catEntry } from '../src/core/vault.js'
 import type { VaultContext } from '../src/core/types.js'
 import * as git from '../src/core/git.js'
 
@@ -45,7 +45,7 @@ describe('getEntryWithFallback', () => {
 
   describe('global scope fallback', () => {
     it('should return entry from global scope when searching from global scope', () => {
-      globalContext = createVault({ scope: 'global' })
+      globalContext = resolveVaultContext({ scope: 'global' })
 
       // Create test file
       const testFile = join(testDir, 'test.txt')
@@ -61,7 +61,7 @@ describe('getEntryWithFallback', () => {
     })
 
     it('should return undefined when entry not found in global scope', () => {
-      globalContext = createVault({ scope: 'global' })
+      globalContext = resolveVaultContext({ scope: 'global' })
 
       const result = getEntryWithFallback(globalContext, 'non-existent')
       expect(result).toBeUndefined()
@@ -70,8 +70,8 @@ describe('getEntryWithFallback', () => {
 
   describe('repository scope fallback', () => {
     it('should find entry in repository scope first', () => {
-      globalContext = createVault({ scope: 'global' })
-      repoContext = createVault({ scope: 'repository' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      repoContext = resolveVaultContext({ scope: 'repository' })
 
       // Create test files
       const globalFile = join(testDir, 'global.txt')
@@ -92,8 +92,8 @@ describe('getEntryWithFallback', () => {
     })
 
     it('should fall back to global scope when not found in repository', () => {
-      globalContext = createVault({ scope: 'global' })
-      repoContext = createVault({ scope: 'repository' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      repoContext = resolveVaultContext({ scope: 'repository' })
 
       // Create test file
       const globalFile = join(testDir, 'global.txt')
@@ -111,7 +111,7 @@ describe('getEntryWithFallback', () => {
     })
 
     it('should return undefined when not found in either scope', () => {
-      repoContext = createVault({ scope: 'repository' })
+      repoContext = resolveVaultContext({ scope: 'repository' })
 
       const result = getEntryWithFallback(repoContext, 'non-existent')
       expect(result).toBeUndefined()
@@ -120,9 +120,9 @@ describe('getEntryWithFallback', () => {
 
   describe('branch scope fallback', () => {
     it('should find entry in branch scope first', () => {
-      globalContext = createVault({ scope: 'global' })
-      repoContext = createVault({ scope: 'repository' })
-      branchContext = createVault({ scope: 'branch' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      repoContext = resolveVaultContext({ scope: 'repository' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test files
       const globalFile = join(testDir, 'global.txt')
@@ -146,9 +146,9 @@ describe('getEntryWithFallback', () => {
     })
 
     it('should fall back to repository scope when not found in branch', () => {
-      globalContext = createVault({ scope: 'global' })
-      repoContext = createVault({ scope: 'repository' })
-      branchContext = createVault({ scope: 'branch' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      repoContext = resolveVaultContext({ scope: 'repository' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test files
       const globalFile = join(testDir, 'global.txt')
@@ -169,8 +169,8 @@ describe('getEntryWithFallback', () => {
     })
 
     it('should fall back to global scope when not found in branch or repository', () => {
-      globalContext = createVault({ scope: 'global' })
-      branchContext = createVault({ scope: 'branch' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test file
       const globalFile = join(testDir, 'global.txt')
@@ -188,7 +188,7 @@ describe('getEntryWithFallback', () => {
     })
 
     it('should return undefined when not found in any scope', () => {
-      branchContext = createVault({ scope: 'branch' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       const result = getEntryWithFallback(branchContext, 'non-existent')
       expect(result).toBeUndefined()
@@ -197,8 +197,8 @@ describe('getEntryWithFallback', () => {
 
   describe('version handling', () => {
     it('should respect version parameter in fallback search', () => {
-      globalContext = createVault({ scope: 'global' })
-      branchContext = createVault({ scope: 'branch' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test files
       const file1 = join(testDir, 'v1.txt')
@@ -219,8 +219,8 @@ describe('getEntryWithFallback', () => {
     })
 
     it('should find specific version in current scope before falling back', () => {
-      repoContext = createVault({ scope: 'repository' })
-      branchContext = createVault({ scope: 'branch' })
+      repoContext = resolveVaultContext({ scope: 'repository' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test files
       const repoFile = join(testDir, 'repo-v1.txt')
@@ -246,7 +246,7 @@ describe('getEntryWithFallback', () => {
 
   describe('file integrity', () => {
     it('should throw error when file integrity check fails', () => {
-      branchContext = createVault({ scope: 'branch' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test file
       const testFile = join(testDir, 'test.txt')
@@ -263,8 +263,8 @@ describe('getEntryWithFallback', () => {
     })
 
     it('should throw error when vault file is missing', () => {
-      globalContext = createVault({ scope: 'global' })
-      branchContext = createVault({ scope: 'branch' })
+      globalContext = resolveVaultContext({ scope: 'global' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create files
       const globalFile = join(testDir, 'global.txt')
@@ -294,7 +294,7 @@ describe('getEntryWithFallback', () => {
         isWorktree: false,
         remoteUrl: 'https://github.com/test/repo.git'
       })
-      const featureContext = createVault({ scope: 'branch' })
+      const featureContext = resolveVaultContext({ scope: 'branch' })
 
       // Create branch context for main branch
       vi.spyOn(git, 'getGitInfo').mockReturnValue({
@@ -304,7 +304,7 @@ describe('getEntryWithFallback', () => {
         isWorktree: false,
         remoteUrl: 'https://github.com/test/repo.git'
       })
-      branchContext = createVault({ scope: 'branch' })
+      branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test file
       const featureFile = join(testDir, 'feature.txt')
@@ -321,7 +321,7 @@ describe('getEntryWithFallback', () => {
     })
 
     it('should find repository entries from any branch', () => {
-      repoContext = createVault({ scope: 'repository' })
+      repoContext = resolveVaultContext({ scope: 'repository' })
 
       // Create test file
       const repoFile = join(testDir, 'repo.txt')
@@ -338,7 +338,7 @@ describe('getEntryWithFallback', () => {
         isWorktree: false,
         remoteUrl: 'https://github.com/test/repo.git'
       })
-      const mainContext = createVault({ scope: 'branch' })
+      const mainContext = resolveVaultContext({ scope: 'branch' })
 
       vi.spyOn(git, 'getGitInfo').mockReturnValue({
         isGitRepo: true,
@@ -347,7 +347,7 @@ describe('getEntryWithFallback', () => {
         isWorktree: false,
         remoteUrl: 'https://github.com/test/repo.git'
       })
-      const featureContext = createVault({ scope: 'branch' })
+      const featureContext = resolveVaultContext({ scope: 'branch' })
 
       // Both branches should find the repository entry
       const mainResult = getEntryWithFallback(mainContext, 'test-key')

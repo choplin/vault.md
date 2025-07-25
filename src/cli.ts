@@ -5,7 +5,6 @@ import { Table } from 'console-table-printer'
 import {
   catEntry,
   closeVault,
-  createVault,
   deleteAllBranches,
   deleteBranch,
   deleteCurrentScope,
@@ -18,6 +17,7 @@ import {
   listEntries,
   moveScope,
   resolveScope,
+  resolveVaultContext,
   setEntry,
 } from './core/index.js'
 import type { ScopeType } from './core/types.js'
@@ -58,7 +58,7 @@ program
     try {
       validateScopeOptions(options)
 
-      const vault = createVault({
+      const vault = resolveVaultContext({
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -90,7 +90,7 @@ program
     try {
       validateScopeOptions(options)
 
-      const vault = createVault({
+      const vault = resolveVaultContext({
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -130,7 +130,7 @@ program
     try {
       validateScopeOptions(options)
 
-      const vault = createVault({
+      const vault = resolveVaultContext({
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -168,7 +168,7 @@ program
     try {
       validateScopeOptions(options)
 
-      const vault = createVault({
+      const vault = resolveVaultContext({
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -228,7 +228,7 @@ program
     try {
       validateScopeOptions(options)
 
-      const vault = createVault({
+      const vault = resolveVaultContext({
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -369,7 +369,7 @@ program
     try {
       validateScopeOptions(options)
 
-      const vault = createVault({
+      const vault = resolveVaultContext({
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -420,7 +420,7 @@ program
       validateScopeOptions(options)
 
       const { startWebServer } = await import('./web/server.js')
-      const vault = createVault({
+      const vault = resolveVaultContext({
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -444,7 +444,7 @@ program
     try {
       validateScopeOptions(options)
 
-      const vault = createVault({
+      const vault = resolveVaultContext({
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -489,7 +489,7 @@ program
         throw new Error('--to-branch option can only be used with --to-scope branch')
       }
 
-      const ctx = createVault() // Current context
+      const ctx = resolveVaultContext() // Current context
 
       const fromScope = resolveScope({
         scope: options.fromScope as ScopeType,

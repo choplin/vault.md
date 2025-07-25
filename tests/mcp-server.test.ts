@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { createVault, clearVault, closeVault } from '../src/core/vault.js'
+import { resolveVaultContext, clearVault, closeVault } from '../src/core/vault.js'
 import * as vault from '../src/core/vault.js'
 import type { VaultContext } from '../src/core/vault.js'
 
@@ -17,7 +17,7 @@ describe('MCP Server Operations', () => {
   })
 
   beforeEach(() => {
-    ctx = createVault()
+    ctx = resolveVaultContext()
   })
 
   afterEach(() => {

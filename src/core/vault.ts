@@ -13,13 +13,13 @@ export interface VaultContext {
   scopeId: number
 }
 
-export interface CreateVaultOptions {
+export interface ResolveContextOptions {
   scope?: ScopeType
   repo?: string
   branch?: string
 }
 
-export function resolveScope(options: CreateVaultOptions): Scope {
+export function resolveScope(options: ResolveContextOptions): Scope {
   const scopeType = options.scope || 'repository' // Default is repository
 
   switch (scopeType) {
@@ -55,7 +55,34 @@ export function resolveScope(options: CreateVaultOptions): Scope {
   }
 }
 
-export function createVault(options: CreateVaultOptions = {}): VaultContext {
+/**
+ * Resolves a vault context for accessing entries in the specified scope.
+ *
+ * This function determines the appropriate scope (global, repository, or branch)
+ * based on the provided options and the current environment (git repository status,
+ * current directory, etc.), then returns a context object for vault operations.
+ *
+ * @param options - Options to determine which scope to use
+ * @param options.scope - The scope type: 'global', 'repository', or 'branch'
+ * @param options.repo - Repository path (optional, defaults to current directory)
+ * @param options.branch - Branch name (required for branch scope, defaults to current branch)
+ * @returns A vault context containing database connection, resolved scope, and scope ID
+ * @throws {Error} If branch scope is requested outside a git repository
+ * @throws {Error} If the resolved scope is invalid
+ *
+ * @example
+ * // Access global scope
+ * const ctx = resolveVaultContext({ scope: 'global' })
+ *
+ * @example
+ * // Access current repository scope
+ * const ctx = resolveVaultContext({ scope: 'repository' })
+ *
+ * @example
+ * // Access specific branch scope
+ * const ctx = resolveVaultContext({ scope: 'branch', branch: 'feature-x' })
+ */
+export function resolveVaultContext(options: ResolveContextOptions = {}): VaultContext {
   const database = db.createDatabase()
 
   // Resolve scope
@@ -80,17 +107,26 @@ export function setEntry(ctx: VaultContext, key: string, filePath: string, optio
     content = fs.readFile(filePath)
   }
 
+  // Handle different scope if specified
+  let scopeId = ctx.scopeId
+  let scope = ctx.scope
+  const altScope = getAlternativeScope(ctx.scope, options)
+  if (altScope) {
+    scope = altScope
+    scopeId = db.getOrCreateScope(ctx.database, scope)
+  }
+
   // Get next version
-  const version = db.getNextScopedVersion(ctx.database, ctx.scopeId, key)
+  const version = db.getNextScopedVersion(ctx.database, scopeId, key)
 
   // Generate scope-specific path for file storage
   let scopePath: string
-  if (isGlobalScope(ctx.scope)) {
+  if (isGlobalScope(scope)) {
     scopePath = 'global'
-  } else if (ctx.scope.type === 'repository') {
-    scopePath = ctx.scope.identifier.replace(/[/\\:]/g, '_')
+  } else if (scope.type === 'repository') {
+    scopePath = scope.identifier.replace(/[/\\:]/g, '_')
   } else {
-    scopePath = `${ctx.scope.identifier}/${ctx.scope.branch}`.replace(/[/\\:]/g, '_')
+    scopePath = `${scope.identifier}/${scope.branch}`.replace(/[/\\:]/g, '_')
   }
 
   // Save file
@@ -98,7 +134,7 @@ export function setEntry(ctx: VaultContext, key: string, filePath: string, optio
 
   // Save to database
   db.insertScopedEntry(ctx.database, {
-    scopeId: ctx.scopeId,
+    scopeId,
     version,
     key,
     filePath: path,
@@ -469,7 +505,7 @@ function getAlternativeScope(_currentScope: Scope, options: VaultOptions): Scope
   }
 
   // Create alternative scope based on options
-  const createOptions: CreateVaultOptions = {
+  const createOptions: ResolveContextOptions = {
     scope: options.scope,
     repo: options.repo,
     branch: options.branch,

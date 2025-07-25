@@ -4,7 +4,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import { z } from 'zod'
 import type { VaultContext } from '../core/vault.js'
 import * as vault from '../core/vault.js'
-import { createVault } from '../core/vault.js'
+import { resolveVaultContext } from '../core/vault.js'
 
 // Zod schemas for tool parameters
 const SetEntrySchema = z.object({
@@ -89,7 +89,7 @@ export class VaultMCPServer {
     )
 
     // Initialize vault context with default scope (current repository)
-    this.vaultContext = createVault({})
+    this.vaultContext = resolveVaultContext({})
 
     this.setupHandlers()
   }
