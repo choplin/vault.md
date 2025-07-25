@@ -3,6 +3,7 @@ import ContentViewer from './components/ContentViewer'
 import EntryTable from './components/EntryTable'
 import GroupedEntryView from './components/GroupedEntryView'
 import Sidebar from './components/Sidebar'
+import { formatScopeForListDisplay } from './components/scopeDisplay.js'
 import { api, type VaultEntry } from './lib/api'
 import {
   displayMode,
@@ -46,20 +47,25 @@ export default function App() {
     }
   })
 
-  function getCurrentScopeString(): string {
+  function getFormattedScope(): string {
     const scope = selectedScope()
     if (!scope) return ''
 
-    const groups = groupedScopes()
-    for (const group of groups) {
-      for (const branch of group.branches) {
-        if (group.identifier === scope.identifier && branch.branch === scope.branch) {
-          return branch.scope
-        }
-      }
+    // Convert selectedScope to Scope type
+    if (scope.identifier === 'global' && scope.branch === 'global') {
+      return formatScopeForListDisplay({ type: 'global' })
+    } else if (scope.branch === '') {
+      return formatScopeForListDisplay({
+        type: 'repository',
+        identifier: scope.identifier,
+      })
+    } else {
+      return formatScopeForListDisplay({
+        type: 'branch',
+        identifier: scope.identifier,
+        branch: scope.branch,
+      })
     }
-
-    return ''
   }
 
   return (
@@ -70,7 +76,7 @@ export default function App() {
           {/* Table View Header */}
           <div class="border-b border-base-300">
             <div class="p-4">
-              <h2 class="text-xl font-semibold">Entries in {getCurrentScopeString()}</h2>
+              <h2 class="text-xl font-semibold">Entries in {getFormattedScope()}</h2>
             </div>
             <div class="px-4 pb-3">
               <div class="flex items-center gap-4">
@@ -158,9 +164,9 @@ export default function App() {
           <Show when={viewMode() === 'table' && selectedScope()} fallback={<ContentViewer />}>
             <Show
               when={displayMode() === 'table'}
-              fallback={<GroupedEntryView entries={scopeEntries()} scope={getCurrentScopeString()} />}
+              fallback={<GroupedEntryView entries={scopeEntries()} scope={getFormattedScope()} />}
             >
-              <EntryTable entries={scopeEntries()} scope={getCurrentScopeString()} />
+              <EntryTable entries={scopeEntries()} scope={getFormattedScope()} />
             </Show>
           </Show>
         </div>
