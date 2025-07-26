@@ -93,7 +93,7 @@ export function groupScopesIntoRepositories(scopesList: ScopeGroup[]): Repositor
       const repoScope = scopesList.find(
         (s) =>
           s.scope.startsWith('repository:') &&
-          (s.scope.endsWith('/' + repoName) || s.scope === 'repository:' + repoName),
+          (s.scope.endsWith(`/${repoName}`) || s.scope === `repository:${repoName}`),
       )
 
       if (repoScope) {

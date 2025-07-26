@@ -14,7 +14,7 @@ import {
   showAllVersions,
   viewMode,
 } from './stores/ui'
-import { groupedScopes, selectedScope, setCurrentScope, setError, setLoading, setScopes } from './stores/vault'
+import { selectedScope, setCurrentScope, setError, setLoading, setScopes } from './stores/vault'
 
 export default function App() {
   const [scopeEntries, setScopeEntries] = createSignal<VaultEntry[]>([])

@@ -22,9 +22,6 @@ export interface BranchScope {
   remoteUrl?: string // git remote URL
 }
 
-// Legacy RepoScope type for backward compatibility during migration
-export type RepoScope = BranchScope
-
 // Type guards
 export function isGlobalScope(scope: Scope): scope is GlobalScope {
   return scope.type === 'global'
@@ -36,11 +33,6 @@ export function isRepositoryScope(scope: Scope): scope is RepositoryScope {
 
 export function isBranchScope(scope: Scope): scope is BranchScope {
   return scope.type === 'branch'
-}
-
-// Legacy type guard for backward compatibility
-export function isRepoScope(scope: Scope): scope is RepoScope {
-  return scope.type === 'branch' || (scope as any).type === 'repo'
 }
 
 // Database representation
