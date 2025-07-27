@@ -1,5 +1,8 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest'
 import { resolve } from 'node:path'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { resolveVaultContext, closeVault } from '../src/core/vault.js'
 import * as gitUtils from '../src/core/git.js'
 
@@ -8,6 +11,13 @@ vi.mock('../src/core/git.js')
 
 describe('vault scope functions', () => {
   let originalCwd: string
+  let testDir: string
+
+  beforeAll(() => {
+    // Set up isolated test directory before tests
+    testDir = mkdtempSync(join(tmpdir(), 'vault-scope-test-'))
+    process.env.VAULT_DIR = testDir
+  })
 
   beforeEach(() => {
     originalCwd = process.cwd()
@@ -16,6 +26,12 @@ describe('vault scope functions', () => {
 
   afterEach(() => {
     process.chdir(originalCwd)
+  })
+
+  afterAll(() => {
+    // Clean up test directory and reset environment
+    rmSync(testDir, { recursive: true, force: true })
+    delete process.env.VAULT_DIR
   })
 
   describe('global scope', () => {
