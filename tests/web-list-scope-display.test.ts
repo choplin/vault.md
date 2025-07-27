@@ -12,18 +12,18 @@ describe('Web UI List Scope Display', () => {
     it('should display repository name only for repository scope', () => {
       const scope: Scope = {
         type: 'repository',
-        identifier: '/Users/aki/workspace/vault.md',
+        identifier: '/home/user/projects/test-repo',
       }
-      expect(formatScopeForListDisplay(scope)).toBe('vault.md')
+      expect(formatScopeForListDisplay(scope)).toBe('test-repo')
     })
 
     it('should display repository:branch for branch scope', () => {
       const scope: Scope = {
         type: 'branch',
-        identifier: '/Users/aki/workspace/vault.md',
+        identifier: '/home/user/projects/test-repo',
         branch: 'main',
       }
-      expect(formatScopeForListDisplay(scope)).toBe('vault.md:main')
+      expect(formatScopeForListDisplay(scope)).toBe('test-repo:main')
     })
 
     it('should handle paths with special characters', () => {
@@ -37,10 +37,10 @@ describe('Web UI List Scope Display', () => {
     it('should handle branch names with special characters', () => {
       const scope: Scope = {
         type: 'branch',
-        identifier: '/Users/aki/workspace/vault.md',
+        identifier: '/home/user/projects/test-repo',
         branch: 'feature/new-feature',
       }
-      expect(formatScopeForListDisplay(scope)).toBe('vault.md:feature/new-feature')
+      expect(formatScopeForListDisplay(scope)).toBe('test-repo:feature/new-feature')
     })
 
     it('should handle root directory as repository', () => {

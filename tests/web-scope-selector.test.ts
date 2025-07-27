@@ -24,29 +24,29 @@ describe('Web UI - Scope Selector Logic', () => {
 
     it('should correctly identify repository scope', () => {
       const repoGroup: RepositoryGroup = {
-        identifier: '/Users/aki/workspace/vault.md',
-        displayName: 'vault.md',
+        identifier: '/home/user/projects/test-repo',
+        displayName: 'test-repo',
         branches: [
           {
             branch: 'repository',
-            scope: 'repository:/Users/aki/workspace/vault.md',
+            scope: 'repository:/home/user/projects/test-repo',
             entries: [],
           },
         ],
       }
 
-      expect(repoGroup.identifier).toBe('/Users/aki/workspace/vault.md')
+      expect(repoGroup.identifier).toBe('/home/user/projects/test-repo')
       expect(repoGroup.branches[0].scope).toContain('repository:')
     })
 
     it('should correctly identify branch scope', () => {
       const repoGroup: RepositoryGroup = {
-        identifier: '/Users/aki/workspace/vault.md',
-        displayName: 'vault.md',
+        identifier: '/home/user/projects/test-repo',
+        displayName: 'test-repo',
         branches: [
           {
             branch: 'main',
-            scope: 'vault.md:main',
+            scope: 'test-repo:main',
             entries: [],
           },
         ],
@@ -68,25 +68,25 @@ describe('Web UI - Scope Selector Logic', () => {
     })
 
     it('should format repository scope correctly', () => {
-      const result = formatScopeForDisplay('vault.md')
+      const result = formatScopeForDisplay('test-repo')
       expect(result).toEqual({
         type: 'repository',
-        displayName: 'vault.md',
+        displayName: 'test-repo',
         branch: undefined,
       })
     })
 
     it('should format branch scope correctly', () => {
-      const result = formatScopeForDisplay('vault.md:main')
+      const result = formatScopeForDisplay('test-repo:main')
       expect(result).toEqual({
         type: 'branch',
-        displayName: 'vault.md',
+        displayName: 'test-repo',
         branch: 'main',
       })
     })
 
     it('should handle complex repository paths', () => {
-      const result = formatScopeForDisplay('repository:/Users/aki/workspace/my-project')
+      const result = formatScopeForDisplay('repository:/home/user/projects/my-project')
       expect(result).toEqual({
         type: 'repository',
         displayName: 'my-project',
@@ -111,7 +111,7 @@ describe('Web UI - Scope Selector Logic', () => {
         {
           id: 2,
           scopeId: 2,
-          scope: 'vault.md:main',
+          scope: '/home/user/projects/test-repo:main',
           key: 'main-key',
           version: 1,
           filePath: '/path2',
@@ -121,7 +121,7 @@ describe('Web UI - Scope Selector Logic', () => {
         {
           id: 3,
           scopeId: 3,
-          scope: 'vault.md:feature-x',
+          scope: '/home/user/projects/test-repo:feature-x',
           key: 'feature-key',
           version: 1,
           filePath: '/path3',
@@ -131,7 +131,7 @@ describe('Web UI - Scope Selector Logic', () => {
         {
           id: 4,
           scopeId: 4,
-          scope: 'repository:/Users/aki/workspace/vault.md',
+          scope: 'repository:/home/user/projects/test-repo',
           key: 'repo-key',
           version: 1,
           filePath: '/path4',
@@ -142,7 +142,7 @@ describe('Web UI - Scope Selector Logic', () => {
 
       const groups = groupEntriesByScope(entries)
 
-      // Should have 2 groups: global and vault.md
+      // Should have 2 groups: global and test-repo
       expect(groups).toHaveLength(2)
 
       // Check global group
@@ -151,8 +151,8 @@ describe('Web UI - Scope Selector Logic', () => {
       expect(globalGroup!.branches).toHaveLength(1)
       expect(globalGroup!.branches[0].entries).toHaveLength(1)
 
-      // Check vault.md group
-      const vaultGroup = groups.find(g => g.displayName === 'vault.md')
+      // Check test-repo group
+      const vaultGroup = groups.find(g => g.identifier === '/home/user/projects/test-repo')
       expect(vaultGroup).toBeDefined()
       expect(vaultGroup!.branches).toHaveLength(3) // repository, main, feature-x
 
@@ -207,16 +207,16 @@ describe('Web UI - Scope Selector Logic', () => {
       })
 
       // Repository scope
-      expect(parseCurrentScope('repository:/Users/aki/workspace/vault.md')).toEqual({
+      expect(parseCurrentScope('repository:/home/user/projects/test-repo')).toEqual({
         type: 'repository',
-        identifier: '/Users/aki/workspace/vault.md',
+        identifier: '/home/user/projects/test-repo',
         branch: undefined,
       })
 
       // Branch scope
-      expect(parseCurrentScope('vault.md:main')).toEqual({
+      expect(parseCurrentScope('test-repo:main')).toEqual({
         type: 'branch',
-        identifier: 'vault.md',
+        identifier: 'test-repo',
         branch: 'main',
       })
     })
@@ -225,17 +225,17 @@ describe('Web UI - Scope Selector Logic', () => {
   describe('Entry count calculation', () => {
     it('should calculate correct total entries for repository', () => {
       const repoGroup: RepositoryGroup = {
-        identifier: '/Users/aki/workspace/vault.md',
-        displayName: 'vault.md',
+        identifier: '/home/user/projects/test-repo',
+        displayName: 'test-repo',
         branches: [
           {
             branch: 'repository',
-            scope: 'repository:/Users/aki/workspace/vault.md',
+            scope: 'repository:/home/user/projects/test-repo',
             entries: [
               {
                 id: 1,
                 scopeId: 1,
-                scope: 'repository:/Users/aki/workspace/vault.md',
+                scope: 'repository:/home/user/projects/test-repo',
                 key: 'shared-config',
                 version: 1,
                 filePath: '/path1',
@@ -246,12 +246,12 @@ describe('Web UI - Scope Selector Logic', () => {
           },
           {
             branch: 'main',
-            scope: 'vault.md:main',
+            scope: 'test-repo:main',
             entries: [
               {
                 id: 2,
                 scopeId: 2,
-                scope: 'vault.md:main',
+                scope: 'test-repo:main',
                 key: 'main-key1',
                 version: 1,
                 filePath: '/path2',
@@ -261,7 +261,7 @@ describe('Web UI - Scope Selector Logic', () => {
               {
                 id: 3,
                 scopeId: 2,
-                scope: 'vault.md:main',
+                scope: 'test-repo:main',
                 key: 'main-key2',
                 version: 1,
                 filePath: '/path3',
@@ -272,12 +272,12 @@ describe('Web UI - Scope Selector Logic', () => {
           },
           {
             branch: 'feature-x',
-            scope: 'vault.md:feature-x',
+            scope: 'test-repo:feature-x',
             entries: [
               {
                 id: 4,
                 scopeId: 3,
-                scope: 'vault.md:feature-x',
+                scope: 'test-repo:feature-x',
                 key: 'feature-key',
                 version: 1,
                 filePath: '/path4',
@@ -321,11 +321,11 @@ describe('Web UI - Scope Selector Store Integration', () => {
           ],
         },
         {
-          scope: 'repository:/Users/aki/workspace/vault.md',
+          scope: 'repository:/home/user/projects/test-repo',
           entries: [
             {
               key: 'repo-config',
-              scope: 'repository:/Users/aki/workspace/vault.md',
+              scope: 'repository:/home/user/projects/test-repo',
               id: 2,
               scopeId: 2,
               version: 1,
@@ -336,11 +336,11 @@ describe('Web UI - Scope Selector Store Integration', () => {
           ],
         },
         {
-          scope: 'vault.md:main',
+          scope: 'test-repo:main',
           entries: [
             {
               key: 'main-key',
-              scope: 'vault.md:main',
+              scope: 'test-repo:main',
               id: 3,
               scopeId: 3,
               version: 1,
@@ -351,11 +351,11 @@ describe('Web UI - Scope Selector Store Integration', () => {
           ],
         },
         {
-          scope: 'vault.md:feature-x',
+          scope: 'test-repo:feature-x',
           entries: [
             {
               key: 'feature-key',
-              scope: 'vault.md:feature-x',
+              scope: 'test-repo:feature-x',
               id: 4,
               scopeId: 4,
               version: 1,
@@ -369,7 +369,7 @@ describe('Web UI - Scope Selector Store Integration', () => {
 
       const groups = groupScopesIntoRepositories(apiResponse)
 
-      // Should have 2 groups: global and vault.md
+      // Should have 2 groups: global and test-repo
       expect(groups).toHaveLength(2)
 
       // Check global group
@@ -381,43 +381,43 @@ describe('Web UI - Scope Selector Store Integration', () => {
       expect(globalGroup!.branches[0].scope).toBe('global')
       expect(globalGroup!.branches[0].entries).toHaveLength(1)
 
-      // Check vault.md group
-      const vaultGroup = groups.find(g => g.displayName === 'vault.md')
+      // Check test-repo group
+      const vaultGroup = groups.find(g => g.displayName === 'test-repo')
       expect(vaultGroup).toBeDefined()
-      expect(vaultGroup!.identifier).toContain('vault.md')
+      expect(vaultGroup!.identifier).toContain('test-repo')
       expect(vaultGroup!.branches).toHaveLength(3) // repository, main, feature-x
 
       // Check repository scope branch
       const repoBranch = vaultGroup!.branches.find(b => b.branch === 'repository')
       expect(repoBranch).toBeDefined()
-      expect(repoBranch!.scope).toBe('repository:/Users/aki/workspace/vault.md')
+      expect(repoBranch!.scope).toBe('repository:/home/user/projects/test-repo')
       expect(repoBranch!.entries).toHaveLength(1)
 
       // Check main branch
       const mainBranch = vaultGroup!.branches.find(b => b.branch === 'main')
       expect(mainBranch).toBeDefined()
-      expect(mainBranch!.scope).toBe('vault.md:main')
+      expect(mainBranch!.scope).toBe('test-repo:main')
       expect(mainBranch!.entries).toHaveLength(1)
 
       // Check feature branch
       const featureBranch = vaultGroup!.branches.find(b => b.branch === 'feature-x')
       expect(featureBranch).toBeDefined()
-      expect(featureBranch!.scope).toBe('vault.md:feature-x')
+      expect(featureBranch!.scope).toBe('test-repo:feature-x')
       expect(featureBranch!.entries).toHaveLength(1)
     })
 
     it('should correctly sort scopes with global first, then repository, then branches', () => {
       const apiResponse: ScopeGroup[] = [
         {
-          scope: 'vault.md:z-branch',
+          scope: 'test-repo:z-branch',
           entries: [],
         },
         {
-          scope: 'vault.md:a-branch',
+          scope: 'test-repo:a-branch',
           entries: [],
         },
         {
-          scope: 'repository:/Users/aki/workspace/vault.md',
+          scope: 'repository:/home/user/projects/test-repo',
           entries: [],
         },
         {
@@ -431,10 +431,10 @@ describe('Web UI - Scope Selector Store Integration', () => {
       // Global should be first
       expect(groups[0].identifier).toBe('global')
 
-      // vault.md should be second
-      expect(groups[1].displayName).toBe('vault.md')
+      // test-repo should be second
+      expect(groups[1].displayName).toBe('test-repo')
 
-      // Within vault.md, repository should be first, then branches alphabetically
+      // Within test-repo, repository should be first, then branches alphabetically
       const vaultBranches = groups[1].branches
       expect(vaultBranches[0].branch).toBe('repository')
       expect(vaultBranches[1].branch).toBe('a-branch')
@@ -448,28 +448,28 @@ describe('Web UI - Scope Selector Store Integration', () => {
           entries: [],
         },
         {
-          scope: 'repository:/Users/aki/workspace/vault.md',
+          scope: 'repository:/home/user/projects/test-repo',
           entries: [],
         },
         {
-          scope: 'vault.md:main',
+          scope: 'test-repo:main',
           entries: [],
         },
         {
-          scope: 'vault.md:feature',
+          scope: 'test-repo:feature',
           entries: [],
         },
       ]
 
       const groups = groupScopesIntoRepositories(apiResponse)
 
-      // Should have 2 groups: global and vault.md
+      // Should have 2 groups: global and test-repo
       expect(groups).toHaveLength(2)
 
       const globalGroup = groups.find(g => g.identifier === 'global')
       expect(globalGroup).toBeDefined()
 
-      const vaultGroup = groups.find(g => g.displayName === 'vault.md')
+      const vaultGroup = groups.find(g => g.displayName === 'test-repo')
       expect(vaultGroup).toBeDefined()
       expect(vaultGroup!.branches).toHaveLength(3) // repository, main, feature
     })

@@ -38,9 +38,9 @@ describe('scope types and interfaces', () => {
     it('should identify repository scope correctly', () => {
       const repoScope: RepositoryScope = {
         type: 'repository',
-        identifier: '/Users/aki/workspace/vault.md',
-        workPath: '/Users/aki/workspace/vault.md',
-        remoteUrl: 'https://github.com/aki/vault.md.git',
+        identifier: '/home/user/projects/test-repo',
+        workPath: '/home/user/projects/test-repo',
+        remoteUrl: 'https://github.com/example/test-repo.git',
       }
       expect(isGlobalScope(repoScope)).toBe(false)
       expect(isRepositoryScope(repoScope)).toBe(true)
@@ -50,10 +50,10 @@ describe('scope types and interfaces', () => {
     it('should identify branch scope correctly', () => {
       const branchScope: BranchScope = {
         type: 'branch',
-        identifier: '/Users/aki/workspace/vault.md',
+        identifier: '/home/user/projects/test-repo',
         branch: 'main',
-        workPath: '/Users/aki/workspace/vault.md',
-        remoteUrl: 'https://github.com/aki/vault.md.git',
+        workPath: '/home/user/projects/test-repo',
+        remoteUrl: 'https://github.com/example/test-repo.git',
       }
       expect(isGlobalScope(branchScope)).toBe(false)
       expect(isRepositoryScope(branchScope)).toBe(false)
@@ -78,35 +78,35 @@ describe('scopeToDb conversion', () => {
   it('should convert repository scope to database representation', () => {
     const repoScope: RepositoryScope = {
       type: 'repository',
-      identifier: '/Users/aki/workspace/vault.md',
-      workPath: '/Users/aki/workspace/vault.md',
-      remoteUrl: 'https://github.com/aki/vault.md.git',
+      identifier: '/home/user/projects/test-repo',
+      workPath: '/home/user/projects/test-repo',
+      remoteUrl: 'https://github.com/example/test-repo.git',
     }
     const dbScope = scopeToDb(repoScope)
 
     expect(dbScope).toEqual({
-      identifier: '/Users/aki/workspace/vault.md',
+      identifier: '/home/user/projects/test-repo',
       branch: 'repository',
-      work_path: '/Users/aki/workspace/vault.md',
-      remote_url: 'https://github.com/aki/vault.md.git',
+      work_path: '/home/user/projects/test-repo',
+      remote_url: 'https://github.com/example/test-repo.git',
     })
   })
 
   it('should convert branch scope to database representation', () => {
     const branchScope: BranchScope = {
       type: 'branch',
-      identifier: '/Users/aki/workspace/vault.md',
+      identifier: '/home/user/projects/test-repo',
       branch: 'feature-x',
-      workPath: '/Users/aki/workspace/vault.md',
-      remoteUrl: 'https://github.com/aki/vault.md.git',
+      workPath: '/home/user/projects/test-repo',
+      remoteUrl: 'https://github.com/example/test-repo.git',
     }
     const dbScope = scopeToDb(branchScope)
 
     expect(dbScope).toEqual({
-      identifier: '/Users/aki/workspace/vault.md',
+      identifier: '/home/user/projects/test-repo',
       branch: 'feature-x',
-      work_path: '/Users/aki/workspace/vault.md',
-      remote_url: 'https://github.com/aki/vault.md.git',
+      work_path: '/home/user/projects/test-repo',
+      remote_url: 'https://github.com/example/test-repo.git',
     })
   })
 
@@ -158,37 +158,37 @@ describe('dbToScope conversion', () => {
 
   it('should convert database representation to repository scope', () => {
     const dbScope: DbScope = {
-      identifier: '/Users/aki/workspace/vault.md',
+      identifier: '/home/user/projects/test-repo',
       branch: 'repository',
-      work_path: '/Users/aki/workspace/vault.md',
-      remote_url: 'https://github.com/aki/vault.md.git',
+      work_path: '/home/user/projects/test-repo',
+      remote_url: 'https://github.com/example/test-repo.git',
     }
     const scope = dbToScope(dbScope)
 
     expect(scope).toEqual({
       type: 'repository',
-      identifier: '/Users/aki/workspace/vault.md',
-      workPath: '/Users/aki/workspace/vault.md',
-      remoteUrl: 'https://github.com/aki/vault.md.git',
+      identifier: '/home/user/projects/test-repo',
+      workPath: '/home/user/projects/test-repo',
+      remoteUrl: 'https://github.com/example/test-repo.git',
     })
     expect(isRepositoryScope(scope)).toBe(true)
   })
 
   it('should convert database representation to branch scope', () => {
     const dbScope: DbScope = {
-      identifier: '/Users/aki/workspace/vault.md',
+      identifier: '/home/user/projects/test-repo',
       branch: 'feature-x',
-      work_path: '/Users/aki/workspace/vault.md',
-      remote_url: 'https://github.com/aki/vault.md.git',
+      work_path: '/home/user/projects/test-repo',
+      remote_url: 'https://github.com/example/test-repo.git',
     }
     const scope = dbToScope(dbScope)
 
     expect(scope).toEqual({
       type: 'branch',
-      identifier: '/Users/aki/workspace/vault.md',
+      identifier: '/home/user/projects/test-repo',
       branch: 'feature-x',
-      workPath: '/Users/aki/workspace/vault.md',
-      remoteUrl: 'https://github.com/aki/vault.md.git',
+      workPath: '/home/user/projects/test-repo',
+      remoteUrl: 'https://github.com/example/test-repo.git',
     })
     expect(isBranchScope(scope)).toBe(true)
   })
@@ -241,7 +241,7 @@ describe('validateScope', () => {
     it('should accept valid repository scope', () => {
       const repoScope: RepositoryScope = {
         type: 'repository',
-        identifier: '/Users/aki/workspace/vault.md',
+        identifier: '/home/user/projects/test-repo',
       }
       expect(() => validateScope(repoScope)).not.toThrow()
     })
@@ -277,7 +277,7 @@ describe('validateScope', () => {
     it('should accept valid branch scope', () => {
       const branchScope: BranchScope = {
         type: 'branch',
-        identifier: '/Users/aki/workspace/vault.md',
+        identifier: '/home/user/projects/test-repo',
         branch: 'main',
       }
       expect(() => validateScope(branchScope)).not.toThrow()
@@ -350,24 +350,24 @@ describe('formatScope', () => {
   it('should format repository scope as repository name only', () => {
     const repoScope: RepositoryScope = {
       type: 'repository',
-      identifier: '/Users/aki/workspace/vault.md',
+      identifier: '/home/user/projects/test-repo',
     }
-    expect(formatScope(repoScope)).toBe('vault.md')
+    expect(formatScope(repoScope)).toBe('test-repo')
   })
 
   it('should format branch scope as "repository:branch"', () => {
     const branchScope: BranchScope = {
       type: 'branch',
-      identifier: '/Users/aki/workspace/vault.md',
+      identifier: '/home/user/projects/test-repo',
       branch: 'main',
     }
-    expect(formatScope(branchScope)).toBe('vault.md:main')
+    expect(formatScope(branchScope)).toBe('test-repo:main')
   })
 
   it('should extract repository name from complex paths', () => {
     const repoScope: RepositoryScope = {
       type: 'repository',
-      identifier: '/Users/aki/workspace/projects/my-app',
+      identifier: '/home/user/projects/my-app',
     }
     expect(formatScope(repoScope)).toBe('my-app')
   })
@@ -375,9 +375,9 @@ describe('formatScope', () => {
   it('should handle paths with trailing slashes', () => {
     const repoScope: RepositoryScope = {
       type: 'repository',
-      identifier: '/Users/aki/workspace/vault.md/',
+      identifier: '/home/user/projects/test-repo/',
     }
-    expect(formatScope(repoScope)).toBe('vault.md')
+    expect(formatScope(repoScope)).toBe('test-repo')
   })
 
   it('should handle root directory', () => {
@@ -398,7 +398,7 @@ describe('formatScopeShort', () => {
   it('should format repository scope as "repository"', () => {
     const repoScope: RepositoryScope = {
       type: 'repository',
-      identifier: '/Users/aki/workspace/vault.md',
+      identifier: '/home/user/projects/test-repo',
     }
     expect(formatScopeShort(repoScope)).toBe('repository')
   })
@@ -406,7 +406,7 @@ describe('formatScopeShort', () => {
   it('should format branch scope as branch name', () => {
     const branchScope: BranchScope = {
       type: 'branch',
-      identifier: '/Users/aki/workspace/vault.md',
+      identifier: '/home/user/projects/test-repo',
       branch: 'feature-x',
     }
     expect(formatScopeShort(branchScope)).toBe('feature-x')

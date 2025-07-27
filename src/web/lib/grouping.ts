@@ -172,7 +172,7 @@ export function groupEntriesByScope(entries: VaultEntry[]): RepositoryGroup[] {
       displayName = parsed.identifier.split('/').pop() || parsed.identifier
     } else {
       // For branch scope, group by repository
-      groupId = parsed.identifier.includes('/') ? parsed.identifier : `/Users/aki/workspace/${parsed.identifier}` // Assume default path
+      groupId = parsed.identifier
       displayName = parsed.identifier
     }
 
