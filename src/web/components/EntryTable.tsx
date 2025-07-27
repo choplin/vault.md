@@ -3,20 +3,6 @@ import { deleteEntry, type VaultEntry } from '../lib/api'
 import { type SortColumn, searchQuery, setTableSort, setViewMode, showAllVersions, tableSort } from '../stores/ui'
 import { refreshEntries, setSelectedEntry } from '../stores/vault'
 
-export function getEntryScopeInfo(entry: VaultEntry): { display: string; badgeClass: string } {
-  const scope = entry.scope
-
-  if (scope === 'global' || scope === 'Global') {
-    return { display: 'global', badgeClass: 'badge-primary' }
-  } else if (scope.includes(':')) {
-    // Branch scope
-    return { display: scope, badgeClass: 'badge-accent' }
-  } else {
-    // Repository scope
-    return { display: scope, badgeClass: 'badge-secondary' }
-  }
-}
-
 interface EntryTableProps {
   entries: VaultEntry[]
   scope: string
@@ -149,7 +135,6 @@ export default function EntryTable(props: EntryTableProps) {
                 Key <SortIcon column="key" />
               </button>
             </th>
-            <th>Scope</th>
             <th>
               <button type="button" onClick={() => toggleSort('version')} class="flex items-center gap-1 font-semibold">
                 Version <SortIcon column="version" />
@@ -181,7 +166,7 @@ export default function EntryTable(props: EntryTableProps) {
             when={filteredAndSortedEntries().length > 0}
             fallback={
               <tr>
-                <td colspan="6" class="text-center text-base-content/60 py-8">
+                <td colspan="5" class="text-center text-base-content/60 py-8">
                   No entries found
                 </td>
               </tr>
@@ -191,11 +176,6 @@ export default function EntryTable(props: EntryTableProps) {
               {(entry) => (
                 <tr class="hover cursor-pointer" onClick={() => selectEntry(entry)}>
                   <td class="font-medium">{entry.key}</td>
-                  <td>
-                    <span class={`badge badge-sm ${getEntryScopeInfo(entry).badgeClass}`}>
-                      {getEntryScopeInfo(entry).display}
-                    </span>
-                  </td>
                   <td>{entry.version || 1}</td>
                   <td class="max-w-md truncate text-base-content/80">{entry.description || '-'}</td>
                   <td class="text-base-content/60">{formatDate(entry.createdAt || entry.created_at || '')}</td>

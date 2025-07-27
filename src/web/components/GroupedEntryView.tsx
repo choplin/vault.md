@@ -3,7 +3,6 @@ import { deleteEntry, type VaultEntry } from '../lib/api'
 import { countEntriesInGroup, type EntryGroup, groupEntriesByPath } from '../lib/grouping'
 import { searchQuery, setViewMode, showAllVersions } from '../stores/ui'
 import { refreshEntries, setSelectedEntry } from '../stores/vault'
-import { getEntryScopeInfo } from './EntryTable.js'
 
 interface GroupedEntryViewProps {
   entries: VaultEntry[]
@@ -98,9 +97,6 @@ function GroupItem(props: GroupItemProps) {
               >
                 <div class="flex-1">
                   <span class="font-medium">{entry.key.split('/').pop()}</span>
-                  <span class={`ml-2 badge badge-sm ${getEntryScopeInfo(entry).badgeClass}`}>
-                    {getEntryScopeInfo(entry).display}
-                  </span>
                   <Show when={showAllVersions()}>
                     <span class="ml-2 text-sm text-base-content/60">v{entry.version || 1}</span>
                   </Show>
