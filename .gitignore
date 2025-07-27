@@ -32,6 +32,9 @@ src/web/static/
 coverage/
 .nyc_output/
 
+# Test reports
+reports/
+
 # Logs
 logs/
 *.log

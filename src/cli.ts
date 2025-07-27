@@ -2,6 +2,7 @@ import * as fs from 'node:fs'
 import { isatty } from 'node:tty'
 import { Command } from 'commander'
 import { Table } from 'console-table-printer'
+import * as git from './core/git.js'
 import {
   catEntry,
   closeVault,
@@ -21,6 +22,7 @@ import {
   setEntry,
 } from './core/index.js'
 import type { ScopeType } from './core/types.js'
+import type { ResolveContextOptions } from './core/vault.js'
 import { VaultMCPServer } from './mcp/server.js'
 
 const program = new Command()
@@ -35,7 +37,7 @@ interface ScopeOptions {
 function validateScopeOptions(options: ScopeOptions): void {
   // Validate scope value
   if (options.scope && !['global', 'repository', 'branch'].includes(options.scope)) {
-    throw new Error(`Invalid scope type: ${options.scope}. Must be one of: global, repository, branch`)
+    throw new Error(`Invalid scope: ${options.scope}. Valid scopes are: global, repository, branch`)
   }
 
   // Validate scope combinations
@@ -90,11 +92,22 @@ program
     try {
       validateScopeOptions(options)
 
-      const vault = resolveVaultContext({
+      // When --all-scopes is used and no explicit scope is provided,
+      // detect if we're in a git repo with a branch to start from branch scope
+      const contextOptions: ResolveContextOptions = {
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
-      })
+      }
+
+      if (options.allScopes && !options.scope) {
+        const gitInfo = git.getGitInfo()
+        if (gitInfo.isGitRepo && gitInfo.currentBranch) {
+          contextOptions.scope = 'branch'
+        }
+      }
+
+      const vault = resolveVaultContext(contextOptions)
       const path = getEntry(vault, key, {
         version: options.ver,
         scope: options.scope as ScopeType,
