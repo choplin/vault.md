@@ -455,7 +455,7 @@ describe('database functions', () => {
 
     it('should create and retrieve repo scope', () => {
       const scope: RepoScope = {
-        type: 'repo',
+        type: 'branch',
         identifier: '/test/repo',
         branch: 'main',
         remoteUrl: 'https://github.com/test/repo',
@@ -466,8 +466,8 @@ describe('database functions', () => {
 
       const retrieved = getScopeById(ctx, scopeId)
       expect(retrieved).toBeDefined()
-      expect(retrieved?.type).toBe('repo')
-      if (retrieved?.type === 'repo') {
+      expect(retrieved?.type).toBe('branch')
+      if (retrieved?.type === 'branch') {
         expect(retrieved.identifier).toBe('/test/repo')
         expect(retrieved.branch).toBe('main')
       }

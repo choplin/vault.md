@@ -10,11 +10,16 @@ export interface VaultEntry {
   createdAt: Date
 }
 
+export type ScopeType = 'global' | 'repository' | 'branch'
+
 export interface VaultOptions {
   // Scope options
-  global?: boolean
+  scope?: ScopeType
   repo?: string
   branch?: string
+
+  // Search options
+  allScopes?: boolean
 
   // Version option
   version?: number

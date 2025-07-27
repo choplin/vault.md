@@ -6,7 +6,7 @@ import {
   catEntry,
   clearVault,
   closeVault,
-  createVault,
+  resolveVaultContext,
   deleteEntry,
   deleteVersion,
   deleteKey,
@@ -35,7 +35,7 @@ describe('vault functions', () => {
     // Create temporary directory for test files
     tempDir = mkdtempSync(join(tmpdir(), 'vault-test-files-'))
     // Use global scope for tests
-    ctx = createVault({ global: true })
+    ctx = resolveVaultContext({ scope: 'global' })
   })
 
   afterEach(() => {
@@ -49,9 +49,9 @@ describe('vault functions', () => {
     delete process.env.VAULT_DIR
   })
 
-  describe('createVault', () => {
+  describe('resolveVaultContext', () => {
     it('should create vault with global scope', () => {
-      const defaultCtx = createVault({ global: true })
+      const defaultCtx = resolveVaultContext({ scope: 'global' })
       expect(defaultCtx.scope.type).toBe('global')
       expect(defaultCtx.scopeId).toBeGreaterThan(0)
       closeVault(defaultCtx)
@@ -59,7 +59,7 @@ describe('vault functions', () => {
 
     it.skip('should create vault with repo scope', () => {
       // Skip this test as it requires a git repository
-      const customCtx = createVault({ repo: '/custom/repo', branch: 'main' })
+      const customCtx = resolveVaultContext({ repo: '/custom/repo', branch: 'main' })
       expect(customCtx.scope.type).toBe('repo')
       expect(customCtx.scopeId).toBeGreaterThan(0)
       closeVault(customCtx)
@@ -71,12 +71,11 @@ describe('vault functions', () => {
 
       try {
         process.chdir(nonGitDir)
-        const ctx = createVault()
+        const ctx = resolveVaultContext()
 
-        expect(ctx.scope.type).toBe('repo')
-        if (ctx.scope.type === 'repo') {
+        expect(ctx.scope.type).toBe('repository')
+        if (ctx.scope.type === 'repository') {
           expect(ctx.scope.identifier).toBe(nonGitDir)
-          expect(ctx.scope.branch).toBe('default')
           expect(ctx.scope.remoteUrl).toBeUndefined()
         }
 
@@ -93,10 +92,10 @@ describe('vault functions', () => {
 
       try {
         process.chdir(nonGitDir)
-        const ctx = createVault({ branch: 'custom' })
+        const ctx = resolveVaultContext({ scope: 'branch', branch: 'custom' })
 
-        expect(ctx.scope.type).toBe('repo')
-        if (ctx.scope.type === 'repo') {
+        expect(ctx.scope.type).toBe('branch')
+        if (ctx.scope.type === 'branch') {
           expect(ctx.scope.identifier).toBe(nonGitDir)
           expect(ctx.scope.branch).toBe('custom')
         }
@@ -118,7 +117,7 @@ describe('vault functions', () => {
       const path = setEntry(ctx, 'test-key', testFile)
 
       expect(path).toContain('test-key_v1.txt')
-      expect(path).toContain('global')
+      expect(path).toContain('/global/')
     })
 
     it('should save with description', () => {
@@ -217,7 +216,7 @@ describe('vault functions', () => {
 
     it.skip('should list entries from different scope', () => {
       // Skip this test as it requires a git repository
-      const otherCtx = createVault({ repo: '/other/repo', branch: 'main' })
+      const otherCtx = resolveVaultContext({ repo: '/other/repo', branch: 'main' })
 
       const entries = listEntries(ctx, { repo: '/other/repo', branch: 'main' })
 
@@ -311,7 +310,7 @@ describe('vault functions', () => {
       expect(info?.key).toBe('test-key')
       expect(info?.version).toBe(1)
       expect(info?.description).toBe('Test info')
-      expect(info?.scope).toBe('Global')
+      expect(info?.scope).toBe('global')
     })
 
     it('should return undefined for non-existent key', () => {

@@ -2,41 +2,41 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
-import type { VaultContext } from '../core/vault.js'
 import * as vault from '../core/vault.js'
-import { createVault } from '../core/vault.js'
+import { resolveVaultContext } from '../core/vault.js'
 
 // Zod schemas for tool parameters
 const SetEntrySchema = z.object({
   key: z.string().describe('The key for the vault entry'),
   content: z.string().describe('The content to store'),
   description: z.string().optional().describe('Optional description for the entry'),
-  global: z.boolean().optional().describe('Use global scope instead of current repository'),
-  repo: z.string().optional().describe('Use specific repository path'),
-  branch: z.string().optional().describe('Use specific branch (with repo option)'),
+  scope: z.enum(['global', 'repository', 'branch']).optional().describe('Scope type'),
+  repo: z.string().optional().describe('Repository path'),
+  branch: z.string().optional().describe('Branch name (for branch scope)'),
 })
 
 const GetEntrySchema = z.object({
   key: z.string().describe('The key for the vault entry'),
   version: z.number().optional().describe('Specific version to retrieve (latest if not specified)'),
-  global: z.boolean().optional().describe('Use global scope instead of current repository'),
-  repo: z.string().optional().describe('Use specific repository path'),
-  branch: z.string().optional().describe('Use specific branch (with repo option)'),
+  scope: z.enum(['global', 'repository', 'branch']).optional().describe('Scope type'),
+  repo: z.string().optional().describe('Repository path'),
+  branch: z.string().optional().describe('Branch name (for branch scope)'),
+  allScopes: z.boolean().optional().describe('Search all scopes in order'),
 })
 
 const ListEntriesSchema = z.object({
   allVersions: z.boolean().optional().describe('Include all versions, not just latest'),
-  global: z.boolean().optional().describe('Use global scope instead of current repository'),
-  repo: z.string().optional().describe('Use specific repository path'),
-  branch: z.string().optional().describe('Use specific branch (with repo option)'),
+  scope: z.enum(['global', 'repository', 'branch']).optional().describe('Scope type'),
+  repo: z.string().optional().describe('Repository path'),
+  branch: z.string().optional().describe('Branch name (for branch scope)'),
 })
 
 const DeleteEntrySchema = z.object({
   key: z.string().describe('The key for the vault entry to delete'),
   version: z.number().optional().describe('Specific version to delete (all versions if not specified)'),
-  global: z.boolean().optional().describe('Use global scope instead of current repository'),
-  repo: z.string().optional().describe('Use specific repository path'),
-  branch: z.string().optional().describe('Use specific branch (with repo option)'),
+  scope: z.enum(['global', 'repository', 'branch']).optional().describe('Scope type'),
+  repo: z.string().optional().describe('Repository path'),
+  branch: z.string().optional().describe('Branch name (for branch scope)'),
 })
 
 const DeleteVersionSchema = z.object({
@@ -64,15 +64,14 @@ const DeleteScopeSchema = z.object({
 const InfoEntrySchema = z.object({
   key: z.string().describe('The key for the vault entry'),
   version: z.number().optional().describe('Specific version (latest if not specified)'),
-  global: z.boolean().optional().describe('Use global scope instead of current repository'),
-  repo: z.string().optional().describe('Use specific repository path'),
-  branch: z.string().optional().describe('Use specific branch (with repo option)'),
+  scope: z.enum(['global', 'repository', 'branch']).optional().describe('Scope type'),
+  repo: z.string().optional().describe('Repository path'),
+  branch: z.string().optional().describe('Branch name (for branch scope)'),
 })
 
 // Server implementation
 export class VaultMCPServer {
   private server: Server
-  private vaultContext: VaultContext
 
   constructor() {
     this.server = new Server(
@@ -86,9 +85,6 @@ export class VaultMCPServer {
         },
       },
     )
-
-    // Initialize vault context with default scope (current repository)
-    this.vaultContext = createVault({})
 
     this.setupHandlers()
   }
@@ -106,9 +102,9 @@ export class VaultMCPServer {
               key: { type: 'string', description: 'The key for the vault entry' },
               content: { type: 'string', description: 'The content to store' },
               description: { type: 'string', description: 'Optional description for the entry' },
-              global: { type: 'boolean', description: 'Use global scope instead of current repository' },
-              repo: { type: 'string', description: 'Use specific repository path' },
-              branch: { type: 'string', description: 'Use specific branch (with repo option)' },
+              scope: { type: 'string', enum: ['global', 'repository', 'branch'], description: 'Scope type' },
+              repo: { type: 'string', description: 'Repository path' },
+              branch: { type: 'string', description: 'Branch name (for branch scope)' },
             },
             required: ['key', 'content'],
           },
@@ -121,9 +117,10 @@ export class VaultMCPServer {
             properties: {
               key: { type: 'string', description: 'The key for the vault entry' },
               version: { type: 'number', description: 'Specific version to retrieve (latest if not specified)' },
-              global: { type: 'boolean', description: 'Use global scope instead of current repository' },
-              repo: { type: 'string', description: 'Use specific repository path' },
-              branch: { type: 'string', description: 'Use specific branch (with repo option)' },
+              scope: { type: 'string', enum: ['global', 'repository', 'branch'], description: 'Scope type' },
+              repo: { type: 'string', description: 'Repository path' },
+              branch: { type: 'string', description: 'Branch name (for branch scope)' },
+              allScopes: { type: 'boolean', description: 'Search all scopes in order' },
             },
             required: ['key'],
           },
@@ -135,9 +132,9 @@ export class VaultMCPServer {
             type: 'object',
             properties: {
               allVersions: { type: 'boolean', description: 'Include all versions, not just latest' },
-              global: { type: 'boolean', description: 'Use global scope instead of current repository' },
-              repo: { type: 'string', description: 'Use specific repository path' },
-              branch: { type: 'string', description: 'Use specific branch (with repo option)' },
+              scope: { type: 'string', enum: ['global', 'repository', 'branch'], description: 'Scope type' },
+              repo: { type: 'string', description: 'Repository path' },
+              branch: { type: 'string', description: 'Branch name (for branch scope)' },
             },
           },
         },
@@ -149,9 +146,9 @@ export class VaultMCPServer {
             properties: {
               key: { type: 'string', description: 'The key for the vault entry to delete' },
               version: { type: 'number', description: 'Specific version to delete (all versions if not specified)' },
-              global: { type: 'boolean', description: 'Use global scope instead of current repository' },
-              repo: { type: 'string', description: 'Use specific repository path' },
-              branch: { type: 'string', description: 'Use specific branch (with repo option)' },
+              scope: { type: 'string', enum: ['global', 'repository', 'branch'], description: 'Scope type' },
+              repo: { type: 'string', description: 'Repository path' },
+              branch: { type: 'string', description: 'Branch name (for branch scope)' },
             },
             required: ['key'],
           },
@@ -164,9 +161,9 @@ export class VaultMCPServer {
             properties: {
               key: { type: 'string', description: 'The key for the vault entry' },
               version: { type: 'number', description: 'Specific version (latest if not specified)' },
-              global: { type: 'boolean', description: 'Use global scope instead of current repository' },
-              repo: { type: 'string', description: 'Use specific repository path' },
-              branch: { type: 'string', description: 'Use specific branch (with repo option)' },
+              scope: { type: 'string', enum: ['global', 'repository', 'branch'], description: 'Scope type' },
+              repo: { type: 'string', description: 'Repository path' },
+              branch: { type: 'string', description: 'Branch name (for branch scope)' },
             },
             required: ['key'],
           },
@@ -230,19 +227,24 @@ export class VaultMCPServer {
         switch (name) {
           case 'vault_set': {
             const params = SetEntrySchema.parse(args)
+            // Create vault context for this request
+            const vaultContext = resolveVaultContext({
+              scope: params.scope as 'global' | 'repository' | 'branch' | undefined,
+              repo: params.repo,
+              branch: params.branch,
+            })
+
             // Create a temporary file to store the content
             const tmpFile = `/tmp/vault-mcp-${Date.now()}.txt`
             const { writeFileSync, unlinkSync } = await import('node:fs')
 
             try {
               writeFileSync(tmpFile, params.content)
-              const path = vault.setEntry(this.vaultContext, params.key, tmpFile, {
+              const path = vault.setEntry(vaultContext, params.key, tmpFile, {
                 description: params.description,
-                global: params.global,
-                repo: params.repo,
-                branch: params.branch,
               })
               unlinkSync(tmpFile)
+              vault.closeVault(vaultContext)
 
               return {
                 content: [
@@ -257,18 +259,25 @@ export class VaultMCPServer {
               try {
                 unlinkSync(tmpFile)
               } catch {}
+              vault.closeVault(vaultContext)
               throw error
             }
           }
 
           case 'vault_get': {
             const params = GetEntrySchema.parse(args)
-            const content = vault.catEntry(this.vaultContext, params.key, {
-              version: params.version,
-              global: params.global,
+            // Create vault context for this request
+            const vaultContext = resolveVaultContext({
+              scope: params.scope as 'global' | 'repository' | 'branch' | undefined,
               repo: params.repo,
               branch: params.branch,
             })
+
+            const content = vault.catEntry(vaultContext, params.key, {
+              version: params.version,
+              allScopes: params.allScopes,
+            })
+            vault.closeVault(vaultContext)
 
             if (!content) {
               return {
@@ -293,12 +302,17 @@ export class VaultMCPServer {
 
           case 'vault_list': {
             const params = ListEntriesSchema.parse(args)
-            const entries = vault.listEntries(this.vaultContext, {
-              allVersions: params.allVersions,
-              global: params.global,
+            // Create vault context for this request
+            const vaultContext = resolveVaultContext({
+              scope: params.scope as 'global' | 'repository' | 'branch' | undefined,
               repo: params.repo,
               branch: params.branch,
             })
+
+            const entries = vault.listEntries(vaultContext, {
+              allVersions: params.allVersions,
+            })
+            vault.closeVault(vaultContext)
 
             if (entries.length === 0) {
               return {
@@ -327,12 +341,17 @@ export class VaultMCPServer {
 
           case 'vault_delete': {
             const params = DeleteEntrySchema.parse(args)
-            const success = vault.deleteEntry(this.vaultContext, params.key, {
-              version: params.version,
-              global: params.global,
+            // Create vault context for this request
+            const vaultContext = resolveVaultContext({
+              scope: params.scope as 'global' | 'repository' | 'branch' | undefined,
               repo: params.repo,
               branch: params.branch,
             })
+
+            const success = vault.deleteEntry(vaultContext, params.key, {
+              version: params.version,
+            })
+            vault.closeVault(vaultContext)
 
             return {
               content: [
@@ -348,7 +367,10 @@ export class VaultMCPServer {
 
           case 'vault_delete_version': {
             const params = DeleteVersionSchema.parse(args)
-            const success = vault.deleteVersion(this.vaultContext, params.key, params.version)
+            // Use default vault context for this operation
+            const vaultContext = resolveVaultContext({})
+            const success = vault.deleteVersion(vaultContext, params.key, params.version)
+            vault.closeVault(vaultContext)
 
             return {
               content: [
@@ -364,7 +386,10 @@ export class VaultMCPServer {
 
           case 'vault_delete_key': {
             const params = DeleteKeySchema.parse(args)
-            const deletedCount = vault.deleteKey(this.vaultContext, params.key)
+            // Use default vault context for this operation
+            const vaultContext = resolveVaultContext({})
+            const deletedCount = vault.deleteKey(vaultContext, params.key)
+            vault.closeVault(vaultContext)
 
             return {
               content: [
@@ -381,10 +406,13 @@ export class VaultMCPServer {
 
           case 'vault_delete_branch': {
             const params = DeleteBranchSchema.parse(args)
+            // Use default vault context for this operation
+            const vaultContext = resolveVaultContext({})
             try {
               const deletedCount = params.branch
-                ? vault.deleteBranch(this.vaultContext, params.branch)
-                : vault.deleteCurrentScope(this.vaultContext)
+                ? vault.deleteBranch(vaultContext, params.branch)
+                : vault.deleteCurrentScope(vaultContext)
+              vault.closeVault(vaultContext)
 
               return {
                 content: [
@@ -395,6 +423,7 @@ export class VaultMCPServer {
                 ],
               }
             } catch (error) {
+              vault.closeVault(vaultContext)
               return {
                 content: [
                   {
@@ -408,8 +437,11 @@ export class VaultMCPServer {
 
           case 'vault_delete_scope': {
             DeleteScopeSchema.parse(args) // Validate args but we don't need params
+            // Use default vault context for this operation
+            const vaultContext = resolveVaultContext({})
             try {
-              const deletedCount = vault.deleteCurrentScope(this.vaultContext)
+              const deletedCount = vault.deleteCurrentScope(vaultContext)
+              vault.closeVault(vaultContext)
 
               return {
                 content: [
@@ -420,6 +452,7 @@ export class VaultMCPServer {
                 ],
               }
             } catch (error) {
+              vault.closeVault(vaultContext)
               return {
                 content: [
                   {
@@ -433,12 +466,17 @@ export class VaultMCPServer {
 
           case 'vault_info': {
             const params = InfoEntrySchema.parse(args)
-            const info = vault.getInfo(this.vaultContext, params.key, {
-              version: params.version,
-              global: params.global,
+            // Create vault context for this request
+            const vaultContext = resolveVaultContext({
+              scope: params.scope as 'global' | 'repository' | 'branch' | undefined,
               repo: params.repo,
               branch: params.branch,
             })
+
+            const info = vault.getInfo(vaultContext, params.key, {
+              version: params.version,
+            })
+            vault.closeVault(vaultContext)
 
             if (!info) {
               return {
@@ -486,7 +524,6 @@ export class VaultMCPServer {
     await this.server.connect(transport)
     return async () => {
       await this.server.close()
-      vault.closeVault(this.vaultContext)
     }
   }
 }
