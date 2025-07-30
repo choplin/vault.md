@@ -44,7 +44,7 @@ describe('getEntryWithFallback', () => {
   })
 
   describe('global scope fallback', () => {
-    it('should return entry from global scope when searching from global scope', () => {
+    it('should return entry from global scope when searching from global scope', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
 
       // Create test file
@@ -52,24 +52,24 @@ describe('getEntryWithFallback', () => {
       writeFileSync(testFile, 'global content')
 
       // Set entry in global scope
-      setEntry(globalContext, 'test-key', testFile)
+      await setEntry(globalContext, 'test-key', testFile)
 
       // Get entry should find it
-      const result = getEntryWithFallback(globalContext, 'test-key')
+      const result = await getEntryWithFallback(globalContext, 'test-key')
       expect(result).toBeDefined()
       expect(result).toContain('test-key')
     })
 
-    it('should return undefined when entry not found in global scope', () => {
+    it('should return undefined when entry not found in global scope', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
 
-      const result = getEntryWithFallback(globalContext, 'non-existent')
+      const result = await getEntryWithFallback(globalContext, 'non-existent')
       expect(result).toBeUndefined()
     })
   })
 
   describe('repository scope fallback', () => {
-    it('should find entry in repository scope first', () => {
+    it('should find entry in repository scope first', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       repoContext = resolveVaultContext({ scope: 'repository' })
 
@@ -80,18 +80,18 @@ describe('getEntryWithFallback', () => {
       writeFileSync(repoFile, 'repo content')
 
       // Set same key in both scopes
-      setEntry(globalContext, 'test-key', globalFile)
-      setEntry(repoContext, 'test-key', repoFile)
+      await setEntry(globalContext, 'test-key', globalFile)
+      await setEntry(repoContext, 'test-key', repoFile)
 
       // Should find repo version first
-      const result = getEntryWithFallback(repoContext, 'test-key')
+      const result = await getEntryWithFallback(repoContext, 'test-key')
       expect(result).toBeDefined()
       // Verify it's the repo version by reading content
-      const content = readFileSync(result, 'utf-8')
+      const content = readFileSync(result!, 'utf-8')
       expect(content).toBe('repo content')
     })
 
-    it('should fall back to global scope when not found in repository', () => {
+    it('should fall back to global scope when not found in repository', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       repoContext = resolveVaultContext({ scope: 'repository' })
 
@@ -100,26 +100,26 @@ describe('getEntryWithFallback', () => {
       writeFileSync(globalFile, 'global content')
 
       // Set entry only in global scope
-      setEntry(globalContext, 'test-key', globalFile)
+      await setEntry(globalContext, 'test-key', globalFile)
 
       // Should fall back to global
-      const result = getEntryWithFallback(repoContext, 'test-key')
+      const result = await getEntryWithFallback(repoContext, 'test-key')
       expect(result).toBeDefined()
       // Verify it's the global version by reading content
-      const content = readFileSync(result, 'utf-8')
+      const content = readFileSync(result!, 'utf-8')
       expect(content).toBe('global content')
     })
 
-    it('should return undefined when not found in either scope', () => {
+    it('should return undefined when not found in either scope', async () => {
       repoContext = resolveVaultContext({ scope: 'repository' })
 
-      const result = getEntryWithFallback(repoContext, 'non-existent')
+      const result = await getEntryWithFallback(repoContext, 'non-existent')
       expect(result).toBeUndefined()
     })
   })
 
   describe('branch scope fallback', () => {
-    it('should find entry in branch scope first', () => {
+    it('should find entry in branch scope first', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       repoContext = resolveVaultContext({ scope: 'repository' })
       branchContext = resolveVaultContext({ scope: 'branch' })
@@ -133,19 +133,19 @@ describe('getEntryWithFallback', () => {
       writeFileSync(branchFile, 'branch content')
 
       // Set same key in all scopes
-      setEntry(globalContext, 'test-key', globalFile)
-      setEntry(repoContext, 'test-key', repoFile)
-      setEntry(branchContext, 'test-key', branchFile)
+      await setEntry(globalContext, 'test-key', globalFile)
+      await setEntry(repoContext, 'test-key', repoFile)
+      await setEntry(branchContext, 'test-key', branchFile)
 
       // Should find branch version first
-      const result = getEntryWithFallback(branchContext, 'test-key')
+      const result = await getEntryWithFallback(branchContext, 'test-key')
       expect(result).toBeDefined()
       // Verify it's the branch version by reading content
-      const content = readFileSync(result, 'utf-8')
+      const content = readFileSync(result!, 'utf-8')
       expect(content).toBe('branch content')
     })
 
-    it('should fall back to repository scope when not found in branch', () => {
+    it('should fall back to repository scope when not found in branch', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       repoContext = resolveVaultContext({ scope: 'repository' })
       branchContext = resolveVaultContext({ scope: 'branch' })
@@ -157,18 +157,18 @@ describe('getEntryWithFallback', () => {
       writeFileSync(repoFile, 'repo content')
 
       // Set entry in global and repo, but not branch
-      setEntry(globalContext, 'test-key', globalFile)
-      setEntry(repoContext, 'test-key', repoFile)
+      await setEntry(globalContext, 'test-key', globalFile)
+      await setEntry(repoContext, 'test-key', repoFile)
 
       // Should fall back to repo
-      const result = getEntryWithFallback(branchContext, 'test-key')
+      const result = await getEntryWithFallback(branchContext, 'test-key')
       expect(result).toBeDefined()
       // Verify it's the repo version by reading content
-      const content = readFileSync(result, 'utf-8')
+      const content = readFileSync(result!, 'utf-8')
       expect(content).toBe('repo content')
     })
 
-    it('should fall back to global scope when not found in branch or repository', () => {
+    it('should fall back to global scope when not found in branch or repository', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       branchContext = resolveVaultContext({ scope: 'branch' })
 
@@ -177,26 +177,26 @@ describe('getEntryWithFallback', () => {
       writeFileSync(globalFile, 'global content')
 
       // Set entry only in global
-      setEntry(globalContext, 'test-key', globalFile)
+      await setEntry(globalContext, 'test-key', globalFile)
 
       // Should fall back to global
-      const result = getEntryWithFallback(branchContext, 'test-key')
+      const result = await getEntryWithFallback(branchContext, 'test-key')
       expect(result).toBeDefined()
       // Verify it's the global version by reading content
-      const content = readFileSync(result, 'utf-8')
+      const content = readFileSync(result!, 'utf-8')
       expect(content).toBe('global content')
     })
 
-    it('should return undefined when not found in any scope', () => {
+    it('should return undefined when not found in any scope', async () => {
       branchContext = resolveVaultContext({ scope: 'branch' })
 
-      const result = getEntryWithFallback(branchContext, 'non-existent')
+      const result = await getEntryWithFallback(branchContext, 'non-existent')
       expect(result).toBeUndefined()
     })
   })
 
   describe('version handling', () => {
-    it('should respect version parameter in fallback search', () => {
+    it('should respect version parameter in fallback search', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       branchContext = resolveVaultContext({ scope: 'branch' })
 
@@ -207,18 +207,18 @@ describe('getEntryWithFallback', () => {
       writeFileSync(file2, 'version 2')
 
       // Set two versions in global
-      setEntry(globalContext, 'test-key', file1)
-      setEntry(globalContext, 'test-key', file2)
+      await setEntry(globalContext, 'test-key', file1)
+      await setEntry(globalContext, 'test-key', file2)
 
       // Get specific version from branch context (should fall back to global)
-      const result = getEntryWithFallback(branchContext, 'test-key', 1)
+      const result = await getEntryWithFallback(branchContext, 'test-key', 1)
       expect(result).toBeDefined()
       // Verify it's version 1 by reading content
-      const content = readFileSync(result, 'utf-8')
+      const content = readFileSync(result!, 'utf-8')
       expect(content).toBe('version 1')
     })
 
-    it('should find specific version in current scope before falling back', () => {
+    it('should find specific version in current scope before falling back', async () => {
       repoContext = resolveVaultContext({ scope: 'repository' })
       branchContext = resolveVaultContext({ scope: 'branch' })
 
@@ -231,21 +231,21 @@ describe('getEntryWithFallback', () => {
       writeFileSync(branchFile2, 'branch version 2')
 
       // Set versions
-      setEntry(repoContext, 'test-key', repoFile)
-      setEntry(branchContext, 'test-key', branchFile1)
-      setEntry(branchContext, 'test-key', branchFile2)
+      await setEntry(repoContext, 'test-key', repoFile)
+      await setEntry(branchContext, 'test-key', branchFile1)
+      await setEntry(branchContext, 'test-key', branchFile2)
 
       // Get version 1 from branch (should not fall back)
-      const result = getEntryWithFallback(branchContext, 'test-key', 1)
+      const result = await getEntryWithFallback(branchContext, 'test-key', 1)
       expect(result).toBeDefined()
       // Verify it's branch version 1 by reading content
-      const content = readFileSync(result, 'utf-8')
+      const content = readFileSync(result!, 'utf-8')
       expect(content).toBe('branch version 1')
     })
   })
 
   describe('file integrity', () => {
-    it('should throw error when file integrity check fails', () => {
+    it('should throw error when file integrity check fails', async () => {
       branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test file
@@ -253,16 +253,16 @@ describe('getEntryWithFallback', () => {
       writeFileSync(testFile, 'original content')
 
       // Set entry and get the actual vault path
-      const vaultPath = setEntry(branchContext, 'test-key', testFile)
+      const vaultPath = await setEntry(branchContext, 'test-key', testFile)
 
       // Modify the vault file directly to break integrity
       writeFileSync(vaultPath, 'modified content')
 
       // Should throw integrity error
-      expect(() => getEntryWithFallback(branchContext, 'test-key')).toThrow('File integrity check failed')
+      await expect(getEntryWithFallback(branchContext, 'test-key')).rejects.toThrow('File integrity check failed')
     })
 
-    it('should throw error when vault file is missing', () => {
+    it('should throw error when vault file is missing', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       branchContext = resolveVaultContext({ scope: 'branch' })
 
@@ -273,19 +273,19 @@ describe('getEntryWithFallback', () => {
       writeFileSync(branchFile, 'branch content')
 
       // Set entries
-      setEntry(globalContext, 'test-key', globalFile)
-      const branchVaultPath = setEntry(branchContext, 'test-key', branchFile)
+      await setEntry(globalContext, 'test-key', globalFile)
+      const branchVaultPath = await setEntry(branchContext, 'test-key', branchFile)
 
       // Remove vault file
       rmSync(branchVaultPath)
 
       // Should throw error, not fall back
-      expect(() => getEntryWithFallback(branchContext, 'test-key')).toThrow('File integrity check failed')
+      await expect(getEntryWithFallback(branchContext, 'test-key')).rejects.toThrow('File integrity check failed')
     })
   })
 
   describe('cross-branch scenarios', () => {
-    it('should not find entries from different branches', () => {
+    it('should not find entries from different branches', async () => {
       // Create branch context for feature branch
       vi.spyOn(git, 'getGitInfo').mockReturnValue({
         isGitRepo: true,
@@ -311,16 +311,16 @@ describe('getEntryWithFallback', () => {
       writeFileSync(featureFile, 'feature content')
 
       // Set entry in feature branch
-      setEntry(featureContext, 'test-key', featureFile)
+      await setEntry(featureContext, 'test-key', featureFile)
 
       // Should not find it from main branch (should fall back to global, but no global entry exists)
-      const result = getEntryWithFallback(branchContext, 'test-key')
+      const result = await getEntryWithFallback(branchContext, 'test-key')
       expect(result).toBeUndefined()
 
       closeVault(featureContext)
     })
 
-    it('should find repository entries from any branch', () => {
+    it('should find repository entries from any branch', async () => {
       repoContext = resolveVaultContext({ scope: 'repository' })
 
       // Create test file
@@ -328,7 +328,7 @@ describe('getEntryWithFallback', () => {
       writeFileSync(repoFile, 'repo content')
 
       // Set entry in repository scope
-      setEntry(repoContext, 'test-key', repoFile)
+      await setEntry(repoContext, 'test-key', repoFile)
 
       // Create branch contexts for different branches
       vi.spyOn(git, 'getGitInfo').mockReturnValue({
@@ -350,8 +350,8 @@ describe('getEntryWithFallback', () => {
       const featureContext = resolveVaultContext({ scope: 'branch' })
 
       // Both branches should find the repository entry
-      const mainResult = getEntryWithFallback(mainContext, 'test-key')
-      const featureResult = getEntryWithFallback(featureContext, 'test-key')
+      const mainResult = await getEntryWithFallback(mainContext, 'test-key')
+      const featureResult = await getEntryWithFallback(featureContext, 'test-key')
 
       expect(mainResult).toBeDefined()
       expect(featureResult).toBeDefined()

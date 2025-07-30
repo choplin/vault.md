@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import * as db from '../src/core/database.js'
+import { createDatabase, closeDatabase } from '../src/core/database/connection.js'
+import { EntryService } from '../src/core/services/entry.service.js'
+import { ScopeService } from '../src/core/services/scope.service.js'
 import * as fs from '../src/core/filesystem.js'
 import { type BranchScope, type GlobalScope, type RepositoryScope } from '../src/core/scope.js'
 import { resolveVaultContext, moveScope, type VaultContext } from '../src/core/vault.js'
@@ -54,7 +56,7 @@ describe('moveScope', () => {
       vi.spyOn(fs, 'verifyFile').mockImplementation(() => true)
     })
 
-    it('should move data from branch scope to repository scope', () => {
+    it('should move data from branch scope to repository scope', async () => {
       // Given: data exists in branch scope
       const branchScope: BranchScope = {
         type: 'branch',
@@ -70,8 +72,8 @@ describe('moveScope', () => {
         remoteUrl: 'https://github.com/test/repo.git',
       }
 
-      const fromScopeId = db.getOrCreateScope(ctx.database, branchScope)
-      db.insertScopedEntry(ctx.database, {
+      const fromScopeId = ctx.scopeService.getOrCreate(branchScope)
+      await ctx.entryService.create({
         scopeId: fromScopeId,
         key: 'test-key',
         version: 1,
@@ -81,21 +83,21 @@ describe('moveScope', () => {
       })
 
       // When: moveScope is called
-      moveScope(ctx, 'test-key', branchScope, repoScope)
+      await moveScope(ctx, 'test-key', branchScope, repoScope)
 
       // Then: data should be in repository scope with same version
-      const toScopeId = db.getOrCreateScope(ctx.database, repoScope)
-      const movedEntry = db.getLatestScopedEntry(ctx.database, toScopeId, 'test-key')
+      const toScopeId = ctx.scopeService.getOrCreate(repoScope)
+      const movedEntry = await ctx.entryService.getLatest(toScopeId, 'test-key')
       expect(movedEntry).toBeDefined()
       expect(movedEntry?.version).toBe(1)
       expect(movedEntry?.description).toBe('test description')
 
       // And: data should be removed from branch scope
-      const oldEntry = db.getLatestScopedEntry(ctx.database, fromScopeId, 'test-key')
+      const oldEntry = await ctx.entryService.getLatest(fromScopeId, 'test-key')
       expect(oldEntry).toBeUndefined()
     })
 
-    it('should move data from repository scope to global scope', () => {
+    it('should move data from repository scope to global scope', async () => {
       // Given: data exists in repository scope
       const repoScope: RepositoryScope = {
         type: 'repository',
@@ -107,8 +109,8 @@ describe('moveScope', () => {
         type: 'global',
       }
 
-      const fromScopeId = db.getOrCreateScope(ctx.database, repoScope)
-      db.insertScopedEntry(ctx.database, {
+      const fromScopeId = ctx.scopeService.getOrCreate(repoScope)
+      await ctx.entryService.create({
         scopeId: fromScopeId,
         key: 'config-key',
         version: 2,
@@ -118,21 +120,21 @@ describe('moveScope', () => {
       })
 
       // When: moveScope is called
-      moveScope(ctx, 'config-key', repoScope, globalScope)
+      await moveScope(ctx, 'config-key', repoScope, globalScope)
 
       // Then: data should be in global scope
-      const toScopeId = db.getOrCreateScope(ctx.database, globalScope)
-      const movedEntry = db.getLatestScopedEntry(ctx.database, toScopeId, 'config-key')
+      const toScopeId = ctx.scopeService.getOrCreate(globalScope)
+      const movedEntry = await ctx.entryService.getLatest(toScopeId, 'config-key')
       expect(movedEntry).toBeDefined()
       expect(movedEntry?.version).toBe(2)
       expect(movedEntry?.description).toBe('global config')
 
       // And: data should be removed from repository scope
-      const oldEntry = db.getLatestScopedEntry(ctx.database, fromScopeId, 'config-key')
+      const oldEntry = await ctx.entryService.getLatest(fromScopeId, 'config-key')
       expect(oldEntry).toBeUndefined()
     })
 
-    it('should preserve all versions when moving between scopes', () => {
+    it('should preserve all versions when moving between scopes', async () => {
       // Given: multiple versions exist in source scope
       const branchScope: BranchScope = {
         type: 'branch',
@@ -148,10 +150,10 @@ describe('moveScope', () => {
         remoteUrl: 'https://github.com/test/repo.git',
       }
 
-      const fromScopeId = db.getOrCreateScope(ctx.database, branchScope)
+      const fromScopeId = ctx.scopeService.getOrCreate(branchScope)
       // Insert 3 versions
       for (let i = 1; i <= 3; i++) {
-        db.insertScopedEntry(ctx.database, {
+        await ctx.entryService.create({
           scopeId: fromScopeId,
           key: 'versioned-key',
           version: i,
@@ -162,11 +164,11 @@ describe('moveScope', () => {
       }
 
       // When: moveScope is called
-      moveScope(ctx, 'versioned-key', branchScope, repoScope)
+      await moveScope(ctx, 'versioned-key', branchScope, repoScope)
 
       // Then: all versions should be in target scope
-      const toScopeId = db.getOrCreateScope(ctx.database, repoScope)
-      const allVersions = db.listScopedEntries(ctx.database, toScopeId, true).filter((e) => e.key === 'versioned-key')
+      const toScopeId = ctx.scopeService.getOrCreate(repoScope)
+      const allVersions = (await ctx.entryService.list(toScopeId, true, true)).filter((e) => e.key === 'versioned-key')
       expect(allVersions).toHaveLength(3)
       expect(allVersions.map((v) => v.version).sort((a, b) => b - a)).toEqual([3, 2, 1])
       expect(allVersions.map((v) => v.description).sort()).toEqual(['version 1', 'version 2', 'version 3'])
@@ -174,7 +176,7 @@ describe('moveScope', () => {
   })
 
   describe('error cases', () => {
-    it('should throw error when key already exists in target scope', () => {
+    it('should throw error when key already exists in target scope', async () => {
       // Given: data exists in both source and target scopes
       const branchScope: BranchScope = {
         type: 'branch',
@@ -190,10 +192,10 @@ describe('moveScope', () => {
         remoteUrl: 'https://github.com/test/repo.git',
       }
 
-      const fromScopeId = db.getOrCreateScope(ctx.database, branchScope)
-      const toScopeId = db.getOrCreateScope(ctx.database, repoScope)
+      const fromScopeId = ctx.scopeService.getOrCreate(branchScope)
+      const toScopeId = ctx.scopeService.getOrCreate(repoScope)
 
-      db.insertScopedEntry(ctx.database, {
+      await ctx.entryService.create({
         scopeId: fromScopeId,
         key: 'conflict-key',
         version: 1,
@@ -202,7 +204,7 @@ describe('moveScope', () => {
         description: 'from branch',
       })
 
-      db.insertScopedEntry(ctx.database, {
+      await ctx.entryService.create({
         scopeId: toScopeId,
         key: 'conflict-key',
         version: 1,
@@ -212,12 +214,10 @@ describe('moveScope', () => {
       })
 
       // When/Then: moveScope should throw error
-      expect(() => {
-        moveScope(ctx, 'conflict-key', branchScope, repoScope)
-      }).toThrow('Key already exists in target scope')
+      await expect(moveScope(ctx, 'conflict-key', branchScope, repoScope)).rejects.toThrow('Key already exists in target scope')
     })
 
-    it('should throw error when key not found in source scope', () => {
+    it('should throw error when key not found in source scope', async () => {
       // Given: key does not exist in source scope
       const branchScope: BranchScope = {
         type: 'branch',
@@ -234,12 +234,10 @@ describe('moveScope', () => {
       }
 
       // When/Then: moveScope should throw error
-      expect(() => {
-        moveScope(ctx, 'non-existent-key', branchScope, repoScope)
-      }).toThrow('Key not found in source scope')
+      await expect(moveScope(ctx, 'non-existent-key', branchScope, repoScope)).rejects.toThrow('Key not found in source scope')
     })
 
-    it('should throw error when source and target scopes are the same', () => {
+    it('should throw error when source and target scopes are the same', async () => {
       // Given: source and target are the same repository scope
       const repoScope: RepositoryScope = {
         type: 'repository',
@@ -249,21 +247,17 @@ describe('moveScope', () => {
       }
 
       // When/Then: moveScope should throw error
-      expect(() => {
-        moveScope(ctx, 'any-key', repoScope, repoScope)
-      }).toThrow('Source and target scopes must be different')
+      await expect(moveScope(ctx, 'any-key', repoScope, repoScope)).rejects.toThrow('Source and target scopes must be different')
     })
 
-    it('should throw error when trying to move from global to same global scope', () => {
+    it('should throw error when trying to move from global to same global scope', async () => {
       // Given: source and target are both global scopes
       const globalScope: GlobalScope = {
         type: 'global',
       }
 
       // When/Then: moveScope should throw error
-      expect(() => {
-        moveScope(ctx, 'any-key', globalScope, globalScope)
-      }).toThrow('Source and target scopes must be different')
+      await expect(moveScope(ctx, 'any-key', globalScope, globalScope)).rejects.toThrow('Source and target scopes must be different')
     })
   })
 })

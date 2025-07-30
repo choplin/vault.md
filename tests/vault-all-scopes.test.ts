@@ -44,7 +44,7 @@ describe('getEntry with allScopes option', () => {
   })
 
   describe('basic functionality', () => {
-    it('should use allScopes to find entry in current scope', () => {
+    it('should use allScopes to find entry in current scope', async () => {
       branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test file
@@ -52,10 +52,10 @@ describe('getEntry with allScopes option', () => {
       writeFileSync(testFile, 'branch content')
 
       // Set entry in branch scope
-      setEntry(branchContext, 'test-key', testFile)
+      await setEntry(branchContext, 'test-key', testFile)
 
       // Get with allScopes should find it
-      const result = getEntry(branchContext, 'test-key', { allScopes: true })
+      const result = await getEntry(branchContext, 'test-key', { allScopes: true })
       expect(result).toBeDefined()
 
       // Verify content
@@ -63,7 +63,7 @@ describe('getEntry with allScopes option', () => {
       expect(content).toBe('branch content')
     })
 
-    it('should use allScopes to fall back to repository scope', () => {
+    it('should use allScopes to fall back to repository scope', async () => {
       repoContext = resolveVaultContext({ scope: 'repository' })
       branchContext = resolveVaultContext({ scope: 'branch' })
 
@@ -72,10 +72,10 @@ describe('getEntry with allScopes option', () => {
       writeFileSync(repoFile, 'repository content')
 
       // Set entry only in repository scope
-      setEntry(repoContext, 'test-key', repoFile)
+      await setEntry(repoContext, 'test-key', repoFile)
 
       // Get from branch with allScopes should find repository entry
-      const result = getEntry(branchContext, 'test-key', { allScopes: true })
+      const result = await getEntry(branchContext, 'test-key', { allScopes: true })
       expect(result).toBeDefined()
 
       // Verify it's the repository version
@@ -83,7 +83,7 @@ describe('getEntry with allScopes option', () => {
       expect(content).toBe('repository content')
     })
 
-    it('should use allScopes to fall back to global scope', () => {
+    it('should use allScopes to fall back to global scope', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       branchContext = resolveVaultContext({ scope: 'branch' })
 
@@ -92,10 +92,10 @@ describe('getEntry with allScopes option', () => {
       writeFileSync(globalFile, 'global content')
 
       // Set entry only in global scope
-      setEntry(globalContext, 'test-key', globalFile)
+      await setEntry(globalContext, 'test-key', globalFile)
 
       // Get from branch with allScopes should find global entry
-      const result = getEntry(branchContext, 'test-key', { allScopes: true })
+      const result = await getEntry(branchContext, 'test-key', { allScopes: true })
       expect(result).toBeDefined()
 
       // Verify it's the global version
@@ -103,17 +103,17 @@ describe('getEntry with allScopes option', () => {
       expect(content).toBe('global content')
     })
 
-    it('should return undefined when not found in any scope with allScopes', () => {
+    it('should return undefined when not found in any scope with allScopes', async () => {
       branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Get non-existent key with allScopes
-      const result = getEntry(branchContext, 'non-existent', { allScopes: true })
+      const result = await getEntry(branchContext, 'non-existent', { allScopes: true })
       expect(result).toBeUndefined()
     })
   })
 
   describe('comparison with non-allScopes', () => {
-    it('should NOT fall back without allScopes option', () => {
+    it('should NOT fall back without allScopes option', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       branchContext = resolveVaultContext({ scope: 'branch' })
 
@@ -122,18 +122,18 @@ describe('getEntry with allScopes option', () => {
       writeFileSync(globalFile, 'global content')
 
       // Set entry only in global scope
-      setEntry(globalContext, 'test-key', globalFile)
+      await setEntry(globalContext, 'test-key', globalFile)
 
       // Get from branch WITHOUT allScopes should NOT find it
-      const result = getEntry(branchContext, 'test-key')
+      const result = await getEntry(branchContext, 'test-key')
       expect(result).toBeUndefined()
 
       // But WITH allScopes should find it
-      const resultWithAllScopes = getEntry(branchContext, 'test-key', { allScopes: true })
+      const resultWithAllScopes = await getEntry(branchContext, 'test-key', { allScopes: true })
       expect(resultWithAllScopes).toBeDefined()
     })
 
-    it('should use explicit scope when allScopes is false', () => {
+    it('should use explicit scope when allScopes is false', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       repoContext = resolveVaultContext({ scope: 'repository' })
       branchContext = resolveVaultContext({ scope: 'branch' })
@@ -145,11 +145,11 @@ describe('getEntry with allScopes option', () => {
       writeFileSync(repoFile, 'repo content')
 
       // Set different values in different scopes
-      setEntry(globalContext, 'test-key', globalFile)
-      setEntry(repoContext, 'test-key', repoFile)
+      await setEntry(globalContext, 'test-key', globalFile)
+      await setEntry(repoContext, 'test-key', repoFile)
 
       // Get with explicit scope (without allScopes) should get from specified scope
-      const result = getEntry(branchContext, 'test-key', { scope: 'global' })
+      const result = await getEntry(branchContext, 'test-key', { scope: 'global' })
       expect(result).toBeDefined()
 
       // Should get global version
@@ -157,7 +157,7 @@ describe('getEntry with allScopes option', () => {
       expect(content).toBe('global content')
 
       // When using allScopes from branch context, it searches from branch -> repo -> global
-      const resultWithAllScopes = getEntry(branchContext, 'test-key', { allScopes: true })
+      const resultWithAllScopes = await getEntry(branchContext, 'test-key', { allScopes: true })
       expect(resultWithAllScopes).toBeDefined()
 
       // Should get repo version (since branch doesn't have it, falls back to repo)
@@ -167,7 +167,7 @@ describe('getEntry with allScopes option', () => {
   })
 
   describe('priority order', () => {
-    it('should follow branch -> repository -> global order', () => {
+    it('should follow branch -> repository -> global order', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       repoContext = resolveVaultContext({ scope: 'repository' })
       branchContext = resolveVaultContext({ scope: 'branch' })
@@ -181,26 +181,26 @@ describe('getEntry with allScopes option', () => {
       writeFileSync(branchFile, 'branch priority 1')
 
       // Set same key in all scopes
-      setEntry(globalContext, 'priority-test', globalFile)
-      setEntry(repoContext, 'priority-test', repoFile)
-      setEntry(branchContext, 'priority-test', branchFile)
+      await setEntry(globalContext, 'priority-test', globalFile)
+      await setEntry(repoContext, 'priority-test', repoFile)
+      await setEntry(branchContext, 'priority-test', branchFile)
 
       // From branch context, should get branch version
-      const branchResult = getEntry(branchContext, 'priority-test', { allScopes: true })
+      const branchResult = await getEntry(branchContext, 'priority-test', { allScopes: true })
       expect(readFileSync(branchResult!, 'utf-8')).toBe('branch priority 1')
 
       // From repo context, should get repo version
-      const repoResult = getEntry(repoContext, 'priority-test', { allScopes: true })
+      const repoResult = await getEntry(repoContext, 'priority-test', { allScopes: true })
       expect(readFileSync(repoResult!, 'utf-8')).toBe('repo priority 2')
 
       // From global context, should get global version
-      const globalResult = getEntry(globalContext, 'priority-test', { allScopes: true })
+      const globalResult = await getEntry(globalContext, 'priority-test', { allScopes: true })
       expect(readFileSync(globalResult!, 'utf-8')).toBe('global priority 3')
     })
   })
 
   describe('version handling with allScopes', () => {
-    it('should respect version parameter with allScopes', () => {
+    it('should respect version parameter with allScopes', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       branchContext = resolveVaultContext({ scope: 'branch' })
 
@@ -211,11 +211,11 @@ describe('getEntry with allScopes option', () => {
       writeFileSync(file2, 'version 2 content')
 
       // Set two versions in global
-      setEntry(globalContext, 'versioned-key', file1)
-      setEntry(globalContext, 'versioned-key', file2)
+      await setEntry(globalContext, 'versioned-key', file1)
+      await setEntry(globalContext, 'versioned-key', file2)
 
       // Get specific version with allScopes from different context
-      const result = getEntry(branchContext, 'versioned-key', { allScopes: true, version: 1 })
+      const result = await getEntry(branchContext, 'versioned-key', { allScopes: true, version: 1 })
       expect(result).toBeDefined()
 
       // Verify it's version 1
@@ -223,7 +223,7 @@ describe('getEntry with allScopes option', () => {
       expect(content).toBe('version 1 content')
     })
 
-    it('should find latest version by default with allScopes', () => {
+    it('should find latest version by default with allScopes', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
       branchContext = resolveVaultContext({ scope: 'branch' })
 
@@ -234,11 +234,11 @@ describe('getEntry with allScopes option', () => {
       writeFileSync(file2, 'new content')
 
       // Set two versions in global
-      setEntry(globalContext, 'versioned-key', file1)
-      setEntry(globalContext, 'versioned-key', file2)
+      await setEntry(globalContext, 'versioned-key', file1)
+      await setEntry(globalContext, 'versioned-key', file2)
 
       // Get without version should return latest
-      const result = getEntry(branchContext, 'versioned-key', { allScopes: true })
+      const result = await getEntry(branchContext, 'versioned-key', { allScopes: true })
       expect(result).toBeDefined()
 
       // Verify it's the latest version
@@ -248,7 +248,7 @@ describe('getEntry with allScopes option', () => {
   })
 
   describe('edge cases', () => {
-    it('should handle allScopes from global scope', () => {
+    it('should handle allScopes from global scope', async () => {
       globalContext = resolveVaultContext({ scope: 'global' })
 
       // Create test file
@@ -256,17 +256,17 @@ describe('getEntry with allScopes option', () => {
       writeFileSync(globalFile, 'global only content')
 
       // Set entry in global
-      setEntry(globalContext, 'test-key', globalFile)
+      await setEntry(globalContext, 'test-key', globalFile)
 
       // Get with allScopes from global should still work
-      const result = getEntry(globalContext, 'test-key', { allScopes: true })
+      const result = await getEntry(globalContext, 'test-key', { allScopes: true })
       expect(result).toBeDefined()
 
       const content = readFileSync(result!, 'utf-8')
       expect(content).toBe('global only content')
     })
 
-    it('should handle allScopes with custom repository path', () => {
+    it('should handle allScopes with custom repository path', async () => {
       const customRepoPath = join(testDir, 'custom-repo')
       mkdirSync(customRepoPath, { recursive: true })
 
@@ -286,10 +286,10 @@ describe('getEntry with allScopes option', () => {
       writeFileSync(customFile, 'custom repo content')
 
       // Set entry in custom repo
-      setEntry(customContext, 'custom-key', customFile)
+      await setEntry(customContext, 'custom-key', customFile)
 
       // Get with allScopes should work
-      const result = getEntry(customContext, 'custom-key', { allScopes: true })
+      const result = await getEntry(customContext, 'custom-key', { allScopes: true })
       expect(result).toBeDefined()
 
       const content = readFileSync(result!, 'utf-8')
@@ -298,7 +298,7 @@ describe('getEntry with allScopes option', () => {
       closeVault(customContext)
     })
 
-    it('should throw error on file integrity failure even with allScopes', () => {
+    it('should throw error on file integrity failure even with allScopes', async () => {
       branchContext = resolveVaultContext({ scope: 'branch' })
 
       // Create test file
@@ -306,13 +306,13 @@ describe('getEntry with allScopes option', () => {
       writeFileSync(testFile, 'original content')
 
       // Set entry and get vault path
-      const vaultPath = setEntry(branchContext, 'test-key', testFile)
+      const vaultPath = await setEntry(branchContext, 'test-key', testFile)
 
       // Corrupt the vault file
       writeFileSync(vaultPath, 'corrupted content')
 
       // Should throw error even with allScopes
-      expect(() => getEntry(branchContext, 'test-key', { allScopes: true })).toThrow('File integrity check failed')
+      await expect(async () => await getEntry(branchContext, 'test-key', { allScopes: true })).rejects.toThrow('File integrity check failed')
     })
   })
 })

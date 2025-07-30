@@ -112,12 +112,20 @@ export class EntryService {
     const entry = this.entryRepo.findByScopeAndKey(scopeId, key)
     if (!entry) return false
 
+    // Check if already archived
+    const status = this.statusRepo.findByEntryId(entry.id)
+    if (status?.isArchived) return false
+
     return this.statusRepo.setArchived(entry.id, true)
   }
 
   async restore(scopeId: number, key: string): Promise<boolean> {
     const entry = this.entryRepo.findByScopeAndKey(scopeId, key)
     if (!entry) return false
+
+    // Check if already active (not archived)
+    const status = this.statusRepo.findByEntryId(entry.id)
+    if (!status?.isArchived) return false
 
     return this.statusRepo.setArchived(entry.id, false)
   }

@@ -54,11 +54,11 @@ describe('MCP Server Three-Tier Scope Operations', () => {
   })
 
   describe('vault.setEntry with three-tier scopes (used by MCP vault_set)', () => {
-    it('should store content in global scope', () => {
+    it('should store content in global scope', async () => {
       const tmpFile = join(testDir, 'global.txt')
       writeFileSync(tmpFile, 'global content')
 
-      const path = setEntry(ctx, 'global-key', tmpFile, {
+      const path = await setEntry(ctx, 'global-key', tmpFile, {
         scope: 'global',
         description: 'global test',
       })
@@ -67,15 +67,15 @@ describe('MCP Server Three-Tier Scope Operations', () => {
 
       // Verify it's in global scope by creating a new context with global scope
       const globalCtx = resolveVaultContext({ scope: 'global' })
-      const content = catEntry(globalCtx, 'global-key')
+      const content = await catEntry(globalCtx, 'global-key')
       expect(content).toBe('global content')
     })
 
-    it('should store content in repository scope by default', () => {
+    it('should store content in repository scope by default', async () => {
       const tmpFile = join(testDir, 'repo.txt')
       writeFileSync(tmpFile, 'repo content')
 
-      const path = setEntry(ctx, 'repo-key', tmpFile, {
+      const path = await setEntry(ctx, 'repo-key', tmpFile, {
         description: 'repo test',
       })
 
@@ -83,15 +83,15 @@ describe('MCP Server Three-Tier Scope Operations', () => {
 
       // Verify it's in repository scope
       const repoCtx = resolveVaultContext({ scope: 'repository' })
-      const content = catEntry(repoCtx, 'repo-key')
+      const content = await catEntry(repoCtx, 'repo-key')
       expect(content).toBe('repo content')
     })
 
-    it('should store content in branch scope', () => {
+    it('should store content in branch scope', async () => {
       const tmpFile = join(testDir, 'branch.txt')
       writeFileSync(tmpFile, 'branch content')
 
-      const path = setEntry(ctx, 'branch-key', tmpFile, {
+      const path = await setEntry(ctx, 'branch-key', tmpFile, {
         scope: 'branch',
         description: 'branch test',
       })
@@ -100,15 +100,15 @@ describe('MCP Server Three-Tier Scope Operations', () => {
 
       // Verify it's in branch scope
       const branchCtx = resolveVaultContext({ scope: 'branch' })
-      const content = catEntry(branchCtx, 'branch-key')
+      const content = await catEntry(branchCtx, 'branch-key')
       expect(content).toBe('branch content')
     })
 
-    it('should store content in specific branch', () => {
+    it('should store content in specific branch', async () => {
       const tmpFile = join(testDir, 'feature.txt')
       writeFileSync(tmpFile, 'feature content')
 
-      const path = setEntry(ctx, 'feature-key', tmpFile, {
+      const path = await setEntry(ctx, 'feature-key', tmpFile, {
         scope: 'branch',
         branch: 'feature-x',
         description: 'feature branch test',
@@ -118,11 +118,11 @@ describe('MCP Server Three-Tier Scope Operations', () => {
 
       // Verify it's in the specific branch
       const featureCtx = resolveVaultContext({ scope: 'branch', branch: 'feature-x' })
-      const content = catEntry(featureCtx, 'feature-key')
+      const content = await catEntry(featureCtx, 'feature-key')
       expect(content).toBe('feature content')
     })
 
-    it('should error when using branch scope outside git repo', () => {
+    it('should error when using branch scope outside git repo', async () => {
       mockGetGitInfo.mockReturnValue({
         isGitRepo: false,
         repoRoot: null,
@@ -136,16 +136,16 @@ describe('MCP Server Three-Tier Scope Operations', () => {
       // Create a new context after changing the git mock
       const nonGitCtx = resolveVaultContext()
 
-      expect(() => {
+      await expect(
         setEntry(nonGitCtx, 'nogit-key', tmpFile, {
           scope: 'branch',
         })
-      }).toThrow('Not in a git repository. Branch scope requires git repository')
+      ).rejects.toThrow('Not in a git repository. Branch scope requires git repository')
     })
   })
 
   describe('vault.catEntry with three-tier scopes (used by MCP vault_get)', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       // Set up test data in all scopes
       const globalFile = join(testDir, 'global.txt')
       const repoFile = join(testDir, 'repo.txt')
@@ -157,64 +157,64 @@ describe('MCP Server Three-Tier Scope Operations', () => {
 
       // Create entries in different scopes
       const globalCtx = resolveVaultContext({ scope: 'global' })
-      setEntry(globalCtx, 'shared-key', globalFile)
+      await setEntry(globalCtx, 'shared-key', globalFile)
 
       const repoCtx = resolveVaultContext({ scope: 'repository' })
-      setEntry(repoCtx, 'shared-key', repoFile)
+      await setEntry(repoCtx, 'shared-key', repoFile)
 
       const branchCtx = resolveVaultContext({ scope: 'branch' })
-      setEntry(branchCtx, 'shared-key', branchFile)
+      await setEntry(branchCtx, 'shared-key', branchFile)
     })
 
-    it('should retrieve from specific scope', () => {
+    it('should retrieve from specific scope', async () => {
       const globalCtx = resolveVaultContext({ scope: 'global' })
       const repoCtx = resolveVaultContext({ scope: 'repository' })
       const branchCtx = resolveVaultContext({ scope: 'branch' })
 
-      const globalContent = catEntry(globalCtx, 'shared-key')
+      const globalContent = await catEntry(globalCtx, 'shared-key')
       expect(globalContent).toBe('global value')
 
-      const repoContent = catEntry(repoCtx, 'shared-key')
+      const repoContent = await catEntry(repoCtx, 'shared-key')
       expect(repoContent).toBe('repo value')
 
-      const branchContent = catEntry(branchCtx, 'shared-key')
+      const branchContent = await catEntry(branchCtx, 'shared-key')
       expect(branchContent).toBe('branch value')
     })
 
-    it('should use repository scope by default', () => {
+    it('should use repository scope by default', async () => {
       const defaultCtx = resolveVaultContext()
-      const content = catEntry(defaultCtx, 'shared-key')
+      const content = await catEntry(defaultCtx, 'shared-key')
       expect(content).toBe('repo value')
     })
 
-    it('should fall back through scopes with allScopes option', () => {
+    it('should fall back through scopes with allScopes option', async () => {
       // Test with a key that only exists in global scope
       const globalFile = join(testDir, 'global-only.txt')
       writeFileSync(globalFile, 'global only value')
 
       const globalCtx = resolveVaultContext({ scope: 'global' })
-      setEntry(globalCtx, 'global-only-key', globalFile)
+      await setEntry(globalCtx, 'global-only-key', globalFile)
 
       // Try to get from branch scope with allScopes
       const branchCtx = resolveVaultContext({ scope: 'branch' })
-      const content = catEntry(branchCtx, 'global-only-key', { allScopes: true })
+      const content = await catEntry(branchCtx, 'global-only-key', { allScopes: true })
       expect(content).toBe('global only value')
     })
 
-    it('should retrieve from specific branch', () => {
+    it('should retrieve from specific branch', async () => {
       const featureFile = join(testDir, 'feature.txt')
       writeFileSync(featureFile, 'feature value')
 
       const featureCtx = resolveVaultContext({ scope: 'branch', branch: 'feature-y' })
-      setEntry(featureCtx, 'feature-key', featureFile)
+      await setEntry(featureCtx, 'feature-key', featureFile)
 
-      const content = catEntry(featureCtx, 'feature-key')
+      const content = await catEntry(featureCtx, 'feature-key')
       expect(content).toBe('feature value')
     })
   })
 
   describe('vault.listEntries with three-tier scopes (used by MCP vault_list)', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       // Set up test data in different scopes
       const file1 = join(testDir, 'file1.txt')
       const file2 = join(testDir, 'file2.txt')
@@ -225,124 +225,124 @@ describe('MCP Server Three-Tier Scope Operations', () => {
       writeFileSync(file3, 'content3')
 
       const globalCtx = resolveVaultContext({ scope: 'global' })
-      setEntry(globalCtx, 'global-entry', file1)
+      await setEntry(globalCtx, 'global-entry', file1)
 
       const repoCtx = resolveVaultContext({ scope: 'repository' })
-      setEntry(repoCtx, 'repo-entry', file2)
+      await setEntry(repoCtx, 'repo-entry', file2)
 
       const branchCtx = resolveVaultContext({ scope: 'branch' })
-      setEntry(branchCtx, 'branch-entry', file3)
+      await setEntry(branchCtx, 'branch-entry', file3)
     })
 
-    it('should list entries from specific scope', () => {
+    it('should list entries from specific scope', async () => {
       const globalCtx = resolveVaultContext({ scope: 'global' })
-      const globalEntries = listEntries(globalCtx)
+      const globalEntries = await listEntries(globalCtx)
       expect(globalEntries).toHaveLength(1)
       expect(globalEntries[0].key).toBe('global-entry')
 
       const repoCtx = resolveVaultContext({ scope: 'repository' })
-      const repoEntries = listEntries(repoCtx)
+      const repoEntries = await listEntries(repoCtx)
       expect(repoEntries).toHaveLength(1)
       expect(repoEntries[0].key).toBe('repo-entry')
 
       const branchCtx = resolveVaultContext({ scope: 'branch' })
-      const branchEntries = listEntries(branchCtx)
+      const branchEntries = await listEntries(branchCtx)
       expect(branchEntries).toHaveLength(1)
       expect(branchEntries[0].key).toBe('branch-entry')
     })
 
-    it('should list repository scope by default', () => {
+    it('should list repository scope by default', async () => {
       const defaultCtx = resolveVaultContext()
-      const entries = listEntries(defaultCtx)
+      const entries = await listEntries(defaultCtx)
       expect(entries).toHaveLength(1)
       expect(entries[0].key).toBe('repo-entry')
     })
 
-    it('should list entries from specific branch', () => {
+    it('should list entries from specific branch', async () => {
       const file = join(testDir, 'feature.txt')
       writeFileSync(file, 'feature content')
 
       const featureCtx = resolveVaultContext({ scope: 'branch', branch: 'feature-z' })
-      setEntry(featureCtx, 'feature-entry', file)
+      await setEntry(featureCtx, 'feature-entry', file)
 
-      const entries = listEntries(featureCtx)
+      const entries = await listEntries(featureCtx)
       expect(entries).toHaveLength(1)
       expect(entries[0].key).toBe('feature-entry')
     })
   })
 
   describe('vault.deleteEntry with three-tier scopes (used by MCP vault_delete)', () => {
-    it('should delete from specific scope only', () => {
+    it('should delete from specific scope only', async () => {
       // Create entries in all scopes
       const file = join(testDir, 'delete.txt')
       writeFileSync(file, 'content')
 
       const globalCtx = resolveVaultContext({ scope: 'global' })
-      setEntry(globalCtx, 'delete-key', file)
+      await setEntry(globalCtx, 'delete-key', file)
 
       const repoCtx = resolveVaultContext({ scope: 'repository' })
-      setEntry(repoCtx, 'delete-key', file)
+      await setEntry(repoCtx, 'delete-key', file)
 
       const branchCtx = resolveVaultContext({ scope: 'branch' })
-      setEntry(branchCtx, 'delete-key', file)
+      await setEntry(branchCtx, 'delete-key', file)
 
       // Delete from repository scope
-      const success = deleteEntry(repoCtx, 'delete-key')
+      const success = await deleteEntry(repoCtx, 'delete-key')
       expect(success).toBe(true)
 
       // Verify only repository scope was deleted
-      expect(catEntry(globalCtx, 'delete-key')).toBe('content')
-      expect(catEntry(repoCtx, 'delete-key')).toBeUndefined()
-      expect(catEntry(branchCtx, 'delete-key')).toBe('content')
+      expect(await catEntry(globalCtx, 'delete-key')).toBe('content')
+      expect(await catEntry(repoCtx, 'delete-key')).toBeUndefined()
+      expect(await catEntry(branchCtx, 'delete-key')).toBe('content')
     })
 
-    it('should delete from specific branch', () => {
+    it('should delete from specific branch', async () => {
       const file = join(testDir, 'branch-delete.txt')
       writeFileSync(file, 'branch content')
 
       const featureCtx = resolveVaultContext({ scope: 'branch', branch: 'feature-delete' })
-      setEntry(featureCtx, 'branch-delete-key', file)
+      await setEntry(featureCtx, 'branch-delete-key', file)
 
-      const success = deleteEntry(featureCtx, 'branch-delete-key')
+      const success = await deleteEntry(featureCtx, 'branch-delete-key')
       expect(success).toBe(true)
 
-      const content = catEntry(featureCtx, 'branch-delete-key')
+      const content = await catEntry(featureCtx, 'branch-delete-key')
       expect(content).toBeUndefined()
     })
   })
 
   describe('vault.getInfo with three-tier scopes (used by MCP vault_info)', () => {
-    it('should return info from specific scope', () => {
+    it('should return info from specific scope', async () => {
       const file = join(testDir, 'info.txt')
       writeFileSync(file, 'info content')
 
       const globalCtx = resolveVaultContext({ scope: 'global' })
-      setEntry(globalCtx, 'info-key', file, { description: 'global info' })
+      await setEntry(globalCtx, 'info-key', file, { description: 'global info' })
 
       const repoCtx = resolveVaultContext({ scope: 'repository' })
-      setEntry(repoCtx, 'info-key', file, { description: 'repo info' })
+      await setEntry(repoCtx, 'info-key', file, { description: 'repo info' })
 
-      const globalInfo = getInfo(globalCtx, 'info-key')
+      const globalInfo = await getInfo(globalCtx, 'info-key')
       expect(globalInfo?.description).toBe('global info')
 
-      const repoInfo = getInfo(repoCtx, 'info-key')
+      const repoInfo = await getInfo(repoCtx, 'info-key')
       expect(repoInfo?.description).toBe('repo info')
     })
 
-    it('should return info from specific branch', () => {
+    it('should return info from specific branch', async () => {
       const file = join(testDir, 'branch-info.txt')
       writeFileSync(file, 'branch info content')
 
       const featureCtx = resolveVaultContext({ scope: 'branch', branch: 'feature-info' })
-      setEntry(featureCtx, 'branch-info-key', file, { description: 'feature branch info' })
+      await setEntry(featureCtx, 'branch-info-key', file, { description: 'feature branch info' })
 
-      const info = getInfo(featureCtx, 'branch-info-key')
+      const info = await getInfo(featureCtx, 'branch-info-key')
       expect(info?.description).toBe('feature branch info')
     })
   })
 
   describe('edge cases and error handling', () => {
-    it('should handle invalid scope type', () => {
+    it('should handle invalid scope type', async () => {
       const file = join(testDir, 'invalid.txt')
       writeFileSync(file, 'content')
 
@@ -352,7 +352,7 @@ describe('MCP Server Three-Tier Scope Operations', () => {
       }).toThrow()
     })
 
-    it('should handle repository scope in non-git directory', () => {
+    it('should handle repository scope in non-git directory', async () => {
       mockGetGitInfo.mockReturnValue({
         isGitRepo: false,
         repoRoot: null,
@@ -365,17 +365,17 @@ describe('MCP Server Three-Tier Scope Operations', () => {
       writeFileSync(file, 'nongit repo content')
 
       // Repository scope should work even outside git repo
-      const path = setEntry(nonGitCtx, 'nongit-key', file, {
+      const path = await setEntry(nonGitCtx, 'nongit-key', file, {
         description: 'non-git repo test',
       })
 
       expect(path).toContain('nongit-key_v1.txt')
 
-      const content = catEntry(nonGitCtx, 'nongit-key')
+      const content = await catEntry(nonGitCtx, 'nongit-key')
       expect(content).toBe('nongit repo content')
     })
 
-    it('should use HEAD as branch name in detached HEAD state', () => {
+    it('should use HEAD as branch name in detached HEAD state', async () => {
       mockGetGitInfo.mockReturnValue({
         isGitRepo: true,
         repoRoot: testDir,
@@ -387,10 +387,10 @@ describe('MCP Server Three-Tier Scope Operations', () => {
       const file = join(testDir, 'detached.txt')
       writeFileSync(file, 'detached content')
 
-      const path = setEntry(detachedCtx, 'detached-key', file)
+      const path = await setEntry(detachedCtx, 'detached-key', file)
       expect(path).toContain('detached-key_v1.txt')
 
-      const content = catEntry(detachedCtx, 'detached-key')
+      const content = await catEntry(detachedCtx, 'detached-key')
       expect(content).toBe('detached content')
     })
   })

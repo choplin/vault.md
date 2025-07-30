@@ -240,7 +240,7 @@ export class VaultMCPServer {
 
             try {
               writeFileSync(tmpFile, params.content)
-              const path = vault.setEntry(vaultContext, params.key, tmpFile, {
+              const path = await vault.setEntry(vaultContext, params.key, tmpFile, {
                 description: params.description,
               })
               unlinkSync(tmpFile)
@@ -273,7 +273,7 @@ export class VaultMCPServer {
               branch: params.branch,
             })
 
-            const content = vault.catEntry(vaultContext, params.key, {
+            const content = await vault.catEntry(vaultContext, params.key, {
               version: params.version,
               allScopes: params.allScopes,
             })
@@ -309,7 +309,7 @@ export class VaultMCPServer {
               branch: params.branch,
             })
 
-            const entries = vault.listEntries(vaultContext, {
+            const entries = await vault.listEntries(vaultContext, {
               allVersions: params.allVersions,
             })
             vault.closeVault(vaultContext)
@@ -348,7 +348,7 @@ export class VaultMCPServer {
               branch: params.branch,
             })
 
-            const success = vault.deleteEntry(vaultContext, params.key, {
+            const success = await vault.deleteEntry(vaultContext, params.key, {
               version: params.version,
             })
             vault.closeVault(vaultContext)
@@ -369,7 +369,7 @@ export class VaultMCPServer {
             const params = DeleteVersionSchema.parse(args)
             // Use default vault context for this operation
             const vaultContext = resolveVaultContext({})
-            const success = vault.deleteVersion(vaultContext, params.key, params.version)
+            const success = await vault.deleteVersion(vaultContext, params.key, params.version)
             vault.closeVault(vaultContext)
 
             return {
@@ -388,7 +388,7 @@ export class VaultMCPServer {
             const params = DeleteKeySchema.parse(args)
             // Use default vault context for this operation
             const vaultContext = resolveVaultContext({})
-            const deletedCount = vault.deleteKey(vaultContext, params.key)
+            const deletedCount = await vault.deleteKey(vaultContext, params.key)
             vault.closeVault(vaultContext)
 
             return {
@@ -410,8 +410,8 @@ export class VaultMCPServer {
             const vaultContext = resolveVaultContext({})
             try {
               const deletedCount = params.branch
-                ? vault.deleteBranch(vaultContext, params.branch)
-                : vault.deleteCurrentScope(vaultContext)
+                ? await vault.deleteBranch(vaultContext, params.branch)
+                : await vault.deleteCurrentScope(vaultContext)
               vault.closeVault(vaultContext)
 
               return {
@@ -440,7 +440,7 @@ export class VaultMCPServer {
             // Use default vault context for this operation
             const vaultContext = resolveVaultContext({})
             try {
-              const deletedCount = vault.deleteCurrentScope(vaultContext)
+              const deletedCount = await vault.deleteCurrentScope(vaultContext)
               vault.closeVault(vaultContext)
 
               return {
@@ -473,7 +473,7 @@ export class VaultMCPServer {
               branch: params.branch,
             })
 
-            const info = vault.getInfo(vaultContext, params.key, {
+            const info = await vault.getInfo(vaultContext, params.key, {
               version: params.version,
             })
             vault.closeVault(vaultContext)
