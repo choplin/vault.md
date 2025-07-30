@@ -3,15 +3,7 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import {
-  deleteEntryAllVersions,
-  deleteEntryVersion,
-  deleteIdentifierAllBranches,
-  deleteScope,
-  getAllScopedEntriesGroupedByScope,
-  getOrCreateScope,
-  listScopedEntries,
-} from '../core/database.js'
+// Database imports are now handled through vault context services
 import { deleteFile, deleteProjectFiles } from '../core/filesystem.js'
 import { catEntry, getEntry, listEntries } from '../core/index.js'
 import { formatScope } from '../core/scope.js'
@@ -25,7 +17,7 @@ export function createWebServer(vault: VaultContext) {
   app.use('*', cors())
 
   // API Routes
-  app.get('/api/entries', (c) => {
+  app.get('/api/entries', async (c) => {
     try {
       const entries = listEntries(vault, { allVersions: true })
       return c.json(entries)
@@ -35,9 +27,9 @@ export function createWebServer(vault: VaultContext) {
   })
 
   // Get all entries from all scopes
-  app.get('/api/entries/all', (c) => {
+  app.get('/api/entries/all', async (c) => {
     try {
-      const scopedEntries = getAllScopedEntriesGroupedByScope(vault.database)
+      const scopedEntries = await vault.scopeService.getAllEntriesGrouped()
       const currentScope = formatScope(vault.scope)
 
       // Convert to array format expected by frontend
@@ -73,7 +65,7 @@ export function createWebServer(vault: VaultContext) {
   })
 
   // Get entries for a specific scope
-  app.get('/api/scopes/:identifier/:branch/entries', (c) => {
+  app.get('/api/scopes/:identifier/:branch/entries', async (c) => {
     try {
       const identifier = decodeURIComponent(c.req.param('identifier'))
       const branch = decodeURIComponent(c.req.param('branch'))
@@ -109,7 +101,7 @@ export function createWebServer(vault: VaultContext) {
       }
 
       // Get entries for this scope
-      const entries = listScopedEntries(vault.database, scopeId.id, allVersions)
+      const entries = await vault.entryService.list(scopeId.id, false, allVersions)
 
       // Convert to web format
       const vaultEntries = entries.map((entry) => ({
@@ -133,7 +125,7 @@ export function createWebServer(vault: VaultContext) {
     }
   })
 
-  app.get('/api/entry/:scope/:key/:version?', (c) => {
+  app.get('/api/entry/:scope/:key/:version?', async (c) => {
     try {
       const scopeParam = decodeURIComponent(c.req.param('scope'))
       const key = decodeURIComponent(c.req.param('key'))
@@ -166,14 +158,14 @@ export function createWebServer(vault: VaultContext) {
         }
       }
 
-      const filePath = getEntry(vault, key, options)
+      const filePath = await getEntry(vault, key, options)
       console.log('Got filePath:', filePath)
 
       if (!filePath) {
         return c.json({ error: 'Entry not found' }, 404)
       }
 
-      const content = catEntry(vault, key, options)
+      const content = await catEntry(vault, key, options)
       console.log('Got content length:', content?.length)
 
       return c.json({ content, filePath })
@@ -183,7 +175,7 @@ export function createWebServer(vault: VaultContext) {
   })
 
   // Delete endpoints
-  app.delete('/api/entries/:identifier/:branch/:key/:version?', (c) => {
+  app.delete('/api/entries/:identifier/:branch/:key/:version?', async (c) => {
     try {
       const identifier = decodeURIComponent(c.req.param('identifier'))
       const branch = decodeURIComponent(c.req.param('branch'))
@@ -209,10 +201,10 @@ export function createWebServer(vault: VaultContext) {
             }
 
       // Get scope ID
-      const scopeId = getOrCreateScope(vault.database, scope)
+      const scopeId = vault.scopeService.getOrCreate(scope)
 
       // Get entries to find file paths before deletion
-      const entries = listScopedEntries(vault.database, scopeId, true).filter((e) => e.key === key)
+      const entries = (await vault.entryService.list(scopeId, true, true)).filter((e) => e.key === key)
 
       if (version) {
         // Delete specific version
@@ -225,8 +217,8 @@ export function createWebServer(vault: VaultContext) {
         deleteFile(entry.filePath)
 
         // Delete from database
-        const deleted = deleteEntryVersion(vault.database, scopeId, key, version)
-        if (deleted > 0) {
+        const deleted = await vault.entryService.deleteVersion(scopeId, key, version)
+        if (deleted) {
           return c.json({ message: `Deleted version ${version} of key '${key}'` })
         }
         return c.json({ error: 'Failed to delete version' }, 500)
@@ -242,8 +234,9 @@ export function createWebServer(vault: VaultContext) {
         })
 
         // Delete from database
-        const deletedCount = deleteEntryAllVersions(vault.database, scopeId, key)
-        if (deletedCount > 0) {
+        const deletedCount = entries.length
+        const success = await vault.entryService.deleteAll(scopeId, key)
+        if (success && deletedCount > 0) {
           return c.json({ message: `Deleted ${deletedCount} versions of key '${key}'` })
         }
         return c.json({ error: 'Failed to delete key' }, 500)
@@ -253,7 +246,7 @@ export function createWebServer(vault: VaultContext) {
     }
   })
 
-  app.delete('/api/branches/:identifier/:branch', (c) => {
+  app.delete('/api/branches/:identifier/:branch', async (c) => {
     try {
       const identifier = decodeURIComponent(c.req.param('identifier'))
       const branch = decodeURIComponent(c.req.param('branch'))
@@ -263,19 +256,19 @@ export function createWebServer(vault: VaultContext) {
       deleteProjectFiles(scopePath)
 
       // Delete from database
-      const deletedCount = deleteScope(vault.database, identifier, branch)
+      const deletedCount = await vault.scopeService.deleteScope(identifier, branch)
       return c.json({ message: `Deleted scope with ${deletedCount} entries` })
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
     }
   })
 
-  app.delete('/api/identifiers/:identifier', (c) => {
+  app.delete('/api/identifiers/:identifier', async (c) => {
     try {
       const identifier = decodeURIComponent(c.req.param('identifier'))
 
       // Get all scopes for this identifier to delete files
-      const allScopes = getAllScopedEntriesGroupedByScope(vault.database)
+      const allScopes = await vault.scopeService.getAllEntriesGrouped()
       for (const [scope, _] of allScopes) {
         if ((scope.type === 'branch' || scope.type === 'repository') && scope.identifier === identifier) {
           if (scope.type === 'branch') {
@@ -289,7 +282,7 @@ export function createWebServer(vault: VaultContext) {
       }
 
       // Delete from database
-      const deletedCount = deleteIdentifierAllBranches(vault.database, identifier)
+      const deletedCount = await vault.scopeService.deleteAllBranches(identifier)
       return c.json({ message: `Deleted all branches with ${deletedCount} total entries` })
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)

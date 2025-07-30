@@ -109,34 +109,34 @@ describe('vault functions', () => {
   })
 
   describe('setEntry', () => {
-    it('should save content from file', () => {
+    it('should save content from file', async () => {
       const testFile = join(tempDir, 'test.txt')
       const content = 'Test content from file'
       writeFileSync(testFile, content)
 
-      const path = setEntry(ctx, 'test-key', testFile)
+      const path = await setEntry(ctx, 'test-key', testFile)
 
       expect(path).toContain('test-key_v1.txt')
       expect(path).toContain('/global/')
     })
 
-    it('should save with description', () => {
+    it('should save with description', async () => {
       const testFile = join(tempDir, 'test.txt')
       writeFileSync(testFile, 'content')
 
-      setEntry(ctx, 'test-key', testFile, { description: 'Test description' })
+      await setEntry(ctx, 'test-key', testFile, { description: 'Test description' })
 
-      const info = getInfo(ctx, 'test-key')
+      const info = await getInfo(ctx, 'test-key')
       expect(info?.description).toBe('Test description')
     })
 
-    it('should increment version on subsequent saves', () => {
+    it('should increment version on subsequent saves', async () => {
       const testFile = join(tempDir, 'test.txt')
       writeFileSync(testFile, 'v1')
 
-      const path1 = setEntry(ctx, 'test-key', testFile)
+      const path1 = await setEntry(ctx, 'test-key', testFile)
       writeFileSync(testFile, 'v2')
-      const path2 = setEntry(ctx, 'test-key', testFile)
+      const path2 = await setEntry(ctx, 'test-key', testFile)
 
       expect(path1).toContain('test-key_v1.txt')
       expect(path2).toContain('test-key_v2.txt')
@@ -144,81 +144,81 @@ describe('vault functions', () => {
   })
 
   describe('getEntry', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       const testFile = join(tempDir, 'test.txt')
       writeFileSync(testFile, 'content')
-      setEntry(ctx, 'test-key', testFile)
+      await setEntry(ctx, 'test-key', testFile)
     })
 
-    it('should get latest entry path', () => {
-      const path = getEntry(ctx, 'test-key')
+    it('should get latest entry path', async () => {
+      const path = await getEntry(ctx, 'test-key')
 
       expect(path).toBeDefined()
       expect(path).toContain('test-key_v1.txt')
     })
 
-    it('should return undefined for non-existent key', () => {
-      const path = getEntry(ctx, 'non-existent')
+    it('should return undefined for non-existent key', async () => {
+      const path = await getEntry(ctx, 'non-existent')
       expect(path).toBeUndefined()
     })
 
-    it('should verify file integrity', () => {
+    it('should verify file integrity', async () => {
       const testFile = join(tempDir, 'test2.txt')
       writeFileSync(testFile, 'content')
-      setEntry(ctx, 'test-key2', testFile)
+      await setEntry(ctx, 'test-key2', testFile)
 
       // Corrupt the file
-      const info = getInfo(ctx, 'test-key2')
+      const info = await getInfo(ctx, 'test-key2')
       if (info?.filePath) {
         writeFileSync(info.filePath, 'corrupted content')
       }
 
-      expect(() => getEntry(ctx, 'test-key2')).toThrow('File integrity check failed')
+      await expect(getEntry(ctx, 'test-key2')).rejects.toThrow('File integrity check failed')
     })
   })
 
   describe('catEntry', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       const testFile = join(tempDir, 'test.txt')
       const content = 'Hello, World!'
       writeFileSync(testFile, content)
-      setEntry(ctx, 'test-key', testFile)
+      await setEntry(ctx, 'test-key', testFile)
     })
 
-    it('should return file content', () => {
-      const content = catEntry(ctx, 'test-key')
+    it('should return file content', async () => {
+      const content = await catEntry(ctx, 'test-key')
       expect(content).toBe('Hello, World!')
     })
 
-    it('should return undefined for non-existent key', () => {
-      const content = catEntry(ctx, 'non-existent')
+    it('should return undefined for non-existent key', async () => {
+      const content = await catEntry(ctx, 'non-existent')
       expect(content).toBeUndefined()
     })
   })
 
   describe('listEntries', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       const file1 = join(tempDir, 'file1.txt')
       const file2 = join(tempDir, 'file2.txt')
       writeFileSync(file1, 'content1')
       writeFileSync(file2, 'content2')
 
-      setEntry(ctx, 'key1', file1)
-      setEntry(ctx, 'key2', file2)
+      await setEntry(ctx, 'key1', file1)
+      await setEntry(ctx, 'key2', file2)
     })
 
-    it('should list all entries', () => {
-      const entries = listEntries(ctx)
+    it('should list all entries', async () => {
+      const entries = await listEntries(ctx)
 
       expect(entries).toHaveLength(2)
       expect(entries.map(e => e.key).sort()).toEqual(['key1', 'key2'])
     })
 
-    it.skip('should list entries from different scope', () => {
+    it.skip('should list entries from different scope', async () => {
       // Skip this test as it requires a git repository
       const otherCtx = resolveVaultContext({ repo: '/other/repo', branch: 'main' })
 
-      const entries = listEntries(ctx, { repo: '/other/repo', branch: 'main' })
+      const entries = await listEntries(ctx, { repo: '/other/repo', branch: 'main' })
 
       expect(entries).toEqual([])
       closeVault(otherCtx)
@@ -226,61 +226,61 @@ describe('vault functions', () => {
   })
 
   describe('deleteEntry', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       const testFile = join(tempDir, 'test.txt')
       writeFileSync(testFile, 'v1')
-      setEntry(ctx, 'test-key', testFile)
+      await setEntry(ctx, 'test-key', testFile)
       writeFileSync(testFile, 'v2')
-      setEntry(ctx, 'test-key', testFile)
+      await setEntry(ctx, 'test-key', testFile)
     })
 
-    it('should delete all versions', () => {
-      const result = deleteEntry(ctx, 'test-key')
+    it('should delete all versions', async () => {
+      const result = await deleteEntry(ctx, 'test-key')
 
       expect(result).toBe(true)
-      expect(getEntry(ctx, 'test-key')).toBeUndefined()
+      expect(await getEntry(ctx, 'test-key')).toBeUndefined()
     })
 
-    it('should delete specific version', () => {
-      const result = deleteEntry(ctx, 'test-key', { version: 1 })
+    it('should delete specific version', async () => {
+      const result = await deleteEntry(ctx, 'test-key', { version: 1 })
 
       expect(result).toBe(true)
-      expect(getEntry(ctx, 'test-key', { version: 1 })).toBeUndefined()
-      expect(getEntry(ctx, 'test-key', { version: 2 })).toBeDefined()
+      expect(await getEntry(ctx, 'test-key', { version: 1 })).toBeUndefined()
+      expect(await getEntry(ctx, 'test-key', { version: 2 })).toBeDefined()
     })
 
-    it('should return false for non-existent key', () => {
-      const result = deleteEntry(ctx, 'non-existent')
+    it('should return false for non-existent key', async () => {
+      const result = await deleteEntry(ctx, 'non-existent')
       expect(result).toBe(false)
     })
   })
 
   describe('new deletion functions', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       const testFile = join(tempDir, 'test.txt')
       writeFileSync(testFile, 'v1')
-      setEntry(ctx, 'delete-test', testFile)
+      await setEntry(ctx, 'delete-test', testFile)
       writeFileSync(testFile, 'v2')
-      setEntry(ctx, 'delete-test', testFile)
+      await setEntry(ctx, 'delete-test', testFile)
 
       const testFile2 = join(tempDir, 'test2.txt')
       writeFileSync(testFile2, 'content')
-      setEntry(ctx, 'delete-test2', testFile2)
+      await setEntry(ctx, 'delete-test2', testFile2)
     })
 
-    it('should delete specific version with deleteVersion', () => {
-      const result = deleteVersion(ctx, 'delete-test', 1)
+    it('should delete specific version with deleteVersion', async () => {
+      const result = await deleteVersion(ctx, 'delete-test', 1)
 
       expect(result).toBe(1)
-      expect(getEntry(ctx, 'delete-test', { version: 1 })).toBeUndefined()
-      expect(getEntry(ctx, 'delete-test', { version: 2 })).toBeDefined()
+      expect(await getEntry(ctx, 'delete-test', { version: 1 })).toBeUndefined()
+      expect(await getEntry(ctx, 'delete-test', { version: 2 })).toBeDefined()
     })
 
-    it('should delete all versions with deleteKey', () => {
-      const result = deleteKey(ctx, 'delete-test')
+    it('should delete all versions with deleteKey', async () => {
+      const result = await deleteKey(ctx, 'delete-test')
 
       expect(result).toBe(2)
-      expect(getEntry(ctx, 'delete-test')).toBeUndefined()
+      expect(await getEntry(ctx, 'delete-test')).toBeUndefined()
     })
 
     it.skip('should delete current scope with deleteCurrentScope', () => {
@@ -297,14 +297,14 @@ describe('vault functions', () => {
   })
 
   describe('getInfo', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       const testFile = join(tempDir, 'test.txt')
       writeFileSync(testFile, 'content')
-      setEntry(ctx, 'test-key', testFile, { description: 'Test info' })
+      await setEntry(ctx, 'test-key', testFile, { description: 'Test info' })
     })
 
-    it('should return entry metadata', () => {
-      const info = getInfo(ctx, 'test-key')
+    it('should return entry metadata', async () => {
+      const info = await getInfo(ctx, 'test-key')
 
       expect(info).toBeDefined()
       expect(info?.key).toBe('test-key')
@@ -313,8 +313,8 @@ describe('vault functions', () => {
       expect(info?.scope).toBe('global')
     })
 
-    it('should return undefined for non-existent key', () => {
-      const info = getInfo(ctx, 'non-existent')
+    it('should return undefined for non-existent key', async () => {
+      const info = await getInfo(ctx, 'non-existent')
       expect(info).toBeUndefined()
     })
   })

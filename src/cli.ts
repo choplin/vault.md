@@ -4,6 +4,7 @@ import { Command } from 'commander'
 import { Table } from 'console-table-printer'
 import * as git from './core/git.js'
 import {
+  archiveEntry,
   catEntry,
   closeVault,
   deleteAllBranches,
@@ -19,6 +20,7 @@ import {
   moveScope,
   resolveScope,
   resolveVaultContext,
+  restoreEntry,
   setEntry,
 } from './core/index.js'
 import type { ScopeType } from './core/types.js'
@@ -56,7 +58,7 @@ program
   .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Save to specific repository')
   .option('--branch <name>', 'Save to specific branch')
-  .action((key, options) => {
+  .action(async (key, options) => {
     try {
       validateScopeOptions(options)
 
@@ -69,7 +71,7 @@ program
       if (!options.file && isatty(0)) {
         console.error('Enter content (Ctrl-D when done):')
       }
-      const path = setEntry(vault, key, options.file || '-', {
+      const path = await setEntry(vault, key, options.file || '-', {
         description: options.description,
       })
       console.log(path)
@@ -88,7 +90,7 @@ program
   .option('--repo <path>', 'Repository path')
   .option('--branch <name>', 'Branch name (for branch scope)')
   .option('--all-scopes', 'Search all scopes in order')
-  .action((key, options) => {
+  .action(async (key, options) => {
     try {
       validateScopeOptions(options)
 
@@ -108,7 +110,7 @@ program
       }
 
       const vault = resolveVaultContext(contextOptions)
-      const path = getEntry(vault, key, {
+      const path = await getEntry(vault, key, {
         version: options.ver,
         scope: options.scope as ScopeType,
         repo: options.repo,
@@ -139,7 +141,7 @@ program
   .option('--repo <path>', 'Repository path')
   .option('--branch <name>', 'Branch name (for branch scope)')
   .option('--all-scopes', 'Search all scopes in order')
-  .action((key, options) => {
+  .action(async (key, options) => {
     try {
       validateScopeOptions(options)
 
@@ -148,7 +150,7 @@ program
         repo: options.repo,
         branch: options.branch,
       })
-      const content = catEntry(vault, key, {
+      const content = await catEntry(vault, key, {
         version: options.ver,
         scope: options.scope as ScopeType,
         repo: options.repo,
@@ -173,11 +175,12 @@ program
   .command('list')
   .description('List keys in vault')
   .option('--all-versions', 'Show all versions')
+  .option('--include-archived', 'Include archived entries')
   .option('--json', 'Output as JSON')
   .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'List from specific repository')
   .option('--branch <name>', 'List from specific branch')
-  .action((options) => {
+  .action(async (options) => {
     try {
       validateScopeOptions(options)
 
@@ -186,8 +189,9 @@ program
         repo: options.repo,
         branch: options.branch,
       })
-      const entries = listEntries(vault, {
+      const entries = await listEntries(vault, {
         allVersions: options.allVersions,
+        includeArchived: options.includeArchived,
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -199,22 +203,34 @@ program
       } else if (entries.length === 0) {
         console.log('No entries found')
       } else {
-        const table = new Table({
-          columns: [
-            { name: 'key', alignment: 'left', color: 'cyan' },
-            { name: 'version', alignment: 'center', color: 'yellow' },
-            { name: 'created', alignment: 'left' },
-            { name: 'description', alignment: 'left', color: 'dim' },
-          ],
-        })
+        const columns = [
+          { name: 'key', alignment: 'left', color: 'cyan' },
+          { name: 'version', alignment: 'center', color: 'yellow' },
+          { name: 'created', alignment: 'left' },
+          { name: 'description', alignment: 'left', color: 'dim' },
+        ]
+
+        // Add archived column if includeArchived is set
+        if (options.includeArchived) {
+          columns.push({ name: 'archived', alignment: 'center', color: 'red' })
+        }
+
+        const table = new Table({ columns })
 
         entries.forEach((entry) => {
-          table.addRow({
+          const row: any = {
             key: entry.key,
             version: `v${entry.version}`,
             created: entry.createdAt.toLocaleString(),
             description: entry.description || '',
-          })
+          }
+
+          // Add archived status if includeArchived is set
+          if (options.includeArchived) {
+            row.archived = entry.isArchived ? 'Yes' : 'No'
+          }
+
+          table.addRow(row)
         })
 
         table.printTable()
@@ -266,7 +282,7 @@ program
             return
           }
         }
-        const deletedCount = deleteCurrentScope(vault)
+        const deletedCount = await deleteCurrentScope(vault)
         console.log(`Deleted scope with ${deletedCount} entries`)
       } else if (options.deleteBranch) {
         // Delete vault for specific branch
@@ -286,7 +302,7 @@ program
             return
           }
         }
-        const deletedCount = deleteBranch(vault, options.deleteBranch)
+        const deletedCount = await deleteBranch(vault, options.deleteBranch)
         console.log(`Deleted vault for branch with ${deletedCount} entries`)
       } else if (options.allBranches) {
         // Delete entire vault
@@ -306,7 +322,7 @@ program
             return
           }
         }
-        const deletedCount = deleteAllBranches(vault)
+        const deletedCount = await deleteAllBranches(vault)
         console.log(`Deleted entire vault with ${deletedCount} total entries`)
       } else if (key) {
         // Delete key or version
@@ -326,7 +342,7 @@ program
               return
             }
           }
-          const deleted = deleteVersion(vault, key, options.ver)
+          const deleted = await deleteVersion(vault, key, options.ver)
           if (deleted) {
             console.log(`Deleted version ${options.ver} of key '${key}'`)
           } else {
@@ -351,7 +367,7 @@ program
               return
             }
           }
-          const deletedCount = deleteKey(vault, key)
+          const deletedCount = await deleteKey(vault, key)
           if (deletedCount > 0) {
             console.log(`Deleted ${deletedCount} versions of key '${key}'`)
           } else {
@@ -378,7 +394,7 @@ program
   .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Show from specific repository')
   .option('--branch <name>', 'Show from specific branch')
-  .action((key, options) => {
+  .action(async (key, options) => {
     try {
       validateScopeOptions(options)
 
@@ -387,7 +403,7 @@ program
         repo: options.repo,
         branch: options.branch,
       })
-      const entry = getInfo(vault, key, {
+      const entry = await getInfo(vault, key, {
         version: options.ver,
         scope: options.scope as ScopeType,
         repo: options.repo,
@@ -399,6 +415,74 @@ program
         console.log(JSON.stringify(entry, null, 2))
       } else {
         console.error(`Key not found: ${key}`)
+        process.exit(1)
+      }
+      closeVault(vault)
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : String(error))
+      process.exit(1)
+    }
+  })
+
+program
+  .command('archive <key>')
+  .description('Archive an entry')
+  .option('--scope <type>', 'Scope type: global, repository, or branch')
+  .option('--repo <path>', 'Archive from specific repository')
+  .option('--branch <name>', 'Archive from specific branch')
+  .action(async (key, options) => {
+    try {
+      validateScopeOptions(options)
+
+      const vault = resolveVaultContext({
+        scope: options.scope as ScopeType,
+        repo: options.repo,
+        branch: options.branch,
+      })
+      const result = await archiveEntry(vault, key, {
+        scope: options.scope as ScopeType,
+        repo: options.repo,
+        branch: options.branch,
+      })
+
+      if (result) {
+        console.log(`Archived entry: ${key}`)
+      } else {
+        console.error(`Failed to archive entry: ${key}`)
+        process.exit(1)
+      }
+      closeVault(vault)
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : String(error))
+      process.exit(1)
+    }
+  })
+
+program
+  .command('restore <key>')
+  .description('Restore an archived entry')
+  .option('--scope <type>', 'Scope type: global, repository, or branch')
+  .option('--repo <path>', 'Restore from specific repository')
+  .option('--branch <name>', 'Restore from specific branch')
+  .action(async (key, options) => {
+    try {
+      validateScopeOptions(options)
+
+      const vault = resolveVaultContext({
+        scope: options.scope as ScopeType,
+        repo: options.repo,
+        branch: options.branch,
+      })
+      const result = await restoreEntry(vault, key, {
+        scope: options.scope as ScopeType,
+        repo: options.repo,
+        branch: options.branch,
+      })
+
+      if (result) {
+        console.log(`Restored entry: ${key}`)
+      } else {
+        console.error(`Failed to restore entry: ${key}`)
         process.exit(1)
       }
       closeVault(vault)
@@ -453,7 +537,7 @@ program
   .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Edit from specific repository')
   .option('--branch <name>', 'Edit from specific branch')
-  .action((key, options) => {
+  .action(async (key, options) => {
     try {
       validateScopeOptions(options)
 
@@ -462,7 +546,7 @@ program
         repo: options.repo,
         branch: options.branch,
       })
-      const changed = editEntry(vault, key, {
+      const changed = await editEntry(vault, key, {
         scope: options.scope as ScopeType,
         repo: options.repo,
         branch: options.branch,
@@ -492,7 +576,7 @@ program
   .requiredOption('--to-scope <type>', 'Target scope type')
   .option('--to-repo <path>', 'Target repository')
   .option('--to-branch <name>', 'Target branch')
-  .action((key, options) => {
+  .action(async (key, options) => {
     try {
       // Validate branch options
       if (options.fromBranch && options.fromScope !== 'branch') {
@@ -516,7 +600,7 @@ program
         branch: options.toBranch,
       })
 
-      moveScope(ctx, key, fromScope, toScope)
+      await moveScope(ctx, key, fromScope, toScope)
       console.log(`Moved ${key} from ${formatScopeShort(fromScope)} to ${formatScopeShort(toScope)}`)
       closeVault(ctx)
     } catch (error) {

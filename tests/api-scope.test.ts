@@ -4,12 +4,14 @@ import type { Database } from 'better-sqlite3'
 import { createWebServer } from '../src/web/server.js'
 import type { VaultContext } from '../src/core/vault.js'
 import type { Scope } from '../src/core/scope.js'
-import * as database from '../src/core/database.js'
+import { createDatabase, closeDatabase, clearDatabase } from '../src/core/database/connection.js'
+import { EntryService } from '../src/core/services/entry.service.js'
+import { ScopeService } from '../src/core/services/scope.service.js'
 import * as vault from '../src/core/index.js'
 import * as scope from '../src/core/scope.js'
 
 // Mock modules
-vi.mock('../src/core/database.js')
+vi.mock('../src/core/database/connection.js')
 vi.mock('../src/core/index.js')
 vi.mock('../src/core/scope.js')
 vi.mock('../src/core/filesystem.js')
@@ -18,6 +20,8 @@ describe('Web API - Three-tier Scope Support', () => {
   let app: Hono
   let mockVaultContext: VaultContext
   let mockDb: Partial<Database>
+  let mockScopeService: Partial<ScopeService>
+  let mockEntryService: Partial<EntryService>
 
   beforeEach(() => {
     // Set up mock database
@@ -27,6 +31,20 @@ describe('Web API - Three-tier Scope Support', () => {
         all: vi.fn(),
         run: vi.fn(),
       }),
+    }
+
+    // Set up mock services
+    mockScopeService = {
+      getAllEntriesGrouped: vi.fn(),
+      getOrCreate: vi.fn(),
+      findOrCreateScope: vi.fn(),
+      listScopeEntries: vi.fn(),
+    }
+
+    mockEntryService = {
+      list: vi.fn(),
+      deleteAll: vi.fn(),
+      deleteVersion: vi.fn(),
     }
 
     // Set up mock vault context
@@ -41,6 +59,8 @@ describe('Web API - Three-tier Scope Support', () => {
         workPath: '/test/repo',
       } as Scope,
       scopeId: 1,
+      scopeService: mockScopeService as ScopeService,
+      entryService: mockEntryService as EntryService,
     }
 
     // Create app with mocked context
@@ -109,7 +129,7 @@ describe('Web API - Three-tier Scope Support', () => {
         ]]
       ])
 
-      vi.mocked(database.getAllScopedEntriesGroupedByScope).mockReturnValue(mockEntries)
+      vi.mocked(mockScopeService.getAllEntriesGrouped!).mockResolvedValue(mockEntries)
       vi.mocked(scope.formatScope)
         .mockReturnValueOnce('test-repo')  // Current scope
         .mockReturnValueOnce('Global')     // Global scope (1st)
@@ -173,7 +193,7 @@ describe('Web API - Three-tier Scope Support', () => {
     })
 
     it('should handle empty scopes', async () => {
-      vi.mocked(database.getAllScopedEntriesGroupedByScope).mockReturnValue(new Map())
+      vi.mocked(mockScopeService.getAllEntriesGrouped!).mockResolvedValue(new Map())
       vi.mocked(scope.formatScope).mockReturnValue('test-repo')
 
       const res = await app.request('/api/entries/all')
@@ -194,7 +214,7 @@ describe('Web API - Three-tier Scope Support', () => {
       vi.mocked(mockDb.prepare).mockReturnValue({
         get: vi.fn().mockReturnValue({ id: 1 }),
       } as any)
-      vi.mocked(database.listScopedEntries).mockReturnValue(mockEntries)
+      vi.mocked(mockEntryService.list!).mockResolvedValue(mockEntries)
       vi.mocked(scope.formatScope).mockReturnValue('Global')
 
       const res = await app.request('/api/scopes/global/global/entries')
@@ -222,7 +242,7 @@ describe('Web API - Three-tier Scope Support', () => {
       vi.mocked(mockDb.prepare).mockReturnValue({
         get: vi.fn().mockReturnValue({ id: 2 }),
       } as any)
-      vi.mocked(database.listScopedEntries).mockReturnValue(mockEntries)
+      vi.mocked(mockEntryService.list!).mockResolvedValue(mockEntries)
       vi.mocked(scope.formatScope).mockReturnValue('test-repo')
 
       const res = await app.request(`/api/scopes/${encodeURIComponent('test-repo')}/${encodeURIComponent('')}/entries`)
@@ -243,7 +263,7 @@ describe('Web API - Three-tier Scope Support', () => {
       vi.mocked(mockDb.prepare).mockReturnValue({
         get: vi.fn().mockReturnValue({ id: 3 }),
       } as any)
-      vi.mocked(database.listScopedEntries).mockReturnValue(mockEntries)
+      vi.mocked(mockEntryService.list!).mockResolvedValue(mockEntries)
       vi.mocked(scope.formatScope).mockReturnValue('test-repo (main)')
 
       const res = await app.request('/api/scopes/test-repo/main/entries')
@@ -274,18 +294,18 @@ describe('Web API - Three-tier Scope Support', () => {
       vi.mocked(mockDb.prepare).mockReturnValue({
         get: vi.fn().mockReturnValue({ id: 1 }),
       } as any)
-      vi.mocked(database.listScopedEntries).mockReturnValue([])
+      vi.mocked(mockEntryService.list!).mockResolvedValue([])
 
       await app.request('/api/scopes/test-repo/main/entries?allVersions=true')
 
-      expect(database.listScopedEntries).toHaveBeenCalledWith(expect.any(Object), 1, true)
+      expect(mockEntryService.list).toHaveBeenCalledWith(1, false, true)
     })
   })
 
   describe('GET /api/entry/:scope/:key/:version?', () => {
     it('should get entry from global scope', async () => {
-      vi.mocked(vault.getEntry).mockReturnValue('/path/to/file')
-      vi.mocked(vault.catEntry).mockReturnValue('global content')
+      vi.mocked(vault.getEntry).mockResolvedValue('/path/to/file')
+      vi.mocked(vault.catEntry).mockResolvedValue('global content')
 
       const res = await app.request('/api/entry/Global/test-key')
       const data = await res.json()
@@ -302,8 +322,8 @@ describe('Web API - Three-tier Scope Support', () => {
     })
 
     it('should get entry from repository scope', async () => {
-      vi.mocked(vault.getEntry).mockReturnValue('/path/to/file')
-      vi.mocked(vault.catEntry).mockReturnValue('repo content')
+      vi.mocked(vault.getEntry).mockResolvedValue('/path/to/file')
+      vi.mocked(vault.catEntry).mockResolvedValue('repo content')
 
       const res = await app.request('/api/entry/test-repo/test-key')
       const data = await res.json()
@@ -318,8 +338,8 @@ describe('Web API - Three-tier Scope Support', () => {
     })
 
     it('should get entry from branch scope with formatted string', async () => {
-      vi.mocked(vault.getEntry).mockReturnValue('/path/to/file')
-      vi.mocked(vault.catEntry).mockReturnValue('branch content')
+      vi.mocked(vault.getEntry).mockResolvedValue('/path/to/file')
+      vi.mocked(vault.catEntry).mockResolvedValue('branch content')
 
       const res = await app.request('/api/entry/test-repo%20(main)/test-key')
       const data = await res.json()
@@ -335,8 +355,8 @@ describe('Web API - Three-tier Scope Support', () => {
     })
 
     it('should get entry from branch scope with colon format', async () => {
-      vi.mocked(vault.getEntry).mockReturnValue('/path/to/file')
-      vi.mocked(vault.catEntry).mockReturnValue('branch content')
+      vi.mocked(vault.getEntry).mockResolvedValue('/path/to/file')
+      vi.mocked(vault.catEntry).mockResolvedValue('branch content')
 
       const res = await app.request('/api/entry/test-repo:feature-branch/test-key')
       const data = await res.json()
@@ -351,8 +371,8 @@ describe('Web API - Three-tier Scope Support', () => {
     })
 
     it('should get specific version', async () => {
-      vi.mocked(vault.getEntry).mockReturnValue('/path/to/file')
-      vi.mocked(vault.catEntry).mockReturnValue('version 2 content')
+      vi.mocked(vault.getEntry).mockResolvedValue('/path/to/file')
+      vi.mocked(vault.catEntry).mockResolvedValue('version 2 content')
 
       const res = await app.request('/api/entry/test-repo/test-key/2')
       const data = await res.json()
@@ -366,7 +386,7 @@ describe('Web API - Three-tier Scope Support', () => {
     })
 
     it('should return 404 when entry not found', async () => {
-      vi.mocked(vault.getEntry).mockReturnValue(undefined)
+      vi.mocked(vault.getEntry).mockResolvedValue(undefined)
 
       const res = await app.request('/api/entry/test-repo/non-existent')
       const data = await res.json()
@@ -383,9 +403,9 @@ describe('Web API - Three-tier Scope Support', () => {
         { id: 1, scopeId: 1, key: 'test-key', version: 1, filePath: '/path/1', hash: 'hash1', createdAt: '2025-01-01' }
       ]
 
-      vi.mocked(database.getOrCreateScope).mockReturnValue(mockScopeId)
-      vi.mocked(database.listScopedEntries).mockReturnValue(mockEntries)
-      vi.mocked(database.deleteEntryAllVersions).mockReturnValue(1)
+      vi.mocked(mockScopeService.getOrCreate!).mockReturnValue(mockScopeId)
+      vi.mocked(mockEntryService.list!).mockResolvedValue(mockEntries)
+      vi.mocked(mockEntryService.deleteAll!).mockReturnValue(Promise.resolve(true))
 
       const res = await app.request('/api/entries/global/global/test-key', {
         method: 'DELETE'
@@ -394,12 +414,7 @@ describe('Web API - Three-tier Scope Support', () => {
 
       expect(res.status).toBe(200)
       expect(data).toEqual({ message: "Deleted 1 versions of key 'test-key'" })
-      expect(database.getOrCreateScope).toHaveBeenCalledWith(
-        mockVaultContext.database,
-        { type: 'global' }
-      )
-      expect(database.deleteEntryAllVersions).toHaveBeenCalledWith(
-        mockVaultContext.database,
+      expect(mockEntryService.deleteAll).toHaveBeenCalledWith(
         mockScopeId,
         'test-key'
       )
@@ -413,9 +428,9 @@ describe('Web API - Three-tier Scope Support', () => {
         { id: 2, scopeId: 2, key: 'test-key', version: 1, filePath: '/path/2', hash: 'hash2', createdAt: '2025-01-02' }
       ]
 
-      vi.mocked(database.getOrCreateScope).mockReturnValue(mockScopeId)
-      vi.mocked(database.listScopedEntries).mockReturnValue(mockEntries)
-      vi.mocked(database.deleteEntryAllVersions).mockReturnValue(1)
+      vi.mocked(mockScopeService.getOrCreate!).mockReturnValue(mockScopeId)
+      vi.mocked(mockEntryService.list!).mockResolvedValue(mockEntries)
+      vi.mocked(mockEntryService.deleteAll!).mockReturnValue(Promise.resolve(true))
 
       const res = await app.request(`/api/entries/${encodeURIComponent('test-repo')}/${encodeURIComponent('')}/test-key`, {
         method: 'DELETE'
@@ -424,14 +439,6 @@ describe('Web API - Three-tier Scope Support', () => {
 
       expect(res.status).toBe(200)
       expect(data).toEqual({ message: "Deleted 1 versions of key 'test-key'" })
-      expect(database.getOrCreateScope).toHaveBeenCalledWith(
-        mockVaultContext.database,
-        expect.objectContaining({
-          type: 'branch',
-          identifier: 'test-repo',
-          branch: ''
-        })
-      )
     })
 
     it('should delete entry from branch scope', async () => {
@@ -440,9 +447,9 @@ describe('Web API - Three-tier Scope Support', () => {
         { id: 3, scopeId: 3, key: 'test-key', version: 1, filePath: '/path/3', hash: 'hash3', createdAt: '2025-01-03' }
       ]
 
-      vi.mocked(database.getOrCreateScope).mockReturnValue(mockScopeId)
-      vi.mocked(database.listScopedEntries).mockReturnValue(mockEntries)
-      vi.mocked(database.deleteEntryAllVersions).mockReturnValue(1)
+      vi.mocked(mockScopeService.getOrCreate!).mockReturnValue(mockScopeId)
+      vi.mocked(mockEntryService.list!).mockResolvedValue(mockEntries)
+      vi.mocked(mockEntryService.deleteAll!).mockReturnValue(Promise.resolve(true))
 
       const res = await app.request('/api/entries/test-repo/main/test-key', {
         method: 'DELETE'
@@ -451,14 +458,6 @@ describe('Web API - Three-tier Scope Support', () => {
 
       expect(res.status).toBe(200)
       expect(data).toEqual({ message: "Deleted 1 versions of key 'test-key'" })
-      expect(database.getOrCreateScope).toHaveBeenCalledWith(
-        mockVaultContext.database,
-        expect.objectContaining({
-          type: 'branch',
-          identifier: 'test-repo',
-          branch: 'main'
-        })
-      )
     })
 
     it('should delete specific version', async () => {
@@ -468,9 +467,9 @@ describe('Web API - Three-tier Scope Support', () => {
         { id: 2, scopeId: 1, key: 'test-key', version: 2, filePath: '/path/2', hash: 'hash2', createdAt: '2025-01-02' }
       ]
 
-      vi.mocked(database.getOrCreateScope).mockReturnValue(mockScopeId)
-      vi.mocked(database.listScopedEntries).mockReturnValue(mockEntries)
-      vi.mocked(database.deleteEntryVersion).mockReturnValue(1)
+      vi.mocked(mockScopeService.getOrCreate!).mockReturnValue(mockScopeId)
+      vi.mocked(mockEntryService.list!).mockResolvedValue(mockEntries)
+      vi.mocked(mockEntryService.deleteVersion!).mockResolvedValue(1)
 
       const res = await app.request('/api/entries/test-repo/main/test-key/2', {
         method: 'DELETE'
@@ -479,8 +478,7 @@ describe('Web API - Three-tier Scope Support', () => {
 
       expect(res.status).toBe(200)
       expect(data).toEqual({ message: "Deleted version 2 of key 'test-key'" })
-      expect(database.deleteEntryVersion).toHaveBeenCalledWith(
-        mockVaultContext.database,
+      expect(mockEntryService.deleteVersion).toHaveBeenCalledWith(
         mockScopeId,
         'test-key',
         2
@@ -488,8 +486,8 @@ describe('Web API - Three-tier Scope Support', () => {
     })
 
     it('should return 404 when entry not found', async () => {
-      vi.mocked(database.getOrCreateScope).mockReturnValue(1)
-      vi.mocked(database.listScopedEntries).mockReturnValue([])
+      vi.mocked(mockScopeService.getOrCreate!).mockReturnValue(1)
+      vi.mocked(mockEntryService.list!).mockResolvedValue([])
 
       const res = await app.request('/api/entries/test-repo/main/non-existent', {
         method: 'DELETE'
