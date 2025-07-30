@@ -2,13 +2,11 @@
 node_modules/
 .pnpm-debug.log
 pnpm-lock.yaml
-package-lock.json
 
 # Build outputs
 dist/
 build/
 out/
-*.d.ts
 *.js.map
 src/web/static/
 !vite.config.mts
