@@ -8,6 +8,7 @@ export interface VaultEntry {
   hash: string
   description?: string
   createdAt: Date
+  isArchived: boolean
 }
 
 export type ScopeType = 'global' | 'repository' | 'branch'
@@ -28,6 +29,7 @@ export interface VaultOptions {
 export interface ListOptions extends VaultOptions {
   allVersions?: boolean
   json?: boolean
+  includeArchived?: boolean
 }
 
 export interface SetOptions extends VaultOptions {
