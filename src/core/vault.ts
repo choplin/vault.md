@@ -1,16 +1,20 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import type { DatabaseContext } from './database.js'
-import * as db from './database.js'
+import { clearDatabase, closeDatabase, createDatabase, type DatabaseContext } from './database/connection.js'
+import { EntryStatusRepository } from './database/repositories/entry-status.repository.js'
 import * as fs from './filesystem.js'
 import { getGitInfo } from './git.js'
 import { type BranchScope, formatScope, isGlobalScope, type RepositoryScope, type Scope } from './scope.js'
+import { EntryService } from './services/entry.service.js'
+import { ScopeService } from './services/scope.service.js'
 import type { ListOptions, ScopeType, SetOptions, VaultEntry, VaultOptions } from './types.js'
 
 export interface VaultContext {
   database: DatabaseContext
   scope: Scope
   scopeId: number
+  entryService: EntryService
+  scopeService: ScopeService
 }
 
 export interface ResolveContextOptions {
@@ -83,22 +87,31 @@ export function resolveScope(options: ResolveContextOptions): Scope {
  * const ctx = resolveVaultContext({ scope: 'branch', branch: 'feature-x' })
  */
 export function resolveVaultContext(options: ResolveContextOptions = {}): VaultContext {
-  const database = db.createDatabase()
+  const database = createDatabase()
+  const entryService = new EntryService(database)
+  const scopeService = new ScopeService(database)
 
   // Resolve scope
   const scope = resolveScope(options)
 
-  // Get or create scope in database
-  const scopeId = db.getOrCreateScope(database, scope)
+  // Get or create scope in database (synchronous operation)
+  const scopeId = scopeService.getOrCreate(scope)
 
   return {
     database,
     scope,
     scopeId,
+    entryService,
+    scopeService,
   }
 }
 
-export function setEntry(ctx: VaultContext, key: string, filePath: string, options: SetOptions = {}): string {
+export async function setEntry(
+  ctx: VaultContext,
+  key: string,
+  filePath: string,
+  options: SetOptions = {},
+): Promise<string> {
   // Read content from file or stdin
   let content: string
   if (filePath === '-') {
@@ -113,11 +126,11 @@ export function setEntry(ctx: VaultContext, key: string, filePath: string, optio
   const altScope = getAlternativeScope(ctx.scope, options)
   if (altScope) {
     scope = altScope
-    scopeId = db.getOrCreateScope(ctx.database, scope)
+    scopeId = await ctx.scopeService.getOrCreate(scope)
   }
 
   // Get next version
-  const version = db.getNextScopedVersion(ctx.database, scopeId, key)
+  const version = await ctx.entryService.getNextVersion(scopeId, key)
 
   // Generate scope-specific path for file storage
   let scopePath: string
@@ -133,7 +146,7 @@ export function setEntry(ctx: VaultContext, key: string, filePath: string, optio
   const { path, hash } = fs.saveFile(scopePath, key, version, content)
 
   // Save to database
-  db.insertScopedEntry(ctx.database, {
+  await ctx.entryService.create({
     scopeId,
     version,
     key,
@@ -167,14 +180,18 @@ export function getSearchOrder(currentScope: Scope): Scope[] {
   }
 }
 
-export function getEntryWithFallback(ctx: VaultContext, key: string, version?: number): string | undefined {
+export async function getEntryWithFallback(
+  ctx: VaultContext,
+  key: string,
+  version?: number,
+): Promise<string | undefined> {
   const searchOrder = getSearchOrder(ctx.scope)
 
   for (const scope of searchOrder) {
-    const scopeId = db.getOrCreateScope(ctx.database, scope)
+    const scopeId = ctx.scopeService.getOrCreate(scope)
     const entry = version
-      ? db.getScopedEntry(ctx.database, scopeId, key, version)
-      : db.getLatestScopedEntry(ctx.database, scopeId, key)
+      ? await ctx.entryService.getByVersion(scopeId, key, version)
+      : await ctx.entryService.getLatest(scopeId, key)
 
     if (entry) {
       // Verify file integrity
@@ -188,22 +205,29 @@ export function getEntryWithFallback(ctx: VaultContext, key: string, version?: n
   return undefined
 }
 
-export function getEntry(ctx: VaultContext, key: string, options: VaultOptions = {}): string | undefined {
+export async function getEntry(
+  ctx: VaultContext,
+  key: string,
+  options: VaultOptions = {},
+): Promise<string | undefined> {
   // Handle different scope if specified
   let scopeId = ctx.scopeId
   const altScope = getAlternativeScope(ctx.scope, options)
   if (altScope) {
-    scopeId = db.getOrCreateScope(ctx.database, altScope)
+    scopeId = ctx.scopeService.getOrCreate(altScope)
+  } else if (ctx.scopeId === -1) {
+    // Lazy load scopeId if not set
+    scopeId = ctx.scopeService.getOrCreate(ctx.scope)
   }
 
   // Handle all scopes search
   if (options.allScopes) {
-    return getEntryWithFallback(ctx, key, options.version)
+    return await getEntryWithFallback(ctx, key, options.version)
   }
 
   const entry = options.version
-    ? db.getScopedEntry(ctx.database, scopeId, key, options.version)
-    : db.getLatestScopedEntry(ctx.database, scopeId, key)
+    ? await ctx.entryService.getByVersion(scopeId, key, options.version)
+    : await ctx.entryService.getLatest(scopeId, key)
 
   if (!entry) {
     return undefined
@@ -217,8 +241,12 @@ export function getEntry(ctx: VaultContext, key: string, options: VaultOptions =
   return entry.filePath
 }
 
-export function catEntry(ctx: VaultContext, key: string, options: VaultOptions = {}): string | undefined {
-  const filePath = getEntry(ctx, key, options)
+export async function catEntry(
+  ctx: VaultContext,
+  key: string,
+  options: VaultOptions = {},
+): Promise<string | undefined> {
+  const filePath = await getEntry(ctx, key, options)
 
   if (!filePath) {
     return undefined
@@ -227,20 +255,27 @@ export function catEntry(ctx: VaultContext, key: string, options: VaultOptions =
   return fs.readFile(filePath)
 }
 
-export function listEntries(ctx: VaultContext, options: ListOptions = {}): VaultEntry[] {
+export async function listEntries(ctx: VaultContext, options: ListOptions = {}): Promise<VaultEntry[]> {
   // Handle different scope if specified
   let scopeId = ctx.scopeId
   let scope = ctx.scope
   const altScope = getAlternativeScope(ctx.scope, options)
   if (altScope) {
     scope = altScope
-    scopeId = db.getOrCreateScope(ctx.database, scope)
+    scopeId = await ctx.scopeService.getOrCreate(scope)
   }
 
-  const scopedEntries = db.listScopedEntries(ctx.database, scopeId, options.allVersions)
+  const scopedEntries = await ctx.entryService.list(
+    scopeId,
+    options.includeArchived || false,
+    options.allVersions || false,
+  )
+
+  // Filter out archived entries unless includeArchived is true
+  const filteredEntries = options.includeArchived ? scopedEntries : scopedEntries.filter((entry) => !entry.isArchived)
 
   // Convert to VaultEntry format
-  return scopedEntries.map((entry) => ({
+  return filteredEntries.map((entry) => ({
     id: entry.id,
     scopeId: entry.scopeId,
     scope: formatScope(scope),
@@ -250,21 +285,25 @@ export function listEntries(ctx: VaultContext, options: ListOptions = {}): Vault
     hash: entry.hash,
     description: entry.description,
     createdAt: entry.createdAt,
+    isArchived: entry.isArchived,
   }))
 }
 
-export function deleteEntry(ctx: VaultContext, key: string, options: VaultOptions = {}): boolean {
+export async function deleteEntry(ctx: VaultContext, key: string, options: VaultOptions = {}): Promise<boolean> {
   // Handle different scope if specified
   let scopeId = ctx.scopeId
   const altScope = getAlternativeScope(ctx.scope, options)
   if (altScope) {
-    scopeId = db.getOrCreateScope(ctx.database, altScope)
+    scopeId = ctx.scopeService.getOrCreate(altScope)
+  } else if (ctx.scopeId === -1) {
+    // Lazy load scopeId if not set
+    scopeId = ctx.scopeService.getOrCreate(ctx.scope)
   }
 
   // Get entries to delete
   const entries = options.version
-    ? [db.getScopedEntry(ctx.database, scopeId, key, options.version)].filter(Boolean)
-    : db.listScopedEntries(ctx.database, scopeId, true).filter((e) => e.key === key)
+    ? [await ctx.entryService.getByVersion(scopeId, key, options.version)].filter(Boolean)
+    : (await ctx.entryService.list(scopeId, true, true)).filter((e) => e.key === key)
 
   if (entries.length === 0) {
     return false
@@ -278,7 +317,9 @@ export function deleteEntry(ctx: VaultContext, key: string, options: VaultOption
   })
 
   // Delete from database
-  return db.deleteScopedEntry(ctx.database, scopeId, key, options.version)
+  return options.version
+    ? await ctx.entryService.deleteVersion(scopeId, key, options.version)
+    : await ctx.entryService.deleteAll(scopeId, key)
 }
 
 // Helper function to check if two scopes are equal
@@ -302,32 +343,36 @@ function areScopesEqual(scope1: Scope, scope2: Scope): boolean {
 }
 
 // Move an entry between scopes
-export function moveScope(ctx: VaultContext, key: string, fromScope: Scope, toScope: Scope): void {
+export async function moveScope(ctx: VaultContext, key: string, fromScope: Scope, toScope: Scope): Promise<void> {
   // Validate that scopes are different
   if (areScopesEqual(fromScope, toScope)) {
     throw new Error('Source and target scopes must be different')
   }
 
   // Get scope IDs
-  const fromScopeId = db.getOrCreateScope(ctx.database, fromScope)
-  const toScopeId = db.getOrCreateScope(ctx.database, toScope)
+  const fromScopeId = await ctx.scopeService.getOrCreate(fromScope)
+  const toScopeId = await ctx.scopeService.getOrCreate(toScope)
 
   // Check if key exists in source scope
-  const entries = db.listScopedEntries(ctx.database, fromScopeId, true).filter((e) => e.key === key)
+  const entries = (await ctx.entryService.list(fromScopeId, true, true)).filter((e) => e.key === key)
   if (entries.length === 0) {
     throw new Error('Key not found in source scope')
   }
 
   // Check if key already exists in target scope
-  const targetEntry = db.getLatestScopedEntry(ctx.database, toScopeId, key)
-  if (targetEntry) {
+  const existingEntry = await ctx.entryService.getLatest(toScopeId, key)
+  if (existingEntry) {
     throw new Error('Key already exists in target scope')
   }
 
+  // Find the current version in source scope
+  const sourceLatest = await ctx.entryService.getLatest(fromScopeId, key)
+  const currentVersion = sourceLatest?.version || 1
+
   // Move all versions
-  entries.forEach((entry) => {
+  for (const entry of entries) {
     // Insert into target scope with same version
-    db.insertScopedEntry(ctx.database, {
+    await ctx.entryService.create({
       scopeId: toScopeId,
       key: entry.key,
       version: entry.version,
@@ -335,15 +380,23 @@ export function moveScope(ctx: VaultContext, key: string, fromScope: Scope, toSc
       hash: entry.hash,
       description: entry.description,
     })
-  })
+  }
+
+  // Set the correct current version in target scope
+  const targetEntry = await ctx.entryService.getEntryByKey(toScopeId, key)
+  if (targetEntry) {
+    const statusRepo = new EntryStatusRepository(ctx.database)
+    statusRepo.updateCurrentVersion(targetEntry.id, currentVersion)
+  }
 
   // Delete from source scope
-  db.deleteScopedEntry(ctx.database, fromScopeId, key)
+  await ctx.entryService.deleteAll(fromScopeId, key)
 }
 
 // Delete a specific version
-export function deleteVersion(ctx: VaultContext, key: string, version: number): number {
-  const entry = db.getScopedEntry(ctx.database, ctx.scopeId, key, version)
+export async function deleteVersion(ctx: VaultContext, key: string, version: number): Promise<number> {
+  const scopeId = ctx.scopeId
+  const entry = await ctx.entryService.getByVersion(scopeId, key, version)
   if (!entry) {
     return 0
   }
@@ -352,13 +405,15 @@ export function deleteVersion(ctx: VaultContext, key: string, version: number): 
   fs.deleteFile(entry.filePath)
 
   // Delete from database
-  return db.deleteEntryVersion(ctx.database, ctx.scopeId, key, version)
+  const result = await ctx.entryService.deleteVersion(scopeId, key, version)
+  return result ? 1 : 0
 }
 
 // Delete all versions of a key
-export function deleteKey(ctx: VaultContext, key: string): number {
+export async function deleteKey(ctx: VaultContext, key: string): Promise<number> {
+  const scopeId = ctx.scopeId
   // Get all entries for this key
-  const entries = db.listScopedEntries(ctx.database, ctx.scopeId, true).filter((e) => e.key === key)
+  const entries = (await ctx.entryService.list(scopeId, true, true)).filter((e) => e.key === key)
 
   // Delete files
   entries.forEach((entry) => {
@@ -366,11 +421,37 @@ export function deleteKey(ctx: VaultContext, key: string): number {
   })
 
   // Delete from database
-  return db.deleteEntryAllVersions(ctx.database, ctx.scopeId, key)
+  const count = entries.length
+  await ctx.entryService.deleteAll(scopeId, key)
+  return count
+}
+
+// Archive an entry
+export async function archiveEntry(ctx: VaultContext, key: string, options: VaultOptions = {}): Promise<boolean> {
+  // Handle different scope if specified
+  let scopeId = ctx.scopeId
+  const altScope = getAlternativeScope(ctx.scope, options)
+  if (altScope) {
+    scopeId = ctx.scopeService.getOrCreate(altScope)
+  }
+
+  return await ctx.entryService.archive(scopeId, key)
+}
+
+// Restore an archived entry
+export async function restoreEntry(ctx: VaultContext, key: string, options: VaultOptions = {}): Promise<boolean> {
+  // Handle different scope if specified
+  let scopeId = ctx.scopeId
+  const altScope = getAlternativeScope(ctx.scope, options)
+  if (altScope) {
+    scopeId = ctx.scopeService.getOrCreate(altScope)
+  }
+
+  return await ctx.entryService.restore(scopeId, key)
 }
 
 // Delete current scope (identifier + branch)
-export function deleteCurrentScope(ctx: VaultContext): number {
+export async function deleteCurrentScope(ctx: VaultContext): Promise<number> {
   if (ctx.scope.type === 'global') {
     throw new Error('Cannot delete global scope')
   }
@@ -383,14 +464,14 @@ export function deleteCurrentScope(ctx: VaultContext): number {
       scopePath = ctx.scope.identifier.replace(/[/\\:]/g, '_')
       fs.deleteProjectFiles(scopePath)
       // Delete repository scope (empty branch)
-      deletedCount = db.deleteScope(ctx.database, ctx.scope.identifier, '')
+      deletedCount = await ctx.scopeService.deleteScope(ctx.scope.identifier, '')
       break
 
     case 'branch':
       scopePath = `${ctx.scope.identifier}/${ctx.scope.branch}`.replace(/[/\\:]/g, '_')
       fs.deleteProjectFiles(scopePath)
       // Delete specific branch scope
-      deletedCount = db.deleteScope(ctx.database, ctx.scope.identifier, ctx.scope.branch)
+      deletedCount = await ctx.scopeService.deleteScope(ctx.scope.identifier, ctx.scope.branch)
       break
   }
 
@@ -398,7 +479,7 @@ export function deleteCurrentScope(ctx: VaultContext): number {
 }
 
 // Delete a specific branch of current identifier
-export function deleteBranch(ctx: VaultContext, branch: string): number {
+export async function deleteBranch(ctx: VaultContext, branch: string): Promise<number> {
   if (ctx.scope.type === 'global') {
     throw new Error('Cannot delete branches from global scope')
   }
@@ -415,11 +496,11 @@ export function deleteBranch(ctx: VaultContext, branch: string): number {
   fs.deleteProjectFiles(scopePath)
 
   // Delete from database
-  return db.deleteScope(ctx.database, identifier, branch)
+  return await ctx.scopeService.deleteScope(identifier, branch)
 }
 
 // Delete all branches of current identifier
-export function deleteAllBranches(ctx: VaultContext): number {
+export async function deleteAllBranches(ctx: VaultContext): Promise<number> {
   if (ctx.scope.type === 'global') {
     throw new Error('Cannot delete branches from global scope')
   }
@@ -431,7 +512,7 @@ export function deleteAllBranches(ctx: VaultContext): number {
   }
 
   // Get all scopes for this identifier
-  const allScopes = db.getAllScopes(ctx.database)
+  const allScopes = ctx.scopeService.getAll()
   const scopesToDelete = allScopes.filter((s) => {
     if (s.type === 'branch' && s.identifier === identifier) {
       return true
@@ -454,22 +535,26 @@ export function deleteAllBranches(ctx: VaultContext): number {
   })
 
   // Delete from database
-  return db.deleteIdentifierAllBranches(ctx.database, identifier)
+  return await ctx.scopeService.deleteAllBranches(identifier)
 }
 
-export function getInfo(ctx: VaultContext, key: string, options: VaultOptions = {}): VaultEntry | undefined {
+export async function getInfo(
+  ctx: VaultContext,
+  key: string,
+  options: VaultOptions = {},
+): Promise<VaultEntry | undefined> {
   // Handle different scope if specified
   let scopeId = ctx.scopeId
   let scope = ctx.scope
   const altScope = getAlternativeScope(ctx.scope, options)
   if (altScope) {
     scope = altScope
-    scopeId = db.getOrCreateScope(ctx.database, scope)
+    scopeId = await ctx.scopeService.getOrCreate(scope)
   }
 
   const entry = options.version
-    ? db.getScopedEntry(ctx.database, scopeId, key, options.version)
-    : db.getLatestScopedEntry(ctx.database, scopeId, key)
+    ? await ctx.entryService.getByVersion(scopeId, key, options.version)
+    : await ctx.entryService.getLatest(scopeId, key)
 
   if (!entry) {
     return undefined
@@ -486,15 +571,16 @@ export function getInfo(ctx: VaultContext, key: string, options: VaultOptions = 
     hash: entry.hash,
     description: entry.description,
     createdAt: entry.createdAt,
+    isArchived: entry.isArchived,
   }
 }
 
 export function closeVault(ctx: VaultContext): void {
-  db.closeDatabase(ctx.database)
+  closeDatabase(ctx.database)
 }
 
 export function clearVault(ctx: VaultContext): void {
-  db.clearDatabase(ctx.database)
+  clearDatabase(ctx.database)
 }
 
 // Helper function to get alternative scope from options

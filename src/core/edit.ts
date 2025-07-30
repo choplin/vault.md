@@ -11,15 +11,15 @@ export interface EditOptions extends VaultOptions {
   // EditOptions now extends VaultOptions to include scope options
 }
 
-export function editEntry(vault: VaultContext, key: string, options: EditOptions = {}): boolean {
+export async function editEntry(vault: VaultContext, key: string, options: EditOptions = {}): Promise<boolean> {
   // Get the file path for the entry
-  const filePath = getEntry(vault, key, options)
+  const filePath = await getEntry(vault, key, options)
   if (!filePath) {
     throw new Error(`Entry not found: ${key}`)
   }
 
   // Get current content
-  const currentContent = catEntry(vault, key, options)
+  const currentContent = await catEntry(vault, key, options)
   if (currentContent === undefined) {
     throw new Error(`Failed to read entry: ${key}`)
   }
@@ -55,7 +55,7 @@ export function editEntry(vault: VaultContext, key: string, options: EditOptions
   }
 
   // Save as new version
-  setEntry(vault, key, tempFile, {
+  await setEntry(vault, key, tempFile, {
     description: `Edited with ${editor}`,
   })
 
