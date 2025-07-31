@@ -9,11 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **GitHub Actions CI/CD** - Automated testing and quality checks on push and pull requests
+- **GitHub Actions CI/CD** - Automated testing and quality checks on push and pull requests (Node.js 20.x, 22.x)
 - **Entry Archive Feature** - Archive and restore vault entries with `vault archive` and `vault restore` commands, view archived entries with `vault list --include-archived`
 - **Three-tier Scope System** - Organize your vault entries at three levels: global (across all projects), repository (specific to a project), or branch (specific to a git branch)
 - **Smart Fallback Search** - When retrieving entries, automatically searches branch → repository → global scopes, ensuring you always get the most specific version available
 - **Enhanced CLI Options** - New `--scope` option to specify where to store entries (global/repository/branch) and `--branch` option for branch-specific storage
+
+### Changed
+
+- Minimum Node.js version requirement updated from 18.x to 20.x
 - **Visual Scope Management** - Web UI now displays color-coded scope badges (purple for global, blue for repository, green for branch) making it easy to see where each entry is stored
 - **MCP Scope Support** - MCP server now accepts scope parameters, allowing AI tools to store and retrieve context at the appropriate level
 

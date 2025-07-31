@@ -26,7 +26,7 @@
     "dev:web": "concurrently -n api,vite -c magenta,cyan \"npm run dev:api\" \"vite\"",
     "dev:api": "tsx src/cli.ts web",
     "build": "npm run build:web && npm run build:bundle && npm run build:types",
-    "build:bundle": "esbuild src/cli.ts --bundle --platform=node --target=node18 --format=cjs --outfile=dist/cli.js --external:better-sqlite3 --banner:js='#!/usr/bin/env node'",
+    "build:bundle": "esbuild src/cli.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/cli.js --external:better-sqlite3 --banner:js='#!/usr/bin/env node'",
     "build:types": "tsc --emitDeclarationOnly",
     "build:web": "vite build",
     "test": "vitest run && npm run test:e2e",
@@ -43,7 +43,7 @@
     "check": "npm run format && npm run lint && npm run build && npm test"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
     "@hono/node-server": "^1.16.0",
