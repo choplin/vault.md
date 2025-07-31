@@ -38,7 +38,7 @@
     "lint:biome": "biome check .",
     "lint:md": "markdownlint-cli2 '**/*.md' '#node_modules' '#.claude'",
     "format": "biome check . --write && markdownlint-cli2 --fix '**/*.md' '#node_modules' '#.claude'",
-    "prepare": "lefthook install",
+    "prepare:hooks": "lefthook install",
     "prepublishOnly": "npm run lint && npm run build",
     "check": "npm run format && npm run lint && npm run build && npm test"
   },
