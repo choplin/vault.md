@@ -27,16 +27,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Biome
-        uses: biomejs/setup-biome@v2
-        with:
-          version: 2.1.1
-
       - name: Run format check
-        run: biome check . --write && markdownlint-cli2 --fix '**/*.md' '#node_modules' '#.claude'
+        run: npm run format
 
       - name: Run linter
-        run: biome check . && markdownlint-cli2 '**/*.md' '#node_modules' '#.claude'
+        run: npm run lint
 
       - name: Build project
         run: npm run build
@@ -70,21 +65,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Biome
-        uses: biomejs/setup-biome@v2
-        with:
-          version: 2.1.1
-
       - name: Check TypeScript
         run: npm run build:types
 
       - name: Check formatting
         run: |
-          biome check . --write && markdownlint-cli2 --fix '**/*.md' '#node_modules' '#.claude'
+          npm run format
           git diff --exit-code || (echo "Code is not formatted. Please run 'npm run format' locally." && exit 1)
 
       - name: Lint code
-        run: biome check . && markdownlint-cli2 '**/*.md' '#node_modules' '#.claude'
+        run: npm run lint
 
       - name: Security audit
         run: npm audit --audit-level=high
