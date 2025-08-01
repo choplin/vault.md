@@ -33,10 +33,10 @@ jobs:
           version: 2.1.1
 
       - name: Run format check
-        run: npm run format
+        run: biome check . --write && markdownlint-cli2 --fix '**/*.md' '#node_modules' '#.claude'
 
       - name: Run linter
-        run: npm run lint
+        run: biome check . && markdownlint-cli2 '**/*.md' '#node_modules' '#.claude'
 
       - name: Build project
         run: npm run build
@@ -80,11 +80,11 @@ jobs:
 
       - name: Check formatting
         run: |
-          npm run format
+          biome check . --write && markdownlint-cli2 --fix '**/*.md' '#node_modules' '#.claude'
           git diff --exit-code || (echo "Code is not formatted. Please run 'npm run format' locally." && exit 1)
 
       - name: Lint code
-        run: npm run lint
+        run: biome check . && markdownlint-cli2 '**/*.md' '#node_modules' '#.claude'
 
       - name: Security audit
         run: npm audit --audit-level=high
