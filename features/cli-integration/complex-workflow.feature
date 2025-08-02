@@ -8,7 +8,7 @@ Feature: Complex development workflow
     And I have initialized a git repository
 
   Scenario: Typical development workflow
-    # Set project configuration in repository scope (main branch)
+    # Set project configuration in repository scope (initial branch)
     Given I have created a test file "config.json" with content '{"version": "1.0.0"}'
     When I run "vault set project-config -d 'Project configuration' < config.json"
     Then the command should succeed
@@ -36,7 +36,7 @@ Feature: Complex development workflow
     When I run "vault move-scope ui-notes --from-scope branch --to-scope repository"
     Then the command should succeed
 
-    # Switch to main branch and verify shared notes are accessible
-    When I switch to git branch "main"
+    # Switch to initial branch and verify shared notes are accessible
+    When I switch to the initial branch
     And I run "vault get ui-notes"
     Then the output should be "# UI Design Notes"
