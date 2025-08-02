@@ -17,6 +17,7 @@ interface CustomWorld {
   lastOutput: string
   lastExitCode: number
   cliPath: string
+  initialBranch?: string
 }
 
 declare module '@cucumber/cucumber' {
@@ -62,6 +63,14 @@ Given('I have initialized a git repository', function(this: CustomWorld) {
   execSync('git init', { cwd: process.cwd() })
   execSync('git config user.email "test@example.com"', { cwd: process.cwd() })
   execSync('git config user.name "Test User"', { cwd: process.cwd() })
+
+  // Create initial commit to establish the default branch
+  writeFileSync(join(process.cwd(), '.gitkeep'), '')
+  execSync('git add .gitkeep', { cwd: process.cwd() })
+  execSync('git commit -m "Initial commit"', { cwd: process.cwd() })
+
+  // Save the initial branch name for later use
+  this.initialBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: process.cwd() }).toString().trim()
 })
 
 Given('I have created a test file {string} with content {string}', function(this: CustomWorld, filename: string, content: string) {
@@ -83,6 +92,13 @@ Given('I have created a git branch {string}', function(this: CustomWorld, branch
 
 When('I switch to git branch {string}', function(this: CustomWorld, branchName: string) {
   execSync(`git checkout ${branchName}`, { cwd: process.cwd() })
+})
+
+When('I switch to the initial branch', function(this: CustomWorld) {
+  if (!this.initialBranch) {
+    throw new Error('Initial branch not set. Make sure to run "Given I have initialized a git repository" first.')
+  }
+  execSync(`git checkout ${this.initialBranch}`, { cwd: process.cwd() })
 })
 
 When('I run {string}', function(this: CustomWorld, command: string) {
