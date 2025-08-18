@@ -182,6 +182,18 @@ Structure:
         └── api-notes_v1.txt
 ```
 
+## Development
+
+To set up the development environment:
+
+```bash
+# Install dependencies
+npm install
+
+# Set up git hooks
+npm run prepare:hooks
+```
+
 ## License
 
 MIT
