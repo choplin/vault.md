@@ -27,13 +27,6 @@ jobs:
       - name: Install dependencies
         run: npm ci --include=optional
 
-      - name: Debug - List @biomejs packages
-        run: |
-          echo "=== Installed @biomejs packages ==="
-          ls -la node_modules/@biomejs/ || echo "No @biomejs directory found"
-          echo "=== Looking for biome binary ==="
-          find node_modules -name "biome" -type f | head -10
-
       - name: Run format check
         run: npm run format
 
