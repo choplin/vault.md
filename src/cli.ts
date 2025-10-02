@@ -506,8 +506,8 @@ program
   })
 
 program
-  .command('web')
-  .description('Start web UI server')
+  .command('ui')
+  .description('Start Web UI server')
   .option('-p, --port <port>', 'Port to listen on', '8080')
   .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Use specific repository')

@@ -140,6 +140,24 @@ Once configured, Claude Desktop can use these tools:
   - `repo` (optional): Use specific repository path
   - `branch` (optional): Use specific branch (with repo option)
 
+### Web UI
+
+vault.md includes a Web UI for browsing and managing your vault visually.
+
+```bash
+# Start the Web UI server (default port: 8080)
+vault ui
+
+# Use a custom port
+vault ui --port 3000
+
+# Start with specific scope
+vault ui --scope global
+vault ui --scope repository --repo /path/to/repo
+```
+
+Open <http://localhost:8080> in your browser to view the Web UI.
+
 ## Key Concepts
 
 ### Scopes

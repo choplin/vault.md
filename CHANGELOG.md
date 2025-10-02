@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Command Rename**: `vault web` → `vault ui` for improved clarity and consistency with other CLI tools (HashiCorp Vault uses the same convention)
+- **npm Scripts**: `dev:web` → `dev:ui` to match the command rename
 - Minimum Node.js version requirement updated from 18.x to 20.x due to dependency requirements
 - **Visual Scope Management** - Web UI now displays color-coded scope badges (purple for global, blue for repository, green for branch) making it easy to see where each entry is stored
 - **MCP Scope Support** - MCP server now accepts scope parameters, allowing AI tools to store and retrieve context at the appropriate level

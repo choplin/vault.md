@@ -49,7 +49,7 @@ All checks must pass before creating a commit. Fix any errors before proceeding.
 
 ### Web UI Development
 
-- `npm run dev:web` - Start both API server (8080) and Vite dev server (5173)
+- `npm run dev:ui` - Start both API server (8080) and Vite dev server (5173)
   - Logs are color-coded (API: magenta, Vite: cyan)
   - Ctrl+C stops both servers
 
@@ -58,7 +58,7 @@ All checks must pass before creating a commit. Fix any errors before proceeding.
 - `npm run dev` - Run CLI (can add arguments)
   - Example: `npm run dev -- set key -d "description"`
   - Example: `npm run dev -- mcp` (start MCP server)
-  - Example: `npm run dev -- web` (start API server)
+  - Example: `npm run dev -- ui` (start API server)
 
 ### Individual Servers
 
