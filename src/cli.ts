@@ -218,7 +218,7 @@ program
         const table = new Table({ columns })
 
         entries.forEach((entry) => {
-          const row: any = {
+          const row: Record<string, string> = {
             key: entry.key,
             version: `v${entry.version}`,
             created: entry.createdAt.toLocaleString(),
@@ -272,8 +272,14 @@ program
             input: process.stdin,
             output: process.stdout,
           })
+          const scopeLabel =
+            vault.scope.type === 'branch'
+              ? `${vault.scope.primaryPath} (${vault.scope.branchName})`
+              : vault.scope.type === 'repository'
+                ? vault.scope.primaryPath
+                : 'global'
           const answer = await rl.question(
-            `Delete scope '${vault.scope.type === 'branch' ? `${vault.scope.identifier} (${vault.scope.branch})` : 'global'}' with all entries? This action cannot be undone. (y/N) `,
+            `Delete scope '${scopeLabel}' with all entries? This action cannot be undone. (y/N) `,
           )
           rl.close()
           if (answer.toLowerCase() !== 'y') {
@@ -292,8 +298,10 @@ program
             input: process.stdin,
             output: process.stdout,
           })
+          const scopeLabel =
+            vault.scope.type === 'branch' || vault.scope.type === 'repository' ? vault.scope.primaryPath : 'global'
           const answer = await rl.question(
-            `Delete vault for branch '${options.deleteBranch}' of '${vault.scope.type === 'branch' ? vault.scope.identifier : 'global'}'? This action cannot be undone. (y/N) `,
+            `Delete vault for branch '${options.deleteBranch}' of '${scopeLabel}'? This action cannot be undone. (y/N) `,
           )
           rl.close()
           if (answer.toLowerCase() !== 'y') {
@@ -312,8 +320,10 @@ program
             input: process.stdin,
             output: process.stdout,
           })
+          const scopeLabel =
+            vault.scope.type === 'branch' || vault.scope.type === 'repository' ? vault.scope.primaryPath : 'global'
           const answer = await rl.question(
-            `Delete entire vault for '${vault.scope.type === 'branch' ? vault.scope.identifier : 'global'}'? This will remove all data across all branches. (y/N) `,
+            `Delete entire vault for '${scopeLabel}'? This will remove all data across all branches. (y/N) `,
           )
           rl.close()
           if (answer.toLowerCase() !== 'y') {

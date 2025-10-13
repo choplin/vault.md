@@ -9,9 +9,9 @@ import { resolveVaultContext, moveScope, type VaultContext } from '../src/core/v
 vi.mock('../src/core/git.js', () => ({
   getGitInfo: vi.fn().mockReturnValue({
     isGitRepo: true,
-    repoRoot: '/test/repo',
+    primaryWorktreePath: '/test/repo',
+    currentWorktreePath: '/test/repo',
     currentBranch: 'main',
-    remoteUrl: 'https://github.com/test/repo.git',
   }),
 }))
 
@@ -60,16 +60,12 @@ describe('moveScope', () => {
       // Given: data exists in branch scope
       const branchScope: BranchScope = {
         type: 'branch',
-        identifier: '/test/repo',
-        branch: 'feature-x',
-        workPath: '/test/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
+        primaryPath: '/test/repo',
+        branchName: 'feature-x',
       }
       const repoScope: RepositoryScope = {
         type: 'repository',
-        identifier: '/test/repo',
-        workPath: '/test/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
+        primaryPath: '/test/repo',
       }
 
       const fromScopeId = ctx.scopeService.getOrCreate(branchScope)
@@ -101,9 +97,7 @@ describe('moveScope', () => {
       // Given: data exists in repository scope
       const repoScope: RepositoryScope = {
         type: 'repository',
-        identifier: '/test/repo',
-        workPath: '/test/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
+        primaryPath: '/test/repo',
       }
       const globalScope: GlobalScope = {
         type: 'global',
@@ -138,16 +132,12 @@ describe('moveScope', () => {
       // Given: multiple versions exist in source scope
       const branchScope: BranchScope = {
         type: 'branch',
-        identifier: '/test/repo',
-        branch: 'main',
-        workPath: '/test/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
+        primaryPath: '/test/repo',
+        branchName: 'main',
       }
       const repoScope: RepositoryScope = {
         type: 'repository',
-        identifier: '/test/repo',
-        workPath: '/test/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
+        primaryPath: '/test/repo',
       }
 
       const fromScopeId = ctx.scopeService.getOrCreate(branchScope)
@@ -180,16 +170,12 @@ describe('moveScope', () => {
       // Given: data exists in both source and target scopes
       const branchScope: BranchScope = {
         type: 'branch',
-        identifier: '/test/repo',
-        branch: 'feature-x',
-        workPath: '/test/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
+        primaryPath: '/test/repo',
+        branchName: 'feature-x',
       }
       const repoScope: RepositoryScope = {
         type: 'repository',
-        identifier: '/test/repo',
-        workPath: '/test/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
+        primaryPath: '/test/repo',
       }
 
       const fromScopeId = ctx.scopeService.getOrCreate(branchScope)
@@ -221,16 +207,12 @@ describe('moveScope', () => {
       // Given: key does not exist in source scope
       const branchScope: BranchScope = {
         type: 'branch',
-        identifier: '/test/repo',
-        branch: 'feature-x',
-        workPath: '/test/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
+        primaryPath: '/test/repo',
+        branchName: 'feature-x',
       }
       const repoScope: RepositoryScope = {
         type: 'repository',
-        identifier: '/test/repo',
-        workPath: '/test/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
+        primaryPath: '/test/repo',
       }
 
       // When/Then: moveScope should throw error
@@ -241,9 +223,7 @@ describe('moveScope', () => {
       // Given: source and target are the same repository scope
       const repoScope: RepositoryScope = {
         type: 'repository',
-        identifier: '/test/repo',
-        workPath: '/test/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
+        primaryPath: '/test/repo',
       }
 
       // When/Then: moveScope should throw error

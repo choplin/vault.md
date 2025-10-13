@@ -75,8 +75,7 @@ describe('vault functions', () => {
 
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
-          expect(ctx.scope.identifier).toBe(nonGitDir)
-          expect(ctx.scope.remoteUrl).toBeUndefined()
+          expect(ctx.scope.primaryPath).toBe(nonGitDir)
         }
 
         closeVault(ctx)
@@ -86,21 +85,15 @@ describe('vault functions', () => {
       }
     })
 
-    it('should use custom branch for non-git directory', () => {
+    it('should reject branch scope when not in git repo', () => {
       const nonGitDir = realpathSync(mkdtempSync(join(tmpdir(), 'non-git-')))
       const originalCwd = process.cwd()
 
       try {
         process.chdir(nonGitDir)
-        const ctx = resolveVaultContext({ scope: 'branch', branch: 'custom' })
-
-        expect(ctx.scope.type).toBe('branch')
-        if (ctx.scope.type === 'branch') {
-          expect(ctx.scope.identifier).toBe(nonGitDir)
-          expect(ctx.scope.branch).toBe('custom')
-        }
-
-        closeVault(ctx)
+        expect(() => resolveVaultContext({ scope: 'branch', branch: 'custom' })).toThrow(
+          'Not in a git repository. Branch scope requires git repository'
+        )
       } finally {
         process.chdir(originalCwd)
         rmSync(nonGitDir, { recursive: true, force: true })

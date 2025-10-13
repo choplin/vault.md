@@ -55,8 +55,8 @@ describe('Web API - Three-tier Scope Support', () => {
       },
       scope: {
         type: 'repository',
-        identifier: '/test/repo',
-        workPath: '/test/repo',
+        primaryPath: '/test/repo',
+        worktreePath: '/test/repo',
       } as Scope,
       scopeId: 1,
       scopeService: mockScopeService as ScopeService,
@@ -86,8 +86,8 @@ describe('Web API - Three-tier Scope Support', () => {
     it('should return current repository scope', async () => {
       mockVaultContext.scope = {
         type: 'repository',
-        identifier: '/test/repo',
-        workPath: '/test/repo'
+        primaryPath: '/test/repo',
+        worktreePath: '/test/repo',
       }
       vi.mocked(scope.formatScope).mockReturnValue('test-repo')
 
@@ -101,9 +101,9 @@ describe('Web API - Three-tier Scope Support', () => {
     it('should return current branch scope', async () => {
       mockVaultContext.scope = {
         type: 'branch',
-        identifier: '/test/repo',
-        branch: 'main',
-        workPath: '/test/repo'
+        primaryPath: '/test/repo',
+        branchName: 'main',
+        worktreePath: '/test/repo',
       }
       vi.mocked(scope.formatScope).mockReturnValue('test-repo (main)')
 
@@ -121,10 +121,10 @@ describe('Web API - Three-tier Scope Support', () => {
         [{ type: 'global' }, [
           { id: 1, key: 'global-key', version: 1, filePath: '/path/1', hash: 'hash1', createdAt: '2025-01-01' }
         ]],
-        [{ type: 'repository', identifier: '/test/repo' }, [
+        [{ type: 'repository', primaryPath: '/test/repo' }, [
           { id: 2, key: 'repo-key', version: 1, filePath: '/path/2', hash: 'hash2', createdAt: '2025-01-02' }
         ]],
-        [{ type: 'branch', identifier: '/test/repo', branch: 'main' }, [
+        [{ type: 'branch', primaryPath: '/test/repo', branchName: 'main' }, [
           { id: 3, key: 'branch-key', version: 1, filePath: '/path/3', hash: 'hash3', createdAt: '2025-01-03' }
         ]]
       ])

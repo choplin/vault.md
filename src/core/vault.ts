@@ -4,7 +4,7 @@ import { clearDatabase, closeDatabase, createDatabase, type DatabaseContext } fr
 import { EntryStatusRepository } from './database/repositories/entry-status.repository.js'
 import * as fs from './filesystem.js'
 import { getGitInfo } from './git.js'
-import { type BranchScope, formatScope, isGlobalScope, type RepositoryScope, type Scope } from './scope.js'
+import { type BranchScope, formatScope, getScopeStorageKey, type RepositoryScope, type Scope } from './scope.js'
 import { EntryService } from './services/entry.service.js'
 import { ScopeService } from './services/scope.service.js'
 import type { ListOptions, ScopeType, SetOptions, VaultEntry, VaultOptions } from './types.js'
@@ -23,34 +23,48 @@ export interface ResolveContextOptions {
   branch?: string
 }
 
-export function resolveScope(options: ResolveContextOptions): Scope {
-  const scopeType = options.scope || 'repository' // Default is repository
+export function resolveScope(options: ResolveContextOptions = {}): Scope {
+  const scopeType = options.scope || 'repository'
+  const targetPath = options.repo || process.cwd()
+  const resolvedTarget = resolve(targetPath)
+  const gitInfo = getGitInfo(targetPath)
 
   switch (scopeType) {
     case 'global':
       return { type: 'global' }
 
     case 'repository': {
-      const gitInfo = getGitInfo(options.repo)
+      if (gitInfo.isGitRepo) {
+        const primaryPath = gitInfo.primaryWorktreePath
+        if (!primaryPath) {
+          throw new Error('Unable to resolve primary worktree path for repository scope')
+        }
+        return {
+          type: 'repository',
+          primaryPath,
+        }
+      }
       return {
         type: 'repository',
-        identifier: gitInfo.isGitRepo ? gitInfo.repoRoot! : resolve(options.repo || process.cwd()),
-        workPath: process.cwd(),
-        remoteUrl: gitInfo.remoteUrl,
+        primaryPath: resolvedTarget,
       }
     }
 
     case 'branch': {
-      const gitInfoBranch = getGitInfo(options.repo)
-      if (!gitInfoBranch.isGitRepo && !options.branch) {
+      if (!gitInfo.isGitRepo) {
         throw new Error('Not in a git repository. Branch scope requires git repository')
       }
+
+      const primaryPath = gitInfo.primaryWorktreePath
+      if (!primaryPath) {
+        throw new Error('Unable to resolve primary worktree path for branch scope')
+      }
+      const branchName = options.branch || gitInfo.currentBranch || 'main'
+
       return {
         type: 'branch',
-        identifier: gitInfoBranch.isGitRepo ? gitInfoBranch.repoRoot! : resolve(options.repo || process.cwd()),
-        branch: options.branch || gitInfoBranch.currentBranch!,
-        workPath: process.cwd(),
-        remoteUrl: gitInfoBranch.remoteUrl,
+        primaryPath,
+        branchName,
       }
     }
 
@@ -133,14 +147,7 @@ export async function setEntry(
   const version = await ctx.entryService.getNextVersion(scopeId, key)
 
   // Generate scope-specific path for file storage
-  let scopePath: string
-  if (isGlobalScope(scope)) {
-    scopePath = 'global'
-  } else if (scope.type === 'repository') {
-    scopePath = scope.identifier.replace(/[/\\:]/g, '_')
-  } else {
-    scopePath = `${scope.identifier}/${scope.branch}`.replace(/[/\\:]/g, '_')
-  }
+  const scopePath = getScopeStorageKey(scope)
 
   // Save file
   const { path, hash } = fs.saveFile(scopePath, key, version, content)
@@ -171,9 +178,7 @@ export function getSearchOrder(currentScope: Scope): Scope[] {
         currentScope,
         {
           type: 'repository',
-          identifier: currentScope.identifier,
-          workPath: currentScope.workPath,
-          remoteUrl: currentScope.remoteUrl,
+          primaryPath: currentScope.primaryPath,
         },
         { type: 'global' },
       ]
@@ -333,11 +338,11 @@ function areScopesEqual(scope1: Scope, scope2: Scope): boolean {
       return true // All global scopes are equal
 
     case 'repository':
-      return scope1.identifier === (scope2 as RepositoryScope).identifier
+      return scope1.primaryPath === (scope2 as RepositoryScope).primaryPath
 
     case 'branch': {
       const branch2 = scope2 as BranchScope
-      return scope1.identifier === branch2.identifier && scope1.branch === branch2.branch
+      return scope1.primaryPath === branch2.primaryPath && scope1.branchName === branch2.branchName
     }
   }
 }
@@ -461,17 +466,15 @@ export async function deleteCurrentScope(ctx: VaultContext): Promise<number> {
 
   switch (ctx.scope.type) {
     case 'repository':
-      scopePath = ctx.scope.identifier.replace(/[/\\:]/g, '_')
+      scopePath = getScopeStorageKey(ctx.scope)
       fs.deleteProjectFiles(scopePath)
-      // Delete repository scope (empty branch)
-      deletedCount = await ctx.scopeService.deleteScope(ctx.scope.identifier, '')
+      deletedCount = await ctx.scopeService.deleteScope(ctx.scope.primaryPath, 'repository')
       break
 
     case 'branch':
-      scopePath = `${ctx.scope.identifier}/${ctx.scope.branch}`.replace(/[/\\:]/g, '_')
+      scopePath = getScopeStorageKey(ctx.scope)
       fs.deleteProjectFiles(scopePath)
-      // Delete specific branch scope
-      deletedCount = await ctx.scopeService.deleteScope(ctx.scope.identifier, ctx.scope.branch)
+      deletedCount = await ctx.scopeService.deleteScope(ctx.scope.primaryPath, ctx.scope.branchName)
       break
   }
 
@@ -484,19 +487,24 @@ export async function deleteBranch(ctx: VaultContext, branch: string): Promise<n
     throw new Error('Cannot delete branches from global scope')
   }
 
-  const identifier = ctx.scope.type === 'branch' || ctx.scope.type === 'repository' ? ctx.scope.identifier : null
+  const primaryPath = ctx.scope.type === 'branch' || ctx.scope.type === 'repository' ? ctx.scope.primaryPath : null
 
-  if (!identifier) {
-    throw new Error('No identifier found in current scope')
+  if (!primaryPath) {
+    throw new Error('No repository path found in current scope')
   }
 
-  const scopePath = `${identifier}/${branch}`.replace(/[/\\:]/g, '_')
+  const branchScope: BranchScope = {
+    type: 'branch',
+    primaryPath,
+    branchName: branch,
+  }
+  const scopePath = getScopeStorageKey(branchScope)
 
   // Delete all files for this branch
   fs.deleteProjectFiles(scopePath)
 
   // Delete from database
-  return await ctx.scopeService.deleteScope(identifier, branch)
+  return await ctx.scopeService.deleteScope(primaryPath, branch)
 }
 
 // Delete all branches of current identifier
@@ -505,19 +513,19 @@ export async function deleteAllBranches(ctx: VaultContext): Promise<number> {
     throw new Error('Cannot delete branches from global scope')
   }
 
-  const identifier = ctx.scope.type === 'branch' || ctx.scope.type === 'repository' ? ctx.scope.identifier : null
+  const primaryPath = ctx.scope.type === 'branch' || ctx.scope.type === 'repository' ? ctx.scope.primaryPath : null
 
-  if (!identifier) {
-    throw new Error('No identifier found in current scope')
+  if (!primaryPath) {
+    throw new Error('No repository path found in current scope')
   }
 
   // Get all scopes for this identifier
   const allScopes = ctx.scopeService.getAll()
   const scopesToDelete = allScopes.filter((s) => {
-    if (s.type === 'branch' && s.identifier === identifier) {
+    if (s.type === 'branch' && s.primaryPath === primaryPath) {
       return true
     }
-    if (s.type === 'repository' && s.identifier === identifier) {
+    if (s.type === 'repository' && s.primaryPath === primaryPath) {
       return true
     }
     return false
@@ -525,17 +533,12 @@ export async function deleteAllBranches(ctx: VaultContext): Promise<number> {
 
   // Delete files for each scope
   scopesToDelete.forEach((scope) => {
-    if (scope.type === 'branch') {
-      const scopePath = `${scope.identifier}/${scope.branch}`.replace(/[/\\:]/g, '_')
-      fs.deleteProjectFiles(scopePath)
-    } else if (scope.type === 'repository') {
-      const scopePath = scope.identifier.replace(/[/\\:]/g, '_')
-      fs.deleteProjectFiles(scopePath)
-    }
+    const scopePath = getScopeStorageKey(scope)
+    fs.deleteProjectFiles(scopePath)
   })
 
   // Delete from database
-  return await ctx.scopeService.deleteAllBranches(identifier)
+  return await ctx.scopeService.deleteAllBranches(primaryPath)
 }
 
 export async function getInfo(

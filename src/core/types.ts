@@ -1,3 +1,7 @@
+import type { ScopeType } from './scope.js'
+
+export type { ScopeType } from './scope.js'
+
 export interface VaultEntry {
   id: number
   scopeId: number
@@ -10,8 +14,6 @@ export interface VaultEntry {
   createdAt: Date
   isArchived: boolean
 }
-
-export type ScopeType = 'global' | 'repository' | 'branch'
 
 export interface VaultOptions {
   // Scope options

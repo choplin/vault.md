@@ -17,7 +17,7 @@ describe('EntryService', () => {
     scopeRepo = new ScopeRepository(ctx)
 
     // Create a test scope
-    const scope: Scope = { type: 'repository', identifier: '/test/repo' }
+    const scope: Scope = { type: 'repository', primaryPath: '/test/repo' }
     scopeId = scopeRepo.create(scope)
   })
 

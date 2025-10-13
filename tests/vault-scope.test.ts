@@ -49,9 +49,9 @@ describe('vault scope functions', () => {
       // Mock git info to simulate being in a git repo
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/test/repo',
+        primaryWorktreePath: '/test/repo',
         currentBranch: 'main',
-        remoteUrl: 'https://github.com/test/repo',
+        currentWorktreePath: process.cwd(),
       })
 
       const ctx = resolveVaultContext({ scope: 'global' })
@@ -99,18 +99,16 @@ describe('vault scope functions', () => {
     it('should create repository scope by default', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/test/repo',
+        primaryWorktreePath: '/test/repo',
         currentBranch: 'main',
-        remoteUrl: 'https://github.com/test/repo',
+        currentWorktreePath: process.cwd(),
       })
 
       const ctx = resolveVaultContext()
       try {
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
-          expect(ctx.scope.identifier).toBe('/test/repo')
-          expect(ctx.scope.workPath).toBe(process.cwd())
-          expect(ctx.scope.remoteUrl).toBe('https://github.com/test/repo')
+          expect(ctx.scope.primaryPath).toBe('/test/repo')
         }
       } finally {
         closeVault(ctx)
@@ -120,17 +118,16 @@ describe('vault scope functions', () => {
     it('should create repository scope when explicitly specified', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/test/repo',
+        primaryWorktreePath: '/test/repo',
         currentBranch: 'feature-x',
-        remoteUrl: 'https://github.com/test/repo',
+        currentWorktreePath: process.cwd(),
       })
 
       const ctx = resolveVaultContext({ scope: 'repository' })
       try {
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
-          expect(ctx.scope.identifier).toBe('/test/repo')
-          expect(ctx.scope.workPath).toBe(process.cwd())
+          expect(ctx.scope.primaryPath).toBe('/test/repo')
         }
       } finally {
         closeVault(ctx)
@@ -144,18 +141,16 @@ describe('vault scope functions', () => {
 
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: false,
-        repoRoot: undefined,
+        primaryWorktreePath: undefined,
         currentBranch: undefined,
-        remoteUrl: undefined,
+        currentWorktreePath: undefined,
       })
 
       const ctx = resolveVaultContext({ scope: 'repository' })
       try {
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
-          expect(ctx.scope.identifier).toBe(mockCwd)
-          expect(ctx.scope.workPath).toBe(mockCwd)
-          expect(ctx.scope.remoteUrl).toBeUndefined()
+          expect(ctx.scope.primaryPath).toBe(mockCwd)
         }
       } finally {
         closeVault(ctx)
@@ -166,16 +161,16 @@ describe('vault scope functions', () => {
     it('should use custom repo path when provided', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/custom/repo',
+        primaryWorktreePath: '/custom/repo',
         currentBranch: 'main',
-        remoteUrl: 'https://github.com/custom/repo',
+        currentWorktreePath: process.cwd(),
       })
 
       const ctx = resolveVaultContext({ scope: 'repository', repo: '/custom/repo' })
       try {
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
-          expect(ctx.scope.identifier).toBe('/custom/repo')
+          expect(ctx.scope.primaryPath).toBe('/custom/repo')
         }
       } finally {
         closeVault(ctx)
@@ -185,16 +180,16 @@ describe('vault scope functions', () => {
     it('should ignore branch option for repository scope', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/test/repo',
+        primaryWorktreePath: '/test/repo',
         currentBranch: 'main',
-        remoteUrl: undefined,
+        currentWorktreePath: process.cwd(),
       })
 
       const ctx = resolveVaultContext({ scope: 'repository', branch: 'feature-x' })
       try {
         expect(ctx.scope.type).toBe('repository')
         if (ctx.scope.type === 'repository') {
-          expect(ctx.scope.identifier).toBe('/test/repo')
+          expect(ctx.scope.primaryPath).toBe('/test/repo')
           // Branch option should be ignored for repository scope
         }
       } finally {
@@ -207,19 +202,17 @@ describe('vault scope functions', () => {
     it('should create branch scope when explicitly specified in git repo', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/test/repo',
+        primaryWorktreePath: '/test/repo',
         currentBranch: 'main',
-        remoteUrl: 'https://github.com/test/repo',
+        currentWorktreePath: process.cwd(),
       })
 
       const ctx = resolveVaultContext({ scope: 'branch' })
       try {
         expect(ctx.scope.type).toBe('branch')
         if (ctx.scope.type === 'branch') {
-          expect(ctx.scope.identifier).toBe('/test/repo')
-          expect(ctx.scope.branch).toBe('main')
-          expect(ctx.scope.workPath).toBe(process.cwd())
-          expect(ctx.scope.remoteUrl).toBe('https://github.com/test/repo')
+          expect(ctx.scope.primaryPath).toBe('/test/repo')
+          expect(ctx.scope.branchName).toBe('main')
         }
       } finally {
         closeVault(ctx)
@@ -229,17 +222,17 @@ describe('vault scope functions', () => {
     it('should use custom branch when provided', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/test/repo',
+        primaryWorktreePath: '/test/repo',
         currentBranch: 'main',
-        remoteUrl: undefined,
+        currentWorktreePath: process.cwd(),
       })
 
       const ctx = resolveVaultContext({ scope: 'branch', branch: 'feature-x' })
       try {
         expect(ctx.scope.type).toBe('branch')
         if (ctx.scope.type === 'branch') {
-          expect(ctx.scope.identifier).toBe('/test/repo')
-          expect(ctx.scope.branch).toBe('feature-x')
+          expect(ctx.scope.primaryPath).toBe('/test/repo')
+          expect(ctx.scope.branchName).toBe('feature-x')
         }
       } finally {
         closeVault(ctx)
@@ -249,9 +242,9 @@ describe('vault scope functions', () => {
     it('should throw error when not in git repo and no branch specified', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: false,
-        repoRoot: undefined,
+        primaryWorktreePath: undefined,
         currentBranch: undefined,
-        remoteUrl: undefined,
+        currentWorktreePath: undefined,
       })
 
       expect(() => resolveVaultContext({ scope: 'branch' })).toThrow(
@@ -259,46 +252,33 @@ describe('vault scope functions', () => {
       )
     })
 
-    it('should allow branch scope with custom branch even outside git repo', () => {
-      const mockCwd = '/non/git/directory'
-      process.chdir('/')
-      vi.spyOn(process, 'cwd').mockReturnValue(mockCwd)
-
+    it('should reject branch scope outside git repo even when branch specified', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: false,
-        repoRoot: undefined,
+        primaryWorktreePath: undefined,
         currentBranch: undefined,
-        remoteUrl: undefined,
+        currentWorktreePath: undefined,
       })
 
-      const ctx = resolveVaultContext({ scope: 'branch', branch: 'custom' })
-      try {
-        expect(ctx.scope.type).toBe('branch')
-        if (ctx.scope.type === 'branch') {
-          expect(ctx.scope.identifier).toBe(mockCwd)
-          expect(ctx.scope.branch).toBe('custom')
-          expect(ctx.scope.remoteUrl).toBeUndefined()
-        }
-      } finally {
-        closeVault(ctx)
-        vi.restoreAllMocks()
-      }
+      expect(() => resolveVaultContext({ scope: 'branch', branch: 'custom' })).toThrow(
+        'Not in a git repository. Branch scope requires git repository'
+      )
     })
 
     it('should use custom repo path for branch scope', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/custom/repo',
+        primaryWorktreePath: '/custom/repo',
         currentBranch: 'develop',
-        remoteUrl: 'https://github.com/custom/repo',
+        currentWorktreePath: process.cwd(),
       })
 
       const ctx = resolveVaultContext({ scope: 'branch', repo: '/custom/repo' })
       try {
         expect(ctx.scope.type).toBe('branch')
         if (ctx.scope.type === 'branch') {
-          expect(ctx.scope.identifier).toBe('/custom/repo')
-          expect(ctx.scope.branch).toBe('develop')
+          expect(ctx.scope.primaryPath).toBe('/custom/repo')
+          expect(ctx.scope.branchName).toBe('develop')
         }
       } finally {
         closeVault(ctx)
@@ -318,9 +298,9 @@ describe('vault scope functions', () => {
     it('should create vault context with proper scope and database', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/test/repo',
+        primaryWorktreePath: '/test/repo',
         currentBranch: 'main',
-        remoteUrl: 'https://github.com/test/repo',
+        currentWorktreePath: '/test/repo',
       })
 
       const ctx = resolveVaultContext()
@@ -337,9 +317,9 @@ describe('vault scope functions', () => {
     it('should persist scope in database and retrieve same scopeId', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/test/repo',
+        primaryWorktreePath: '/test/repo',
         currentBranch: 'main',
-        remoteUrl: undefined,
+        currentWorktreePath: '/test/repo',
       })
 
       const ctx1 = resolveVaultContext({ scope: 'repository' })
@@ -358,9 +338,9 @@ describe('vault scope functions', () => {
     it('should create different scopeIds for different scopes', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/test/repo',
+        primaryWorktreePath: '/test/repo',
         currentBranch: 'main',
-        remoteUrl: undefined,
+        currentWorktreePath: '/test/repo',
       })
 
       const ctxGlobal = resolveVaultContext({ scope: 'global' })
@@ -381,9 +361,9 @@ describe('vault scope functions', () => {
     it('should handle different branches as different scopes', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/test/repo',
+        primaryWorktreePath: '/test/repo',
         currentBranch: 'main',
-        remoteUrl: undefined,
+        currentWorktreePath: '/test/repo',
       })
 
       const ctxMain = resolveVaultContext({ scope: 'branch', branch: 'main' })
@@ -392,8 +372,8 @@ describe('vault scope functions', () => {
       try {
         expect(ctxMain.scopeId).not.toBe(ctxFeature.scopeId)
         if (ctxMain.scope.type === 'branch' && ctxFeature.scope.type === 'branch') {
-          expect(ctxMain.scope.branch).toBe('main')
-          expect(ctxFeature.scope.branch).toBe('feature-x')
+          expect(ctxMain.scope.branchName).toBe('main')
+          expect(ctxFeature.scope.branchName).toBe('feature-x')
         }
       } finally {
         closeVault(ctxMain)
@@ -404,9 +384,9 @@ describe('vault scope functions', () => {
     it('should create valid vault context for all scope types', () => {
       vi.mocked(gitUtils.getGitInfo).mockReturnValue({
         isGitRepo: true,
-        repoRoot: '/test/repo',
+        primaryWorktreePath: '/test/repo',
         currentBranch: 'main',
-        remoteUrl: 'https://github.com/test/repo',
+        currentWorktreePath: '/test/repo',
       })
 
       const testCases = [

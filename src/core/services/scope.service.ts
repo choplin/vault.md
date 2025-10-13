@@ -41,7 +41,6 @@ export class ScopeService {
     const scopes = this.getAll()
     const scopeIds = scopes.map((scope) => this.getOrCreate(scope))
 
-    // Get all entries in one query
     const entriesByScope = this.scopedEntryQuery.listByScopes(scopeIds)
 
     const result = new Map<Scope, ScopedEntry[]>()
@@ -53,56 +52,45 @@ export class ScopeService {
     return result
   }
 
-  async deleteScope(identifier: string, branch: string): Promise<number> {
+  async deleteScope(primaryPath: string, branchName: string): Promise<number> {
     return this.ctx.db.transaction(() => {
-      // Get scope
-      const scopeRow = this.scopeRepo.findByIdentifierAndBranch(identifier, branch)
+      const scopeRow = this.scopeRepo.findByPrimaryPathAndBranch(primaryPath, branchName)
       if (!scopeRow) return 0
 
-      // Get all entries with version counts in one query
       const entriesInfo = this.scopeEntryQuery.getEntriesWithVersionCount(scopeRow.id)
 
       let totalVersions = 0
-
-      // Delete all related data for each entry
       for (const info of entriesInfo) {
         totalVersions += info.versionCount
-
-        // Delete in order due to foreign keys
         this.versionRepo.deleteAllByEntry(info.entryId)
         this.statusRepo.delete(info.entryId)
         this.entryRepo.delete(info.entryId)
       }
 
-      // Delete scope
       this.scopeRepo.delete(scopeRow.id)
 
       return totalVersions
     })()
   }
 
-  async deleteAllBranches(identifier: string): Promise<number> {
+  async deleteAllBranches(primaryPath: string): Promise<number> {
     return this.ctx.db.transaction(() => {
       let totalVersions = 0
 
-      // Get all scope info with counts in one query
-      const scopesInfo = this.scopeEntryQuery.getScopesWithCounts(identifier)
+      const scopesInfo = this.scopeEntryQuery.getScopesWithCounts(primaryPath)
 
-      // Delete each scope
       for (const info of scopesInfo) {
         totalVersions += info.versionCount
 
         const entries = this.entryRepo.findAllByScope(info.scopeId)
         for (const entry of entries) {
-          // Delete in order due to foreign keys
           this.versionRepo.deleteAllByEntry(entry.id)
           this.statusRepo.delete(entry.id)
           this.entryRepo.delete(entry.id)
         }
       }
 
-      // Delete all scopes with this identifier
-      this.scopeRepo.deleteByIdentifier(identifier)
+      this.scopeRepo.deleteByPrimaryPath(primaryPath)
 
       return totalVersions
     })()

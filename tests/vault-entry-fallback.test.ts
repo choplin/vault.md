@@ -26,10 +26,10 @@ describe('getEntryWithFallback', () => {
     // Mock git functions
     vi.spyOn(git, 'getGitInfo').mockReturnValue({
       isGitRepo: true,
-      repoRoot: testDir,
+      primaryWorktreePath: testDir,
+      currentWorktreePath: testDir,
       currentBranch: 'main',
       isWorktree: false,
-      remoteUrl: 'https://github.com/test/repo.git'
     })
   })
 
@@ -289,20 +289,20 @@ describe('getEntryWithFallback', () => {
       // Create branch context for feature branch
       vi.spyOn(git, 'getGitInfo').mockReturnValue({
         isGitRepo: true,
-        repoRoot: testDir,
+        primaryWorktreePath: testDir,
+        currentWorktreePath: testDir,
         currentBranch: 'feature',
         isWorktree: false,
-        remoteUrl: 'https://github.com/test/repo.git'
       })
       const featureContext = resolveVaultContext({ scope: 'branch' })
 
       // Create branch context for main branch
       vi.spyOn(git, 'getGitInfo').mockReturnValue({
         isGitRepo: true,
-        repoRoot: testDir,
+        primaryWorktreePath: testDir,
+        currentWorktreePath: testDir,
         currentBranch: 'main',
         isWorktree: false,
-        remoteUrl: 'https://github.com/test/repo.git'
       })
       branchContext = resolveVaultContext({ scope: 'branch' })
 
@@ -333,19 +333,19 @@ describe('getEntryWithFallback', () => {
       // Create branch contexts for different branches
       vi.spyOn(git, 'getGitInfo').mockReturnValue({
         isGitRepo: true,
-        repoRoot: testDir,
+        primaryWorktreePath: testDir,
+        currentWorktreePath: testDir,
         currentBranch: 'main',
         isWorktree: false,
-        remoteUrl: 'https://github.com/test/repo.git'
       })
       const mainContext = resolveVaultContext({ scope: 'branch' })
 
       vi.spyOn(git, 'getGitInfo').mockReturnValue({
         isGitRepo: true,
-        repoRoot: testDir,
+        primaryWorktreePath: testDir,
+        currentWorktreePath: testDir,
         currentBranch: 'feature',
         isWorktree: false,
-        remoteUrl: 'https://github.com/test/repo.git'
       })
       const featureContext = resolveVaultContext({ scope: 'branch' })
 

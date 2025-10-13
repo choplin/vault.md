@@ -6,7 +6,7 @@ import { cors } from 'hono/cors'
 // Database imports are now handled through vault context services
 import { deleteFile, deleteProjectFiles } from '../core/filesystem.js'
 import { catEntry, getEntry, listEntries } from '../core/index.js'
-import { formatScope } from '../core/scope.js'
+import { formatScope, getScopeStorageKey, type Scope } from '../core/scope.js'
 import type { VaultOptions } from '../core/types.js'
 import type { VaultContext } from '../core/vault.js'
 
@@ -15,6 +15,16 @@ export function createWebServer(vault: VaultContext) {
 
   // Middleware
   app.use('*', cors())
+
+  const scopeFromParams = (identifier: string, branch: string): Scope => {
+    if (identifier === 'global' && branch === 'global') {
+      return { type: 'global' }
+    }
+    if (branch === 'repository') {
+      return { type: 'repository', primaryPath: identifier }
+    }
+    return { type: 'branch', primaryPath: identifier, branchName: branch }
+  }
 
   // API Routes
   app.get('/api/entries', async (c) => {
@@ -74,22 +84,7 @@ export function createWebServer(vault: VaultContext) {
       const allVersions = c.req.query('allVersions') === 'true'
 
       // Build scope based on identifier and branch
-      const scope =
-        identifier === 'global' && branch === 'global'
-          ? { type: 'global' as const }
-          : {
-              type: 'branch' as const,
-              identifier,
-              branch,
-              workPath:
-                vault.scope.type === 'branch' && vault.scope.identifier === identifier
-                  ? vault.scope.workPath
-                  : undefined,
-              remoteUrl:
-                vault.scope.type === 'branch' && vault.scope.identifier === identifier
-                  ? vault.scope.remoteUrl
-                  : undefined,
-            }
+      const scope = scopeFromParams(identifier, branch)
 
       // Get scope ID
       const scopeId = vault.database.db
@@ -183,22 +178,7 @@ export function createWebServer(vault: VaultContext) {
       const version = c.req.param('version') ? parseInt(c.req.param('version')!) : undefined
 
       // Create scope object for database lookup
-      const scope =
-        identifier === 'global' && branch === 'global'
-          ? { type: 'global' as const }
-          : {
-              type: 'branch' as const,
-              identifier,
-              branch,
-              workPath:
-                vault.scope.type === 'branch' && vault.scope.identifier === identifier
-                  ? vault.scope.workPath
-                  : undefined,
-              remoteUrl:
-                vault.scope.type === 'branch' && vault.scope.identifier === identifier
-                  ? vault.scope.remoteUrl
-                  : undefined,
-            }
+      const scope = scopeFromParams(identifier, branch)
 
       // Get scope ID
       const scopeId = vault.scopeService.getOrCreate(scope)
@@ -251,12 +231,19 @@ export function createWebServer(vault: VaultContext) {
       const identifier = decodeURIComponent(c.req.param('identifier'))
       const branch = decodeURIComponent(c.req.param('branch'))
 
-      // Delete project files
-      const scopePath = `${identifier}/${branch}`.replace(/[/\\:]/g, '_')
+      const scope = scopeFromParams(identifier, branch)
+      if (scope.type === 'global') {
+        return c.json({ error: 'Cannot delete global scope' }, 400)
+      }
+
+      const scopePath = getScopeStorageKey(scope)
       deleteProjectFiles(scopePath)
 
       // Delete from database
-      const deletedCount = await vault.scopeService.deleteScope(identifier, branch)
+      const deletedCount =
+        scope.type === 'repository'
+          ? await vault.scopeService.deleteScope(scope.primaryPath, 'repository')
+          : await vault.scopeService.deleteScope(scope.primaryPath, scope.branchName)
       return c.json({ message: `Deleted scope with ${deletedCount} entries` })
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
@@ -270,14 +257,10 @@ export function createWebServer(vault: VaultContext) {
       // Get all scopes for this identifier to delete files
       const allScopes = await vault.scopeService.getAllEntriesGrouped()
       for (const [scope, _] of allScopes) {
-        if ((scope.type === 'branch' || scope.type === 'repository') && scope.identifier === identifier) {
-          if (scope.type === 'branch') {
-            const scopePath = `${scope.identifier}/${scope.branch}`.replace(/[/\\:]/g, '_')
-            deleteProjectFiles(scopePath)
-          } else {
-            const scopePath = scope.identifier.replace(/[/\\:]/g, '_')
-            deleteProjectFiles(scopePath)
-          }
+        if (scope.type === 'branch' && scope.primaryPath === identifier) {
+          deleteProjectFiles(getScopeStorageKey(scope))
+        } else if (scope.type === 'repository' && scope.primaryPath === identifier) {
+          deleteProjectFiles(getScopeStorageKey(scope))
         }
       }
 

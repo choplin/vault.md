@@ -78,8 +78,6 @@ function runMigration(db: Database.Database, version: number): void {
 
           CREATE INDEX idx_versions_lookup ON versions(entry_id, version DESC);
         `)
-
-        console.log('Migration 1: Created new table structure with separated concerns')
       })()
       break
     default:
