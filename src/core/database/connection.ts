@@ -20,24 +20,27 @@ function setSchemaVersion(db: Database.Database, version: number): void {
 function runMigration(db: Database.Database, version: number): void {
   switch (version) {
     case 1:
-      // New schema with separated concerns
+      // Canonical schema with scope metadata (type, primary_path, worktree_id, branch_name)
       db.transaction(() => {
         // 1. Scopes table with scope_path
         db.exec(`
           CREATE TABLE scopes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            identifier TEXT NOT NULL,
-            branch TEXT NOT NULL,
+            type TEXT NOT NULL,
+            primary_path TEXT,
+            worktree_id TEXT,
+            worktree_path TEXT,
+            branch_name TEXT,
             scope_path TEXT NOT NULL,
-            work_path TEXT,
-            remote_url TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(identifier, branch),
+            UNIQUE(type, primary_path, worktree_id, branch_name),
+            -- scope_path is a sanitised filesystem key; keep it unique to surface storage collisions early
             UNIQUE(scope_path)
           );
 
-          CREATE INDEX idx_scopes_lookup ON scopes(identifier, branch);
+          CREATE INDEX idx_scopes_lookup ON scopes(type, primary_path, branch_name);
+          CREATE INDEX idx_scopes_primary_path ON scopes(primary_path);
         `)
 
         // 2. Entries table (immutable)

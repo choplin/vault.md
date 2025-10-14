@@ -53,13 +53,13 @@ Supplemental metadata has been dropped; only the logical key components and disp
 - Replace the `scopes` table with the following columns:
   - `type` TEXT NOT NULL — `global`, `repository`, `branch`, `worktree`.
   - `primary_path` TEXT NOT NULL — canonical absolute path of the primary worktree.
-  - `worktree_key` TEXT — `basename(git rev-parse --git-dir)` for worktree scopes (nullable otherwise).
+  - `worktree_id` TEXT — `basename(git rev-parse --git-dir)` for worktree scopes (nullable otherwise).
   - `worktree_path` TEXT — absolute path to the worktree root (nullable; populated only for worktree scopes).
   - `branch_name` TEXT — local branch name (nullable, required for branch scopes).
   - `scope_path` TEXT NOT NULL — cached filesystem-safe key used by the storage layer.
   - `created_at`, `updated_at` timestamps.
 - Unique constraints:
-  - `(type, primary_path, worktree_key, branch_name)` with NULL handling aligned to the scope type (worktree key distinguishes individual worktrees).
+  - `(type, primary_path, worktree_id, branch_name)` with NULL handling aligned to the scope type (worktree id distinguishes individual worktrees).
   - `scope_path` to prevent collisions introduced by sanitisation; operations must treat a UNIQUE violation as an error and surface it to the caller.
 
 ### File storage
@@ -119,12 +119,12 @@ Supplemental metadata has been dropped; only the logical key components and disp
 
 Using a primary repository located at `/Users/aki/workspace/app`:
 
-| Scope kind | `formatScope(scope)` | `formatScopeShort(scope)` | Database row (type / primary_path / worktree_key / worktree_path / branch_name / scope_path) | API request example | Filesystem directory |
+| Scope kind | `formatScope(scope)` | `formatScopeShort(scope)` | Database row (type / primary_path / worktree_id / worktree_path / branch_name / scope_path) | API request example | Filesystem directory |
 | --- | --- | --- | --- | --- | --- |
 | Global | `global` | `global` | `global / NULL / NULL / NULL / NULL / global` | `POST /api/scopes/list-entries` with body `{ "scope": { "type": "global" } }` | `<vault-root>/global/` |
 | Repository | `/Users/aki/workspace/app` | `app` | `repository / /Users/aki/workspace/app / NULL / NULL / NULL / -Users-aki-workspace-app` | `POST /api/scopes/list-entries` with body `{ "scope": { "type": "repository", "primaryPath": "/Users/aki/workspace/app" } }` | `<vault-root>/-Users-aki-workspace-app/` |
 | Branch (`feature/login`) | `/Users/aki/workspace/app:feature/login` | `app:feature/login` | `branch / /Users/aki/workspace/app / NULL / NULL / feature/login / -Users-aki-workspace-app-feature-login` | `POST /api/scopes/list-entries` with body `{ "scope": { "type": "branch", "primaryPath": "/Users/aki/workspace/app", "branchName": "feature/login" } }` | `<vault-root>/-Users-aki-workspace-app-feature-login/` |
-| Worktree (`git rev-parse --git-dir` → `/Users/aki/workspace/app/.git/worktrees/feature-login`) | `/Users/aki/workspace/app@feature-login` | `app@feature-login` | `worktree / /Users/aki/workspace/app / feature-login / /Users/aki/workspace/app/worktrees/feature-login / NULL / -Users-aki-workspace-app-feature-login` | `POST /api/scopes/list-entries` with body `{ "scope": { "type": "worktree", "primaryPath": "/Users/aki/workspace/app", "worktreeKey": "feature-login" } }` | `<vault-root>/-Users-aki-workspace-app-feature-login/` |
+| Worktree (`git rev-parse --git-dir` → `/Users/aki/workspace/app/.git/worktrees/feature-login`) | `/Users/aki/workspace/app@feature-login` | `app@feature-login` | `worktree / /Users/aki/workspace/app / feature-login / /Users/aki/workspace/app/worktrees/feature-login / NULL / -Users-aki-workspace-app-feature-login` | `POST /api/scopes/list-entries` with body `{ "scope": { "type": "worktree", "primaryPath": "/Users/aki/workspace/app", "worktreeId": "feature-login" } }` | `<vault-root>/-Users-aki-workspace-app-feature-login/` |
 
 Notes:
 

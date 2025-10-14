@@ -53,7 +53,7 @@ export class ScopeEntryQuery {
         FROM scopes s
         LEFT JOIN entries e ON s.id = e.scope_id
         LEFT JOIN versions v ON e.id = v.entry_id
-        WHERE s.identifier = ?
+        WHERE s.primary_path = ?
         GROUP BY s.id
       `)
       .all(primaryPath) as Array<{ scope_id: number; entry_count: number; version_count: number }>

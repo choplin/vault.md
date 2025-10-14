@@ -29,6 +29,8 @@ describe('Web API – Scope JSON contract', () => {
 
     mockScopeService = {
       getAllEntriesGrouped: vi.fn(),
+      getOrCreate: vi.fn(),
+      findScopeId: vi.fn(),
       deleteScope: vi.fn(),
       deleteAllBranches: vi.fn(),
     }
@@ -177,11 +179,7 @@ describe('Web API – Scope JSON contract', () => {
 
   describe('POST /api/scope/entries', () => {
     it('returns entries for a known scope', async () => {
-      const getMock = vi.fn().mockReturnValue({ id: 42 })
-      vi.mocked(mockDb.prepare as any).mockReturnValue({
-        get: getMock,
-      })
-
+      vi.mocked(mockScopeService.findScopeId!).mockReturnValue(42)
       vi.mocked(mockEntryService.list!).mockResolvedValue([
         {
           id: 7,
@@ -208,7 +206,11 @@ describe('Web API – Scope JSON contract', () => {
       const data = await res.json()
 
       expect(res.status).toBe(200)
-      expect(getMock).toHaveBeenCalledWith('/test/repo', 'main')
+      expect(mockScopeService.findScopeId).toHaveBeenCalledWith({
+        type: 'branch',
+        primaryPath: '/test/repo',
+        branchName: 'main',
+      })
       expect(data.scope).toEqual({ type: 'branch', primaryPath: '/test/repo', branchName: 'main' })
       expect(data.entries[0]).toMatchObject({
         id: 7,
@@ -219,10 +221,7 @@ describe('Web API – Scope JSON contract', () => {
     })
 
     it('returns empty list when scope is missing', async () => {
-      const getMock = vi.fn().mockReturnValue(undefined)
-      vi.mocked(mockDb.prepare as any).mockReturnValue({
-        get: getMock,
-      })
+      vi.mocked(mockScopeService.findScopeId!).mockReturnValue(undefined)
 
       const res = await app.request('/api/scope/entries', {
         method: 'POST',
@@ -235,6 +234,10 @@ describe('Web API – Scope JSON contract', () => {
       const data = await res.json()
 
       expect(res.status).toBe(200)
+      expect(mockScopeService.findScopeId).toHaveBeenCalledWith({
+        type: 'repository',
+        primaryPath: '/missing/repo',
+      })
       expect(data.entries).toEqual([])
     })
   })
@@ -282,8 +285,7 @@ describe('Web API – Scope JSON contract', () => {
 
   describe('DELETE /api/entry', () => {
     it('deletes a specific version', async () => {
-      const getMock = vi.fn().mockReturnValue({ id: 5 })
-      vi.mocked(mockDb.prepare as any).mockReturnValue({ get: getMock })
+      vi.mocked(mockScopeService.findScopeId!).mockReturnValue(5)
       vi.mocked(mockEntryService.list!).mockResolvedValue([
         {
           id: 12,
@@ -310,12 +312,16 @@ describe('Web API – Scope JSON contract', () => {
       })
 
       expect(res.status).toBe(200)
+      expect(mockScopeService.findScopeId).toHaveBeenCalledWith({
+        type: 'branch',
+        primaryPath: '/test/repo',
+        branchName: 'feature',
+      })
       expect(mockEntryService.deleteVersion).toHaveBeenCalledWith(5, 'note', 2)
     })
 
     it('deletes all versions when version is omitted', async () => {
-      const getMock = vi.fn().mockReturnValue({ id: 9 })
-      vi.mocked(mockDb.prepare as any).mockReturnValue({ get: getMock })
+      vi.mocked(mockScopeService.findScopeId!).mockReturnValue(9)
       vi.mocked(mockEntryService.list!).mockResolvedValue([
         {
           id: 1,
@@ -341,6 +347,10 @@ describe('Web API – Scope JSON contract', () => {
       })
 
       expect(res.status).toBe(200)
+      expect(mockScopeService.findScopeId).toHaveBeenCalledWith({
+        type: 'repository',
+        primaryPath: '/test/repo',
+      })
       expect(mockEntryService.deleteAll).toHaveBeenCalledWith(9, 'note')
     })
   })
@@ -358,7 +368,11 @@ describe('Web API – Scope JSON contract', () => {
       })
 
       expect(res.status).toBe(200)
-      expect(mockScopeService.deleteScope).toHaveBeenCalledWith('/test/repo', 'main')
+      expect(mockScopeService.deleteScope).toHaveBeenCalledWith({
+        type: 'branch',
+        primaryPath: '/test/repo',
+        branchName: 'main',
+      })
     })
 
     it('removes an entire repository when cascade is true', async () => {

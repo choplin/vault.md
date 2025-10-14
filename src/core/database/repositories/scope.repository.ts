@@ -1,40 +1,60 @@
-import { getScopeStorageKey, type Scope } from '../../scope.js'
+import { getScopeStorageKey, type Scope, type ScopeType } from '../../scope.js'
 import type { DatabaseContext } from '../connection.js'
 import type { DbScopeRow } from '../types.js'
 
 type ScopePersistence = {
-  identifier: string
-  branch: string
-  work_path: string | null
+  type: ScopeType
+  primary_path: string | null
+  worktree_id: string | null
+  worktree_path: string | null
+  branch_name: string | null
 }
 
 function toPersistence(scope: Scope): ScopePersistence {
   switch (scope.type) {
     case 'global':
-      return { identifier: 'global', branch: 'global', work_path: null }
+      return {
+        type: 'global',
+        primary_path: null,
+        worktree_id: null,
+        worktree_path: null,
+        branch_name: null,
+      }
     case 'repository':
-      return { identifier: scope.primaryPath, branch: 'repository', work_path: null }
+      return {
+        type: 'repository',
+        primary_path: scope.primaryPath,
+        worktree_id: null,
+        worktree_path: null,
+        branch_name: null,
+      }
     case 'branch':
-      return { identifier: scope.primaryPath, branch: scope.branchName, work_path: null }
+      return {
+        type: 'branch',
+        primary_path: scope.primaryPath,
+        worktree_id: null,
+        worktree_path: null,
+        branch_name: scope.branchName,
+      }
   }
 }
 
 function toDomain(row: DbScopeRow): Scope {
-  if (row.identifier === 'global' && row.branch === 'global') {
+  if (row.type === 'global') {
     return { type: 'global' }
   }
 
-  if (row.branch === 'repository') {
+  if (row.type === 'repository') {
     return {
       type: 'repository',
-      primaryPath: row.identifier,
+      primaryPath: row.primary_path || '',
     }
   }
 
   return {
     type: 'branch',
-    primaryPath: row.identifier,
-    branchName: row.branch,
+    primaryPath: row.primary_path || '',
+    branchName: row.branch_name || '',
   }
 }
 
@@ -46,10 +66,9 @@ export class ScopeRepository {
     return row ? toDomain(row) : undefined
   }
 
-  findByPrimaryPathAndBranch(primaryPath: string, branchName: string): DbScopeRow | undefined {
-    return this.ctx.db
-      .prepare('SELECT * FROM scopes WHERE identifier = ? AND branch = ?')
-      .get(primaryPath, branchName) as DbScopeRow | undefined
+  findByScope(scope: Scope): DbScopeRow | undefined {
+    const scopePath = getScopeStorageKey(scope)
+    return this.findByScopePath(scopePath)
   }
 
   private findByScopePath(scopePath: string): DbScopeRow | undefined {
@@ -63,52 +82,66 @@ export class ScopeRepository {
     const result = this.ctx.db
       .prepare(
         `
-        INSERT INTO scopes (identifier, branch, scope_path, work_path, remote_url)
-        VALUES (?, ?, ?, ?, NULL)
+        INSERT INTO scopes (type, primary_path, worktree_id, worktree_path, branch_name, scope_path)
+        VALUES (?, ?, ?, ?, ?, ?)
       `,
       )
-      .run(dbScope.identifier, dbScope.branch, scopePath, dbScope.work_path)
+      .run(
+        dbScope.type,
+        dbScope.primary_path,
+        dbScope.worktree_id,
+        dbScope.worktree_path,
+        dbScope.branch_name,
+        scopePath,
+      )
 
     return result.lastInsertRowid as number
   }
 
   getOrCreate(scope: Scope): number {
-    const dbScope = toPersistence(scope)
     const scopePath = getScopeStorageKey(scope)
 
-    const existing = this.findByPrimaryPathAndBranch(dbScope.identifier, dbScope.branch)
+    const existing = this.findByScopePath(scopePath)
     if (existing) {
-      this.updateScope(existing.id, dbScope)
+      this.updateScope(existing.id, scope)
       return existing.id
-    }
-
-    const byPath = this.findByScopePath(scopePath)
-    if (byPath) {
-      this.updateScope(byPath.id, dbScope)
-      return byPath.id
     }
 
     return this.create(scope)
   }
 
-  private updateScope(id: number, dbScope: ScopePersistence): void {
+  private updateScope(id: number, scope: Scope): void {
+    const dbScope = toPersistence(scope)
+    const scopePath = getScopeStorageKey(scope)
     this.ctx.db
       .prepare(
         `
         UPDATE scopes
-        SET identifier = ?,
-            branch = ?,
-            work_path = ?,
-            remote_url = NULL,
+        SET type = ?,
+            primary_path = ?,
+            worktree_id = ?,
+            worktree_path = ?,
+            branch_name = ?,
+            scope_path = ?,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `,
       )
-      .run(dbScope.identifier, dbScope.branch, dbScope.work_path, id)
+      .run(
+        dbScope.type,
+        dbScope.primary_path,
+        dbScope.worktree_id,
+        dbScope.worktree_path,
+        dbScope.branch_name,
+        scopePath,
+        id,
+      )
   }
 
   findAll(): Scope[] {
-    const rows = this.ctx.db.prepare('SELECT * FROM scopes ORDER BY identifier, branch').all() as DbScopeRow[]
+    const rows = this.ctx.db
+      .prepare('SELECT * FROM scopes ORDER BY type, primary_path, branch_name')
+      .all() as DbScopeRow[]
     return rows.map(toDomain)
   }
 
@@ -118,13 +151,15 @@ export class ScopeRepository {
   }
 
   deleteByPrimaryPath(primaryPath: string): number {
-    const result = this.ctx.db.prepare('DELETE FROM scopes WHERE identifier = ?').run(primaryPath)
+    const result = this.ctx.db
+      .prepare("DELETE FROM scopes WHERE primary_path = ? AND type IN ('repository', 'branch', 'worktree')")
+      .run(primaryPath)
     return result.changes
   }
 
   deleteBranch(primaryPath: string, branchName: string): boolean {
     const result = this.ctx.db
-      .prepare('DELETE FROM scopes WHERE identifier = ? AND branch = ?')
+      .prepare("DELETE FROM scopes WHERE type = 'branch' AND primary_path = ? AND branch_name = ?")
       .run(primaryPath, branchName)
     return result.changes > 0
   }

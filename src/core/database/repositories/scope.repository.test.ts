@@ -80,12 +80,12 @@ describe('ScopeRepository', () => {
       scopes.forEach((s) => repo.create(s))
 
       const all = repo.findAll()
-      expect(all.map((s) => s.type)).toEqual(['branch', 'branch', 'repository', 'repository', 'global'])
+      expect(all.map((s) => s.type)).toEqual(['branch', 'branch', 'global', 'repository', 'repository'])
       expect(all[0]).toMatchObject({ type: 'branch', primaryPath: '/a/repo', branchName: 'dev' })
       expect(all[1]).toMatchObject({ type: 'branch', primaryPath: '/a/repo', branchName: 'main' })
-      expect(all[2]).toMatchObject({ type: 'repository', primaryPath: '/a/repo' })
-      expect(all[3]).toMatchObject({ type: 'repository', primaryPath: '/b/repo' })
-      expect(all[4]).toMatchObject({ type: 'global' })
+      expect(all[2]).toMatchObject({ type: 'global' })
+      expect(all[3]).toMatchObject({ type: 'repository', primaryPath: '/a/repo' })
+      expect(all[4]).toMatchObject({ type: 'repository', primaryPath: '/b/repo' })
     })
   })
 

@@ -468,13 +468,13 @@ export async function deleteCurrentScope(ctx: VaultContext): Promise<number> {
     case 'repository':
       scopePath = getScopeStorageKey(ctx.scope)
       fs.deleteProjectFiles(scopePath)
-      deletedCount = await ctx.scopeService.deleteScope(ctx.scope.primaryPath, 'repository')
+      deletedCount = await ctx.scopeService.deleteScope(ctx.scope)
       break
 
     case 'branch':
       scopePath = getScopeStorageKey(ctx.scope)
       fs.deleteProjectFiles(scopePath)
-      deletedCount = await ctx.scopeService.deleteScope(ctx.scope.primaryPath, ctx.scope.branchName)
+      deletedCount = await ctx.scopeService.deleteScope(ctx.scope)
       break
   }
 
@@ -504,7 +504,7 @@ export async function deleteBranch(ctx: VaultContext, branch: string): Promise<n
   fs.deleteProjectFiles(scopePath)
 
   // Delete from database
-  return await ctx.scopeService.deleteScope(primaryPath, branch)
+  return await ctx.scopeService.deleteScope(branchScope)
 }
 
 // Delete all branches of current identifier

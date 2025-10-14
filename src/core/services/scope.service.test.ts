@@ -139,7 +139,7 @@ describe('ScopeService', () => {
         hash: 'hash3',
       })
 
-      const deletedVersions = await scopeService.deleteScope('/test/repo', 'repository')
+      const deletedVersions = await scopeService.deleteScope(scope)
       expect(deletedVersions).toBe(3)
 
       // Verify scope is deleted
@@ -152,7 +152,7 @@ describe('ScopeService', () => {
     })
 
     it('should return 0 for non-existent scope', async () => {
-      const deletedVersions = await scopeService.deleteScope('/non/existent', 'repository')
+      const deletedVersions = await scopeService.deleteScope({ type: 'repository', primaryPath: '/non/existent' })
       expect(deletedVersions).toBe(0)
     })
 
@@ -160,7 +160,7 @@ describe('ScopeService', () => {
       const scope: Scope = { type: 'repository', primaryPath: '/empty/repo' }
       scopeService.getOrCreate(scope)
 
-      const deletedVersions = await scopeService.deleteScope('/empty/repo', 'repository')
+      const deletedVersions = await scopeService.deleteScope(scope)
       expect(deletedVersions).toBe(0)
     })
   })

@@ -1,11 +1,12 @@
 // Database row types
 export interface DbScopeRow {
   id: number
-  identifier: string
-  branch: string
+  type: string
+  primary_path: string | null
+  worktree_id: string | null
+  worktree_path: string | null
+  branch_name: string | null
   scope_path: string
-  work_path?: string
-  remote_url?: string
   created_at: string
   updated_at: string
 }

@@ -33,6 +33,11 @@ export class ScopeService {
     return this.scopeRepo.findById(id)
   }
 
+  findScopeId(scope: Scope): number | undefined {
+    const row = this.scopeRepo.findByScope(scope)
+    return row?.id
+  }
+
   getAll(): Scope[] {
     return this.scopeRepo.findAll()
   }
@@ -52,9 +57,9 @@ export class ScopeService {
     return result
   }
 
-  async deleteScope(primaryPath: string, branchName: string): Promise<number> {
+  async deleteScope(scope: Scope): Promise<number> {
     return this.ctx.db.transaction(() => {
-      const scopeRow = this.scopeRepo.findByPrimaryPathAndBranch(primaryPath, branchName)
+      const scopeRow = this.scopeRepo.findByScope(scope)
       if (!scopeRow) return 0
 
       const entriesInfo = this.scopeEntryQuery.getEntriesWithVersionCount(scopeRow.id)
