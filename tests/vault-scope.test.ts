@@ -134,7 +134,7 @@ describe('vault scope functions', () => {
       }
     })
 
-    it('should use current directory as identifier when not in git repo', () => {
+    it('should use current directory as repository path when not in git repo', () => {
       const mockCwd = '/non/git/directory'
       process.chdir('/')
       vi.spyOn(process, 'cwd').mockReturnValue(mockCwd)

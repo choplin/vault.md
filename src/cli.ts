@@ -249,9 +249,9 @@ program
   .option('--scope <type>', 'Scope type: global, repository, or branch')
   .option('--repo <path>', 'Delete from specific repository')
   .option('--branch <name>', 'Delete from specific branch')
-  .option('--current-scope', 'Delete vault for current scope (identifier + branch)')
+  .option('--current-scope', 'Delete vault for current scope (repository or branch)')
   .option('--delete-branch <branch>', 'Delete vault for specific branch')
-  .option('--all-branches', 'Delete entire vault (all branches) of current identifier')
+  .option('--all-branches', 'Delete entire vault (all branches) of current repository')
   .option('--force', 'Skip confirmation prompt')
   .action(async (key, options) => {
     try {

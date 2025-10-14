@@ -50,12 +50,12 @@ describe('validateScope', () => {
 
   it('throws on empty repository path', () => {
     const scope: RepositoryScope = { type: 'repository', primaryPath: '' }
-    expect(() => validateScope(scope)).toThrow('Repository scope requires a valid identifier (repository path)')
+    expect(() => validateScope(scope)).toThrow('Repository scope requires a valid repository path')
   })
 
   it('throws on repository path "global"', () => {
     const scope: RepositoryScope = { type: 'repository', primaryPath: 'global' }
-    expect(() => validateScope(scope)).toThrow('Repository identifier cannot be "global" (reserved for global scope)')
+    expect(() => validateScope(scope)).toThrow('Repository path cannot be "global" (reserved for global scope)')
   })
 
   it('accepts valid branch scope', () => {
@@ -65,7 +65,7 @@ describe('validateScope', () => {
 
   it('throws on empty branch primary path', () => {
     const scope: BranchScope = { type: 'branch', primaryPath: '', branchName: 'main' }
-    expect(() => validateScope(scope)).toThrow('Branch scope requires a valid identifier (repository path)')
+    expect(() => validateScope(scope)).toThrow('Branch scope requires a valid repository path')
   })
 
   it('throws on empty branch name', () => {
@@ -75,7 +75,7 @@ describe('validateScope', () => {
 
   it('throws on branch primary path "global"', () => {
     const scope: BranchScope = { type: 'branch', primaryPath: 'global', branchName: 'main' }
-    expect(() => validateScope(scope)).toThrow('Branch identifier cannot be "global" (reserved for global scope)')
+    expect(() => validateScope(scope)).toThrow('Branch scope cannot use "global" as repository path')
   })
 
   it('throws on branch name "repository"', () => {

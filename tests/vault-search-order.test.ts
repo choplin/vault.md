@@ -85,7 +85,7 @@ describe('getSearchOrder', () => {
       // First should be the original branch scope
       expect(result[0]).toEqual(branchScope)
 
-      // Second should be repository scope with same identifier but no branch
+      // Second should be repository scope with same primary path but no branch
       expect(result[1]).toEqual({
         type: 'repository',
         primaryPath: '/path/to/repo',
@@ -156,7 +156,7 @@ describe('getSearchOrder', () => {
       // Verify hierarchy: branch -> repository -> global
       expect(result.map(s => s.type)).toEqual(['branch', 'repository', 'global'])
 
-      // Verify identifier consistency
+      // Verify primary path consistency
       expect((result[0] as any).primaryPath).toBe('/workspace/project')
       expect((result[1] as any).primaryPath).toBe('/workspace/project')
       expect('primaryPath' in result[2]).toBe(false)

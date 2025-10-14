@@ -32,9 +32,9 @@ Supplemental metadata has been dropped; only the logical key components and disp
 - Resolve every path with `realpath` before persisting or comparing; symlinks collapse to their canonical targets.
 - Comparison remains case-sensitive even on case-insensitive filesystems.
 - For each worktree capture:
-  - `worktreeKey`: `basename(git rev-parse --git-dir)` (stable identifier provided by Git, guaranteed unique within the repo)
+- `worktreeId`: `basename(git rev-parse --git-dir)` (stable identifier provided by Git, guaranteed unique within the repo)
   - Optional `worktreePath`: absolute path of the worktree root (`git rev-parse --show-toplevel`) for display/filesystem convenience
-- Only `primaryPath` and `worktreeKey` participate in logical identity; `worktreePath` is auxiliary metadata.
+- Only `primaryPath` and `worktreeId` participate in logical identity; `worktreePath` is auxiliary metadata.
 
 ## Data Representation Guidelines
 
@@ -44,9 +44,9 @@ Supplemental metadata has been dropped; only the logical key components and disp
 - Required fields per type:
   - Repository: `primaryPath` (absolute), optional `worktreePath` (absolute).
   - Branch: `primaryPath` (absolute), `branchName`, optional `worktreePath`.
-  - Worktree: `primaryPath` (absolute), `worktreeKey` (string derived from git). Optional `worktreePath` can be retained purely for display or filesystem operations, but it is not part of identity.
+  - Worktree: `primaryPath` (absolute), `worktreeId` (string derived from git). Optional `worktreePath` can be retained purely for display or filesystem operations, but it is not part of identity.
 - Helper accessors (`getScopePrimaryPath`, `getScopeBranchName`, etc.) are the single source of truth; legacy properties are removed entirely.
-- `resolveScope` emits canonicalised scopes, populating `worktreeKey` when a worktree is active and, if desired, including the optional `worktreePath` for downstream display helpers.
+- `resolveScope` emits canonicalised scopes, populating `worktreeId` when a worktree is active and, if desired, including the optional `worktreePath` for downstream display helpers.
 
 ### Database schema
 
@@ -70,7 +70,7 @@ Supplemental metadata has been dropped; only the logical key components and disp
 
 ### UI & API contracts
 
-- All public surfaces adopt the in-memory structure without renaming (`primaryPath`, `branchName`, `worktreeKey`, optional `worktreePath`).
+- All public surfaces adopt the in-memory structure without renaming (`primaryPath`, `branchName`, `worktreeId`, optional `worktreePath`).
 - HTTP requests carry scope information in a JSON body. Common shape:
 
   ```json
@@ -105,12 +105,12 @@ Supplemental metadata has been dropped; only the logical key components and disp
   - Global → `'global'`
   - Repository → absolute `primaryPath`
   - Branch → `<absolute primaryPath>:<branchName>`
-  - Worktree → `<absolute primaryPath>@<worktreeKey>`
+  - Worktree → `<absolute primaryPath>@<worktreeId>`
 - `formatScopeShort`:
   - Global → `'global'`
   - Repository → `basename(primaryPath)`
   - Branch → `basename(primaryPath):<branchName>`
-  - Worktree → `basename(primaryPath)@<worktreeKey>`
+  - Worktree → `basename(primaryPath)@<worktreeId>`
 - Optional helpers may still present the absolute worktree path (or a relative version) in UI tooltips or detail views, but this information does not appear in the canonical string outputs.
 - `formatScope`, `formatScopeShort`, and `getScopeStorageKey` are colocated in `src/core/scope.ts` so that updates to the canonical representation flow to storage keys and compact labels without divergence.
 - UI components that previously relied on `formatScope`/`formatScopeShort` continue to do so, gaining the new behaviour automatically.
@@ -129,7 +129,7 @@ Using a primary repository located at `/Users/aki/workspace/app`:
 Notes:
 
 - The branch example demonstrates that `/` inside the branch name survives in the formatted string but is sanitised to `-` in the storage key.
-- The worktree example shows `worktreeKey = feature-login`, taken directly from `git rev-parse --git-dir`. Even if the worktree lives outside the primary directory, the key remains stable and collision-free within the repository. The optional `worktreePath` column can hold `/Users/aki/workspace/app/worktrees/feature-login` for display or filesystem lookups.
+- The worktree example shows `worktreeId = feature-login`, taken directly from `git rev-parse --git-dir`. Even if the worktree lives outside the primary directory, the id remains stable and collision-free within the repository. The optional `worktreePath` column can hold `/Users/aki/workspace/app/worktrees/feature-login` for display or filesystem lookups.
 
 ## Implementation Phases
 

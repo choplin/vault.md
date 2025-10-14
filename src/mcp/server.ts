@@ -52,12 +52,10 @@ const DeleteKeySchema = z.object({
 
 const DeleteBranchSchema = z.object({
   branch: z.string().optional().describe('Branch to delete (current branch if not specified)'),
-  scope: z.string().optional().describe('Scope identifier (current scope if not specified)'),
   force: z.boolean().optional().describe('Skip confirmation (always true for MCP)'),
 })
 
 const DeleteScopeSchema = z.object({
-  scope: z.string().optional().describe('Scope identifier (current scope if not specified)'),
   force: z.boolean().optional().describe('Skip confirmation (always true for MCP)'),
 })
 
@@ -200,18 +198,16 @@ export class VaultMCPServer {
             type: 'object',
             properties: {
               branch: { type: 'string', description: 'Branch to delete (current branch if not specified)' },
-              scope: { type: 'string', description: 'Scope identifier (current scope if not specified)' },
               force: { type: 'boolean', description: 'Skip confirmation (always true for MCP)' },
             },
           },
         },
         {
           name: 'vault_delete_scope',
-          description: 'Delete current scope (identifier + branch)',
+          description: 'Delete the current scope (repository or branch)',
           inputSchema: {
             type: 'object',
             properties: {
-              scope: { type: 'string', description: 'Scope identifier (current scope if not specified)' },
               force: { type: 'boolean', description: 'Skip confirmation (always true for MCP)' },
             },
           },

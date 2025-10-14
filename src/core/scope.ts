@@ -37,16 +37,16 @@ export function validateScope(scope: Scope): void {
     case 'global':
       return
     case 'repository':
-      ensureNonEmpty('Repository scope requires a valid identifier (repository path)', scope.primaryPath)
+      ensureNonEmpty('Repository scope requires a valid repository path', scope.primaryPath)
       if (scope.primaryPath === 'global') {
-        throw new Error('Repository identifier cannot be "global" (reserved for global scope)')
+        throw new Error('Repository path cannot be "global" (reserved for global scope)')
       }
       return
     case 'branch':
-      ensureNonEmpty('Branch scope requires a valid identifier (repository path)', scope.primaryPath)
+      ensureNonEmpty('Branch scope requires a valid repository path', scope.primaryPath)
       ensureNonEmpty('Branch scope requires a valid branch name', scope.branchName)
       if (scope.primaryPath === 'global') {
-        throw new Error('Branch identifier cannot be "global" (reserved for global scope)')
+        throw new Error('Branch scope cannot use "global" as repository path')
       }
       if (scope.branchName === 'repository') {
         throw new Error('Branch name "repository" is reserved for repository scope')

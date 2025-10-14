@@ -94,7 +94,7 @@ describe('ScopeEntryQuery', () => {
 
   describe('getScopesWithCounts', () => {
     it('should return all scopes with entry and version counts', () => {
-      // Create multiple scopes with same identifier
+      // Create multiple scopes with same primary path
       const scope1: Scope = { type: 'repository', primaryPath: '/test/repo' }
       const scopeId1 = scopeRepo.create(scope1)
 

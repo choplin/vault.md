@@ -12,7 +12,7 @@ interface ScopeTreeProps {
 
 export default function ScopeTree(props: ScopeTreeProps) {
   const [deleteConfirm, setDeleteConfirm] = createSignal<{
-    type: 'scope' | 'identifier'
+    type: 'scope' | 'repository'
     branchName?: string
     scope?: ScopePayload
   } | null>(null)
@@ -114,7 +114,7 @@ export default function ScopeTree(props: ScopeTreeProps) {
             </button>
             <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
               <li>
-                <button type="button" onClick={() => setDeleteConfirm({ type: 'identifier', scope: repositoryScope })}>
+                <button type="button" onClick={() => setDeleteConfirm({ type: 'repository', scope: repositoryScope })}>
                   Delete entire vault
                 </button>
               </li>

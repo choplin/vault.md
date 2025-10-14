@@ -455,7 +455,7 @@ export async function restoreEntry(ctx: VaultContext, key: string, options: Vaul
   return await ctx.entryService.restore(scopeId, key)
 }
 
-// Delete current scope (identifier + branch)
+// Delete current scope (repository or branch)
 export async function deleteCurrentScope(ctx: VaultContext): Promise<number> {
   if (ctx.scope.type === 'global') {
     throw new Error('Cannot delete global scope')
@@ -481,7 +481,7 @@ export async function deleteCurrentScope(ctx: VaultContext): Promise<number> {
   return deletedCount
 }
 
-// Delete a specific branch of current identifier
+// Delete a specific branch of the current repository
 export async function deleteBranch(ctx: VaultContext, branch: string): Promise<number> {
   if (ctx.scope.type === 'global') {
     throw new Error('Cannot delete branches from global scope')
@@ -507,7 +507,7 @@ export async function deleteBranch(ctx: VaultContext, branch: string): Promise<n
   return await ctx.scopeService.deleteScope(branchScope)
 }
 
-// Delete all branches of current identifier
+// Delete all branches of the current repository
 export async function deleteAllBranches(ctx: VaultContext): Promise<number> {
   if (ctx.scope.type === 'global') {
     throw new Error('Cannot delete branches from global scope')
@@ -519,7 +519,7 @@ export async function deleteAllBranches(ctx: VaultContext): Promise<number> {
     throw new Error('No repository path found in current scope')
   }
 
-  // Get all scopes for this identifier
+  // Get all scopes for this repository path
   const allScopes = ctx.scopeService.getAll()
   const scopesToDelete = allScopes.filter((s) => {
     if (s.type === 'branch' && s.primaryPath === primaryPath) {
