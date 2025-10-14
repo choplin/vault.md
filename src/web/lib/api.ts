@@ -33,8 +33,8 @@ export const api = {
     return data
   },
 
-  async getScopeEntries(identifier: string, branch: string, allVersions = false): Promise<ScopeGroup> {
-    const path = `/api/scopes/${encodeURIComponent(identifier)}/${encodeURIComponent(branch)}/entries${
+  async getScopeEntries(primaryPath: string, branchName: string, allVersions = false): Promise<ScopeGroup> {
+    const path = `/api/scopes/${encodeURIComponent(primaryPath)}/${encodeURIComponent(branchName)}/entries${
       allVersions ? '?allVersions=true' : ''
     }`
     const res = await fetch(path)
@@ -55,28 +55,30 @@ export const api = {
   },
 }
 
-// Parse scope string to extract identifier and branch
-function parseScopeString(scope: string): { identifier: string; branch: string } {
-  if (scope === 'Global' || scope === 'global') {
-    return { identifier: 'global', branch: 'global' }
+// Parse canonical scope strings emitted by the backend/UI helpers
+function parseScopeString(scope: string): { primaryPath: string; branchName: string } {
+  if (scope === 'global') {
+    return { primaryPath: 'global', branchName: 'global' }
   }
 
-  // Parse "repoPath (branch)" format
-  const match = scope.match(/^(.+) \((.+)\)$/)
-  if (match) {
-    return { identifier: match[1], branch: match[2] }
+  const colonIndex = scope.indexOf(':')
+  if (colonIndex > 0 && colonIndex < scope.length - 1) {
+    return {
+      primaryPath: scope.substring(0, colonIndex),
+      branchName: scope.substring(colonIndex + 1),
+    }
   }
 
-  // Fallback
-  return { identifier: scope, branch: 'default' }
+  // Repository scopes are represented solely by their primary path
+  return { primaryPath: scope, branchName: 'repository' }
 }
 
 export async function deleteEntry(scope: string, key: string, version?: number): Promise<void> {
-  const { identifier, branch } = parseScopeString(scope)
+  const { primaryPath, branchName } = parseScopeString(scope)
 
   const path = version
-    ? `/api/entries/${encodeURIComponent(identifier)}/${encodeURIComponent(branch)}/${encodeURIComponent(key)}/${version}`
-    : `/api/entries/${encodeURIComponent(identifier)}/${encodeURIComponent(branch)}/${encodeURIComponent(key)}`
+    ? `/api/entries/${encodeURIComponent(primaryPath)}/${encodeURIComponent(branchName)}/${encodeURIComponent(key)}/${version}`
+    : `/api/entries/${encodeURIComponent(primaryPath)}/${encodeURIComponent(branchName)}/${encodeURIComponent(key)}`
 
   const res = await fetch(path, { method: 'DELETE' })
   if (!res.ok) {
@@ -85,8 +87,8 @@ export async function deleteEntry(scope: string, key: string, version?: number):
   }
 }
 
-export async function deleteScope(identifier: string, branch: string): Promise<void> {
-  const path = `/api/branches/${encodeURIComponent(identifier)}/${encodeURIComponent(branch)}`
+export async function deleteScope(primaryPath: string, branchName: string): Promise<void> {
+  const path = `/api/branches/${encodeURIComponent(primaryPath)}/${encodeURIComponent(branchName)}`
   const res = await fetch(path, { method: 'DELETE' })
   if (!res.ok) {
     const error = await res.json()
@@ -94,8 +96,8 @@ export async function deleteScope(identifier: string, branch: string): Promise<v
   }
 }
 
-export async function deleteIdentifier(identifier: string): Promise<void> {
-  const path = `/api/identifiers/${encodeURIComponent(identifier)}`
+export async function deleteIdentifier(primaryPath: string): Promise<void> {
+  const path = `/api/identifiers/${encodeURIComponent(primaryPath)}`
   const res = await fetch(path, { method: 'DELETE' })
   if (!res.ok) {
     const error = await res.json()

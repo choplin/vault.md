@@ -17,9 +17,9 @@ export default function Sidebar() {
         if (branch.scope === current) {
           return {
             displayName: group.displayName,
-            branch: branch.branch,
-            identifier: group.identifier,
-            isGlobal: group.identifier === 'global',
+            branchName: branch.branchName,
+            primaryPath: group.primaryPath,
+            isGlobal: group.primaryPath === 'global',
           }
         }
       }
@@ -31,7 +31,7 @@ export default function Sidebar() {
   function selectCurrentScope() {
     const display = getCurrentScopeDisplay()
     if (display) {
-      setSelectedScope({ identifier: display.identifier, branch: display.branch })
+      setSelectedScope({ primaryPath: display.primaryPath, branchName: display.branchName })
       setViewMode('table')
     }
   }
@@ -76,7 +76,7 @@ export default function Sidebar() {
                 >
                   <span class="font-medium text-base">{display().displayName}</span>
                   <Show when={!display().isGlobal}>
-                    <span class="text-base text-base-content/60">({display().branch})</span>
+                    <span class="text-base text-base-content/60">({display().branchName})</span>
                   </Show>
                 </button>
               </div>

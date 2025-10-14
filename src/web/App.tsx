@@ -39,7 +39,7 @@ export default function App() {
     if (!scope) return
 
     try {
-      const result = await api.getScopeEntries(scope.identifier, scope.branch, showAllVersions())
+      const result = await api.getScopeEntries(scope.primaryPath, scope.branchName, showAllVersions())
       setScopeEntries(result.entries || [])
     } catch (error) {
       console.error('Failed to load scope entries:', error)
@@ -52,18 +52,18 @@ export default function App() {
     if (!scope) return ''
 
     // Convert selectedScope to Scope type
-    if (scope.identifier === 'global' && scope.branch === 'global') {
+    if (scope.primaryPath === 'global' && scope.branchName === 'global') {
       return formatScopeForListDisplay({ type: 'global' })
-    } else if (scope.branch === '') {
+    } else if (scope.branchName === 'repository') {
       return formatScopeForListDisplay({
         type: 'repository',
-        identifier: scope.identifier,
+        primaryPath: scope.primaryPath,
       })
     } else {
       return formatScopeForListDisplay({
         type: 'branch',
-        identifier: scope.identifier,
-        branch: scope.branch,
+        primaryPath: scope.primaryPath,
+        branchName: scope.branchName,
       })
     }
   }

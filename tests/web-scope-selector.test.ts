@@ -7,52 +7,52 @@ describe('Web UI - Scope Selector Logic', () => {
   describe('Requirement 1: Three-tier scope system support', () => {
     it('should correctly identify global scope', () => {
       const globalGroup: RepositoryGroup = {
-        identifier: 'global',
+        primaryPath: 'global',
         displayName: 'Global',
         branches: [
           {
-            branch: 'global',
+            branchName: 'global',
             scope: 'global',
             entries: [],
           },
         ],
       }
 
-      expect(globalGroup.identifier).toBe('global')
+      expect(globalGroup.primaryPath).toBe('global')
       expect(globalGroup.branches[0].scope).toBe('global')
     })
 
     it('should correctly identify repository scope', () => {
       const repoGroup: RepositoryGroup = {
-        identifier: '/home/user/projects/test-repo',
+        primaryPath: '/home/user/projects/test-repo',
         displayName: 'test-repo',
         branches: [
           {
-            branch: 'repository',
-            scope: 'repository:/home/user/projects/test-repo',
+            branchName: 'repository',
+            scope: '/home/user/projects/test-repo',
             entries: [],
           },
         ],
       }
 
-      expect(repoGroup.identifier).toBe('/home/user/projects/test-repo')
-      expect(repoGroup.branches[0].scope).toContain('repository:')
+      expect(repoGroup.primaryPath).toBe('/home/user/projects/test-repo')
+      expect(repoGroup.branches[0].scope).toBe('/home/user/projects/test-repo')
     })
 
     it('should correctly identify branch scope', () => {
       const repoGroup: RepositoryGroup = {
-        identifier: '/home/user/projects/test-repo',
+        primaryPath: '/home/user/projects/test-repo',
         displayName: 'test-repo',
         branches: [
           {
-            branch: 'main',
-            scope: 'test-repo:main',
+            branchName: 'main',
+            scope: '/home/user/projects/test-repo:main',
             entries: [],
           },
         ],
       }
 
-      expect(repoGroup.branches[0].branch).toBe('main')
+      expect(repoGroup.branches[0].branchName).toBe('main')
       expect(repoGroup.branches[0].scope).toContain(':main')
     })
   })
@@ -63,34 +63,34 @@ describe('Web UI - Scope Selector Logic', () => {
       expect(result).toEqual({
         type: 'global',
         displayName: 'Global',
-        branch: undefined,
+        branchName: undefined,
       })
     })
 
     it('should format repository scope correctly', () => {
-      const result = formatScopeForDisplay('test-repo')
+      const result = formatScopeForDisplay('/home/user/projects/test-repo')
       expect(result).toEqual({
         type: 'repository',
         displayName: 'test-repo',
-        branch: undefined,
+        branchName: undefined,
       })
     })
 
     it('should format branch scope correctly', () => {
-      const result = formatScopeForDisplay('test-repo:main')
+      const result = formatScopeForDisplay('/home/user/projects/test-repo:main')
       expect(result).toEqual({
         type: 'branch',
         displayName: 'test-repo',
-        branch: 'main',
+        branchName: 'main',
       })
     })
 
     it('should handle complex repository paths', () => {
-      const result = formatScopeForDisplay('repository:/home/user/projects/my-project')
+      const result = formatScopeForDisplay('/home/user/projects/my-project')
       expect(result).toEqual({
         type: 'repository',
         displayName: 'my-project',
-        branch: undefined,
+        branchName: undefined,
       })
     })
   })
@@ -131,7 +131,7 @@ describe('Web UI - Scope Selector Logic', () => {
         {
           id: 4,
           scopeId: 4,
-          scope: 'repository:/home/user/projects/test-repo',
+          scope: '/home/user/projects/test-repo',
           key: 'repo-key',
           version: 1,
           filePath: '/path4',
@@ -146,29 +146,29 @@ describe('Web UI - Scope Selector Logic', () => {
       expect(groups).toHaveLength(2)
 
       // Check global group
-      const globalGroup = groups.find(g => g.identifier === 'global')
+      const globalGroup = groups.find(g => g.primaryPath === 'global')
       expect(globalGroup).toBeDefined()
       expect(globalGroup!.branches).toHaveLength(1)
       expect(globalGroup!.branches[0].entries).toHaveLength(1)
 
       // Check test-repo group
-      const vaultGroup = groups.find(g => g.identifier === '/home/user/projects/test-repo')
+      const vaultGroup = groups.find(g => g.primaryPath === '/home/user/projects/test-repo')
       expect(vaultGroup).toBeDefined()
       expect(vaultGroup!.branches).toHaveLength(3) // repository, main, feature-x
 
       // Check repository scope branch
-      const repoBranch = vaultGroup!.branches.find(b => b.branch === 'repository')
+      const repoBranch = vaultGroup!.branches.find(b => b.branchName === 'repository')
       expect(repoBranch).toBeDefined()
       expect(repoBranch!.entries).toHaveLength(1)
       expect(repoBranch!.entries[0].key).toBe('repo-key')
 
       // Check main branch
-      const mainBranch = vaultGroup!.branches.find(b => b.branch === 'main')
+      const mainBranch = vaultGroup!.branches.find(b => b.branchName === 'main')
       expect(mainBranch).toBeDefined()
       expect(mainBranch!.entries).toHaveLength(1)
 
       // Check feature branch
-      const featureBranch = vaultGroup!.branches.find(b => b.branch === 'feature-x')
+      const featureBranch = vaultGroup!.branches.find(b => b.branchName === 'feature-x')
       expect(featureBranch).toBeDefined()
       expect(featureBranch!.entries).toHaveLength(1)
     })
@@ -178,7 +178,7 @@ describe('Web UI - Scope Selector Logic', () => {
         {
           id: 1,
           scopeId: 1,
-          scope: 'repository:/tmp/test-repo',
+          scope: '/tmp/test-repo',
           key: 'config',
           version: 1,
           filePath: '/path1',
@@ -192,7 +192,7 @@ describe('Web UI - Scope Selector Logic', () => {
       expect(groups).toHaveLength(1)
       expect(groups[0].displayName).toBe('test-repo')
       expect(groups[0].branches).toHaveLength(1)
-      expect(groups[0].branches[0].branch).toBe('repository')
+      expect(groups[0].branches[0].branchName).toBe('repository')
       expect(groups[0].branches[0].entries).toHaveLength(1)
     })
   })
@@ -202,22 +202,22 @@ describe('Web UI - Scope Selector Logic', () => {
       // Global scope
       expect(parseCurrentScope('global')).toEqual({
         type: 'global',
-        identifier: 'global',
-        branch: undefined,
+        primaryPath: 'global',
+        branchName: undefined,
       })
 
       // Repository scope
-      expect(parseCurrentScope('repository:/home/user/projects/test-repo')).toEqual({
+      expect(parseCurrentScope('/home/user/projects/test-repo')).toEqual({
         type: 'repository',
-        identifier: '/home/user/projects/test-repo',
-        branch: undefined,
+        primaryPath: '/home/user/projects/test-repo',
+        branchName: undefined,
       })
 
       // Branch scope
-      expect(parseCurrentScope('test-repo:main')).toEqual({
+      expect(parseCurrentScope('/home/user/projects/test-repo:main')).toEqual({
         type: 'branch',
-        identifier: 'test-repo',
-        branch: 'main',
+        primaryPath: '/home/user/projects/test-repo',
+        branchName: 'main',
       })
     })
   })
@@ -225,17 +225,17 @@ describe('Web UI - Scope Selector Logic', () => {
   describe('Entry count calculation', () => {
     it('should calculate correct total entries for repository', () => {
       const repoGroup: RepositoryGroup = {
-        identifier: '/home/user/projects/test-repo',
+        primaryPath: '/home/user/projects/test-repo',
         displayName: 'test-repo',
         branches: [
           {
-            branch: 'repository',
-            scope: 'repository:/home/user/projects/test-repo',
+            branchName: 'repository',
+            scope: '/home/user/projects/test-repo',
             entries: [
               {
                 id: 1,
                 scopeId: 1,
-                scope: 'repository:/home/user/projects/test-repo',
+                scope: '/home/user/projects/test-repo',
                 key: 'shared-config',
                 version: 1,
                 filePath: '/path1',
@@ -245,13 +245,13 @@ describe('Web UI - Scope Selector Logic', () => {
             ],
           },
           {
-            branch: 'main',
-            scope: 'test-repo:main',
+            branchName: 'main',
+            scope: '/home/user/projects/test-repo:main',
             entries: [
               {
                 id: 2,
                 scopeId: 2,
-                scope: 'test-repo:main',
+                scope: '/home/user/projects/test-repo:main',
                 key: 'main-key1',
                 version: 1,
                 filePath: '/path2',
@@ -261,7 +261,7 @@ describe('Web UI - Scope Selector Logic', () => {
               {
                 id: 3,
                 scopeId: 2,
-                scope: 'test-repo:main',
+                scope: '/home/user/projects/test-repo:main',
                 key: 'main-key2',
                 version: 1,
                 filePath: '/path3',
@@ -271,13 +271,13 @@ describe('Web UI - Scope Selector Logic', () => {
             ],
           },
           {
-            branch: 'feature-x',
-            scope: 'test-repo:feature-x',
+            branchName: 'feature-x',
+            scope: '/home/user/projects/test-repo:feature-x',
             entries: [
               {
                 id: 4,
                 scopeId: 3,
-                scope: 'test-repo:feature-x',
+                scope: '/home/user/projects/test-repo:feature-x',
                 key: 'feature-key',
                 version: 1,
                 filePath: '/path4',
@@ -321,11 +321,11 @@ describe('Web UI - Scope Selector Store Integration', () => {
           ],
         },
         {
-          scope: 'repository:/home/user/projects/test-repo',
+          scope: '/home/user/projects/test-repo',
           entries: [
             {
               key: 'repo-config',
-              scope: 'repository:/home/user/projects/test-repo',
+              scope: '/home/user/projects/test-repo',
               id: 2,
               scopeId: 2,
               version: 1,
@@ -336,11 +336,11 @@ describe('Web UI - Scope Selector Store Integration', () => {
           ],
         },
         {
-          scope: 'test-repo:main',
+          scope: '/home/user/projects/test-repo:main',
           entries: [
             {
               key: 'main-key',
-              scope: 'test-repo:main',
+              scope: '/home/user/projects/test-repo:main',
               id: 3,
               scopeId: 3,
               version: 1,
@@ -351,11 +351,11 @@ describe('Web UI - Scope Selector Store Integration', () => {
           ],
         },
         {
-          scope: 'test-repo:feature-x',
+          scope: '/home/user/projects/test-repo:feature-x',
           entries: [
             {
               key: 'feature-key',
-              scope: 'test-repo:feature-x',
+              scope: '/home/user/projects/test-repo:feature-x',
               id: 4,
               scopeId: 4,
               version: 1,
@@ -373,51 +373,51 @@ describe('Web UI - Scope Selector Store Integration', () => {
       expect(groups).toHaveLength(2)
 
       // Check global group
-      const globalGroup = groups.find(g => g.identifier === 'global')
+      const globalGroup = groups.find(g => g.primaryPath === 'global')
       expect(globalGroup).toBeDefined()
       expect(globalGroup!.displayName).toBe('Global')
       expect(globalGroup!.branches).toHaveLength(1)
-      expect(globalGroup!.branches[0].branch).toBe('global')
+      expect(globalGroup!.branches[0].branchName).toBe('global')
       expect(globalGroup!.branches[0].scope).toBe('global')
       expect(globalGroup!.branches[0].entries).toHaveLength(1)
 
       // Check test-repo group
       const vaultGroup = groups.find(g => g.displayName === 'test-repo')
       expect(vaultGroup).toBeDefined()
-      expect(vaultGroup!.identifier).toContain('test-repo')
+      expect(vaultGroup!.primaryPath).toBe('/home/user/projects/test-repo')
       expect(vaultGroup!.branches).toHaveLength(3) // repository, main, feature-x
 
       // Check repository scope branch
-      const repoBranch = vaultGroup!.branches.find(b => b.branch === 'repository')
+      const repoBranch = vaultGroup!.branches.find(b => b.branchName === 'repository')
       expect(repoBranch).toBeDefined()
-      expect(repoBranch!.scope).toBe('repository:/home/user/projects/test-repo')
+      expect(repoBranch!.scope).toBe('/home/user/projects/test-repo')
       expect(repoBranch!.entries).toHaveLength(1)
 
       // Check main branch
-      const mainBranch = vaultGroup!.branches.find(b => b.branch === 'main')
+      const mainBranch = vaultGroup!.branches.find(b => b.branchName === 'main')
       expect(mainBranch).toBeDefined()
-      expect(mainBranch!.scope).toBe('test-repo:main')
+      expect(mainBranch!.scope).toBe('/home/user/projects/test-repo:main')
       expect(mainBranch!.entries).toHaveLength(1)
 
       // Check feature branch
-      const featureBranch = vaultGroup!.branches.find(b => b.branch === 'feature-x')
+      const featureBranch = vaultGroup!.branches.find(b => b.branchName === 'feature-x')
       expect(featureBranch).toBeDefined()
-      expect(featureBranch!.scope).toBe('test-repo:feature-x')
+      expect(featureBranch!.scope).toBe('/home/user/projects/test-repo:feature-x')
       expect(featureBranch!.entries).toHaveLength(1)
     })
 
     it('should correctly sort scopes with global first, then repository, then branches', () => {
       const apiResponse: ScopeGroup[] = [
         {
-          scope: 'test-repo:z-branch',
+          scope: '/home/user/projects/test-repo:z-branch',
           entries: [],
         },
         {
-          scope: 'test-repo:a-branch',
+          scope: '/home/user/projects/test-repo:a-branch',
           entries: [],
         },
         {
-          scope: 'repository:/home/user/projects/test-repo',
+          scope: '/home/user/projects/test-repo',
           entries: [],
         },
         {
@@ -429,16 +429,16 @@ describe('Web UI - Scope Selector Store Integration', () => {
       const groups = groupScopesIntoRepositories(apiResponse)
 
       // Global should be first
-      expect(groups[0].identifier).toBe('global')
+      expect(groups[0].primaryPath).toBe('global')
 
       // test-repo should be second
       expect(groups[1].displayName).toBe('test-repo')
 
       // Within test-repo, repository should be first, then branches alphabetically
       const vaultBranches = groups[1].branches
-      expect(vaultBranches[0].branch).toBe('repository')
-      expect(vaultBranches[1].branch).toBe('a-branch')
-      expect(vaultBranches[2].branch).toBe('z-branch')
+      expect(vaultBranches[0].branchName).toBe('repository')
+      expect(vaultBranches[1].branchName).toBe('a-branch')
+      expect(vaultBranches[2].branchName).toBe('z-branch')
     })
 
     it('should handle only new three-tier scope formats', () => {
@@ -448,15 +448,15 @@ describe('Web UI - Scope Selector Store Integration', () => {
           entries: [],
         },
         {
-          scope: 'repository:/home/user/projects/test-repo',
+          scope: '/home/user/projects/test-repo',
           entries: [],
         },
         {
-          scope: 'test-repo:main',
+          scope: '/home/user/projects/test-repo:main',
           entries: [],
         },
         {
-          scope: 'test-repo:feature',
+          scope: '/home/user/projects/test-repo:feature',
           entries: [],
         },
       ]
@@ -466,7 +466,7 @@ describe('Web UI - Scope Selector Store Integration', () => {
       // Should have 2 groups: global and test-repo
       expect(groups).toHaveLength(2)
 
-      const globalGroup = groups.find(g => g.identifier === 'global')
+      const globalGroup = groups.find(g => g.primaryPath === 'global')
       expect(globalGroup).toBeDefined()
 
       const vaultGroup = groups.find(g => g.displayName === 'test-repo')

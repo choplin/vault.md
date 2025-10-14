@@ -10,34 +10,36 @@ interface ScopeTreeProps {
 }
 
 export default function ScopeTree(props: ScopeTreeProps) {
-  const [deleteConfirm, setDeleteConfirm] = createSignal<{ type: 'scope' | 'identifier'; branch?: string } | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = createSignal<{ type: 'scope' | 'identifier'; branchName?: string } | null>(
+    null,
+  )
   const [deleting, setDeleting] = createSignal(false)
 
-  const isCollapsed = () => collapsedRepos().has(props.repository.identifier)
-  const isGlobal = () => props.repository.identifier === 'global'
+  const isCollapsed = () => collapsedRepos().has(props.repository.primaryPath)
+  const isGlobal = () => props.repository.primaryPath === 'global'
 
   function toggleCollapse() {
     if (!isGlobal()) {
-      toggleRepoCollapse(props.repository.identifier)
+      toggleRepoCollapse(props.repository.primaryPath)
     }
   }
 
-  async function selectBranch(branch: string) {
-    setSelectedScope({ identifier: props.repository.identifier, branch })
+  async function selectBranch(branchName: string) {
+    setSelectedScope({ primaryPath: props.repository.primaryPath, branchName })
     setViewMode('table')
 
     // Load entries for this scope
     try {
-      await api.getScopeEntries(props.repository.identifier, branch)
+      await api.getScopeEntries(props.repository.primaryPath, branchName)
       // This will be handled by the parent component watching selectedScope
     } catch (error) {
       console.error('Failed to load scope entries:', error)
     }
   }
 
-  function isCurrentBranch(branch: string): boolean {
+  function isCurrentBranch(branchName: string): boolean {
     const current = currentScope()
-    const scopeStr = props.repository.branches.find((b) => b.branch === branch)?.scope
+    const scopeStr = props.repository.branches.find((b) => b.branchName === branchName)?.scope
     return current === scopeStr
   }
 
@@ -119,17 +121,17 @@ export default function ScopeTree(props: ScopeTreeProps) {
               <div class="flex items-center">
                 <button
                   type="button"
-                  onClick={() => selectBranch(branch.branch)}
+                  onClick={() => selectBranch(branch.branchName)}
                   class={`btn btn-ghost flex-1 justify-start normal-case h-auto min-h-[2.5rem] py-2 ${
-                    isCurrentBranch(branch.branch) ? 'btn-active' : ''
+                    isCurrentBranch(branch.branchName) ? 'btn-active' : ''
                   }`}
                 >
                   <GitBranch class="w-5 h-5 mr-2 flex-shrink-0 text-base-content/60" />
-                  <span class="font-medium text-base text-base-content truncate">{branch.branch}</span>
-                  <Show when={isCurrentBranch(branch.branch)}>
+                  <span class="font-medium text-base text-base-content truncate">{branch.branchName}</span>
+                  <Show when={isCurrentBranch(branch.branchName)}>
                     <Check class="w-4 h-4 ml-2 text-primary" />
                   </Show>
-                  <span class={`ml-auto badge ${isCurrentBranch(branch.branch) ? 'badge-primary' : ''}`}>
+                  <span class={`ml-auto badge ${isCurrentBranch(branch.branchName) ? 'badge-primary' : ''}`}>
                     {branch.entries.length}
                   </span>
                 </button>
@@ -159,7 +161,10 @@ export default function ScopeTree(props: ScopeTreeProps) {
                   </button>
                   <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
                     <li>
-                      <button type="button" onClick={() => setDeleteConfirm({ type: 'scope', branch: branch.branch })}>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirm({ type: 'scope', branchName: branch.branchName })}
+                      >
                         Delete vault for this branch
                       </button>
                     </li>
@@ -179,7 +184,7 @@ export default function ScopeTree(props: ScopeTreeProps) {
               <h3 class="font-bold text-lg">Confirm Deletion</h3>
               <p class="py-4">
                 {confirm().type === 'scope'
-                  ? `Delete vault for branch '${confirm().branch}' of '${props.repository.displayName}'? This action cannot be undone.`
+                  ? `Delete vault for branch '${confirm().branchName}' of '${props.repository.displayName}'? This action cannot be undone.`
                   : `Delete entire vault for '${props.repository.displayName}'? This will remove all data across all branches.`}
               </p>
               <div class="modal-action">
@@ -193,10 +198,10 @@ export default function ScopeTree(props: ScopeTreeProps) {
                   onClick={async () => {
                     setDeleting(true)
                     try {
-                      if (confirm().type === 'scope' && confirm().branch) {
-                        await deleteScope(props.repository.identifier, confirm().branch)
+                      if (confirm().type === 'scope' && confirm().branchName) {
+                        await deleteScope(props.repository.primaryPath, confirm().branchName)
                       } else {
-                        await deleteIdentifier(props.repository.identifier)
+                        await deleteIdentifier(props.repository.primaryPath)
                       }
                       setDeleteConfirm(null)
                       // Refresh the entries list

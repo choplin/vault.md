@@ -1,13 +1,14 @@
 import { createMemo, createSignal } from 'solid-js'
 import { api, type ScopeGroup, type VaultEntry } from '../lib/api'
+import { parseCurrentScope } from '../lib/grouping'
 
 export type { ScopeGroup } from '../lib/api'
 
 export interface RepositoryGroup {
-  identifier: string
+  primaryPath: string
   displayName: string
   branches: Array<{
-    branch: string
+    branchName: string
     scope: string
     entries: VaultEntry[]
   }>
@@ -16,8 +17,8 @@ export interface RepositoryGroup {
 export const [currentScope, setCurrentScope] = createSignal<string>('')
 export const [scopes, setScopes] = createSignal<ScopeGroup[]>([])
 export const [selectedScope, setSelectedScope] = createSignal<{
-  identifier: string
-  branch: string
+  primaryPath: string
+  branchName: string
 } | null>(null)
 export const [selectedEntry, setSelectedEntry] = createSignal<{
   scope: string
@@ -50,11 +51,11 @@ export function groupScopesIntoRepositories(scopesList: ScopeGroup[]): Repositor
   const globalScope = scopesList.find((s) => s.scope === 'global')
   if (globalScope) {
     groups.push({
-      identifier: 'global',
+      primaryPath: 'global',
       displayName: 'Global',
       branches: [
         {
-          branch: 'global',
+          branchName: 'global',
           scope: globalScope.scope,
           entries: globalScope.entries,
         },
@@ -65,76 +66,35 @@ export function groupScopesIntoRepositories(scopesList: ScopeGroup[]): Repositor
   // Group repository scopes
   const repoMap = new Map<string, RepositoryGroup>()
 
-  for (const scope of scopesList) {
-    if (scope.scope === 'global') continue
+  for (const scopeGroup of scopesList) {
+    if (scopeGroup.scope === 'global') continue
 
-    // Handle new three-tier scope formats
-    let repoIdentifier: string | null = null
-    let displayName: string | null = null
-    let branchData: { branch: string; scope: string; entries: VaultEntry[] } | null = null
+    const parsed = parseCurrentScope(scopeGroup.scope)
 
-    if (scope.scope.startsWith('repository:')) {
-      // Repository scope: repository:/path/to/repo
-      const repoPath = scope.scope.substring('repository:'.length)
-      repoIdentifier = repoPath
-      displayName = repoPath.split('/').pop() || repoPath
-      branchData = {
-        branch: 'repository',
-        scope: scope.scope,
-        entries: scope.entries,
-      }
-    } else if (scope.scope.includes(':')) {
-      // Branch scope: repo:branch (new format)
-      const colonIndex = scope.scope.indexOf(':')
-      const repoName = scope.scope.substring(0, colonIndex)
-      const branch = scope.scope.substring(colonIndex + 1)
+    const repoPrimaryPath = parsed.primaryPath
+    const displayName = repoPrimaryPath.split('/').pop() || repoPrimaryPath
+    const branchName = parsed.type === 'repository' ? 'repository' : parsed.branchName!
 
-      // Check if we have a matching repository scope in the list
-      const repoScope = scopesList.find(
-        (s) =>
-          s.scope.startsWith('repository:') &&
-          (s.scope.endsWith(`/${repoName}`) || s.scope === `repository:${repoName}`),
-      )
-
-      if (repoScope) {
-        // Use the full path from the repository scope
-        repoIdentifier = repoScope.scope.substring('repository:'.length)
-      } else {
-        // Use the repo name as identifier
-        repoIdentifier = repoName
-      }
-
-      displayName = repoName
-      branchData = {
-        branch,
-        scope: scope.scope,
-        entries: scope.entries,
-      }
+    if (!repoMap.has(repoPrimaryPath)) {
+      repoMap.set(repoPrimaryPath, {
+        primaryPath: repoPrimaryPath,
+        displayName,
+        branches: [],
+      })
     }
 
-    // Add to map if we have valid data
-    if (repoIdentifier && displayName && branchData) {
-      if (!repoMap.has(repoIdentifier)) {
-        repoMap.set(repoIdentifier, {
-          identifier: repoIdentifier,
-          displayName,
-          branches: [],
-        })
-      }
-
-      const group = repoMap.get(repoIdentifier)!
-      group.branches.push(branchData)
-    }
+    const group = repoMap.get(repoPrimaryPath)!
+    group.branches.push({ branchName, scope: scopeGroup.scope, entries: scopeGroup.entries })
   }
 
   // Sort branches within each repository group
   repoMap.forEach((group) => {
     group.branches.sort((a, b) => {
       // Repository scope comes first
-      if (a.branch === 'repository') return -1
-      if (b.branch === 'repository') return 1
+      if (a.branchName === 'repository') return -1
+      if (b.branchName === 'repository') return 1
       // Then sort by branch name
-      return a.branch.localeCompare(b.branch)
+      return a.branchName.localeCompare(b.branchName)
     })
   })
 

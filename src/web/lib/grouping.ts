@@ -8,16 +8,16 @@ export interface EntryGroup {
   entries: VaultEntry[]
 }
 
-export interface ParsedScope {
-  type: 'global' | 'repository' | 'branch'
-  identifier: string
-  branch?: string
-}
-
 export interface ScopeDisplayInfo {
   type: 'global' | 'repository' | 'branch'
   displayName: string
-  branch?: string
+  branchName?: string
+}
+
+export interface ParsedScope {
+  type: 'global' | 'repository' | 'branch'
+  primaryPath: string
+  branchName?: string
 }
 
 /**
@@ -105,27 +105,20 @@ export function flattenGroup(group: EntryGroup): VaultEntry[] {
  */
 export function parseCurrentScope(scope: string): ParsedScope {
   if (scope === 'global') {
-    return { type: 'global', identifier: 'global' }
-  }
-
-  if (scope.startsWith('repository:')) {
-    return {
-      type: 'repository',
-      identifier: scope.substring('repository:'.length),
-    }
+    return { type: 'global', primaryPath: 'global' }
   }
 
   const colonIndex = scope.indexOf(':')
-  if (colonIndex > 0) {
+  if (colonIndex > 0 && colonIndex < scope.length - 1) {
     return {
       type: 'branch',
-      identifier: scope.substring(0, colonIndex),
-      branch: scope.substring(colonIndex + 1),
+      primaryPath: scope.substring(0, colonIndex),
+      branchName: scope.substring(colonIndex + 1),
     }
   }
 
-  // Default to repository type for backward compatibility
-  return { type: 'repository', identifier: scope }
+  // Repository scopes are represented solely by their primary path
+  return { type: 'repository', primaryPath: scope }
 }
 
 /**
@@ -136,21 +129,17 @@ export function formatScopeForDisplay(scope: string): ScopeDisplayInfo {
     return { type: 'global', displayName: 'Global' }
   }
 
-  if (scope.startsWith('repository:')) {
-    const path = scope.substring('repository:'.length)
-    const displayName = path.split('/').pop() || path
-    return { type: 'repository', displayName }
-  }
-
   const colonIndex = scope.indexOf(':')
-  if (colonIndex > 0) {
-    const displayName = scope.substring(0, colonIndex)
-    const branch = scope.substring(colonIndex + 1)
-    return { type: 'branch', displayName, branch }
+  if (colonIndex > 0 && colonIndex < scope.length - 1) {
+    const repoPath = scope.substring(0, colonIndex)
+    const displayName = repoPath.split('/').pop() || repoPath
+    const branchName = scope.substring(colonIndex + 1)
+    return { type: 'branch', displayName, branchName }
   }
 
   // Default to repository type for backward compatibility
-  return { type: 'repository', displayName: scope }
+  const displayName = scope.split('/').pop() || scope
+  return { type: 'repository', displayName }
 }
 
 /**
@@ -161,30 +150,26 @@ export function groupEntriesByScope(entries: VaultEntry[]): RepositoryGroup[] {
 
   entries.forEach((entry) => {
     const parsed = parseCurrentScope(entry.scope)
-    let groupId: string
+    let groupPrimaryPath: string
     let displayName: string
 
     if (parsed.type === 'global') {
-      groupId = 'global'
+      groupPrimaryPath = 'global'
       displayName = 'Global'
-    } else if (parsed.type === 'repository') {
-      groupId = parsed.identifier
-      displayName = parsed.identifier.split('/').pop() || parsed.identifier
     } else {
-      // For branch scope, group by repository
-      groupId = parsed.identifier
-      displayName = parsed.identifier
+      groupPrimaryPath = parsed.primaryPath
+      displayName = parsed.primaryPath.split('/').pop() || parsed.primaryPath
     }
 
-    if (!groups.has(groupId)) {
-      groups.set(groupId, {
-        identifier: groupId,
+    if (!groups.has(groupPrimaryPath)) {
+      groups.set(groupPrimaryPath, {
+        primaryPath: groupPrimaryPath,
         displayName,
         branches: [],
       })
     }
 
-    const group = groups.get(groupId)!
+    const group = groups.get(groupPrimaryPath)!
 
     // Find or create branch
     let branchName: string
@@ -193,13 +178,13 @@ export function groupEntriesByScope(entries: VaultEntry[]): RepositoryGroup[] {
     } else if (parsed.type === 'repository') {
       branchName = 'repository'
     } else {
-      branchName = parsed.branch!
+      branchName = parsed.branchName!
     }
 
-    let branch = group.branches.find((b) => b.branch === branchName)
+    let branch = group.branches.find((b) => b.branchName === branchName)
     if (!branch) {
       branch = {
-        branch: branchName,
+        branchName,
         scope: entry.scope,
         entries: [],
       }
@@ -212,18 +197,18 @@ export function groupEntriesByScope(entries: VaultEntry[]): RepositoryGroup[] {
   // Sort groups and branches
   const sortedGroups = Array.from(groups.values()).sort((a, b) => {
     // Global always comes first
-    if (a.identifier === 'global') return -1
-    if (b.identifier === 'global') return 1
+    if (a.primaryPath === 'global') return -1
+    if (b.primaryPath === 'global') return 1
     return a.displayName.localeCompare(b.displayName)
   })
 
   sortedGroups.forEach((group) => {
     group.branches.sort((a, b) => {
       // Repository scope comes first
-      if (a.branch === 'repository') return -1
-      if (b.branch === 'repository') return 1
+      if (a.branchName === 'repository') return -1
+      if (b.branchName === 'repository') return 1
       // Then sort by branch name
-      return a.branch.localeCompare(b.branch)
+      return a.branchName.localeCompare(b.branchName)
     })
   })
 

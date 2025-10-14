@@ -12,7 +12,7 @@ describe('Web UI List Scope Display', () => {
     it('should display repository name only for repository scope', () => {
       const scope: Scope = {
         type: 'repository',
-        identifier: '/home/user/projects/test-repo',
+        primaryPath: '/home/user/projects/test-repo',
       }
       expect(formatScopeForListDisplay(scope)).toBe('test-repo')
     })
@@ -20,8 +20,8 @@ describe('Web UI List Scope Display', () => {
     it('should display repository:branch for branch scope', () => {
       const scope: Scope = {
         type: 'branch',
-        identifier: '/home/user/projects/test-repo',
-        branch: 'main',
+        primaryPath: '/home/user/projects/test-repo',
+        branchName: 'main',
       }
       expect(formatScopeForListDisplay(scope)).toBe('test-repo:main')
     })
@@ -29,7 +29,7 @@ describe('Web UI List Scope Display', () => {
     it('should handle paths with special characters', () => {
       const scope: Scope = {
         type: 'repository',
-        identifier: '/path/with spaces/my-repo',
+        primaryPath: '/path/with spaces/my-repo',
       }
       expect(formatScopeForListDisplay(scope)).toBe('my-repo')
     })
@@ -37,8 +37,8 @@ describe('Web UI List Scope Display', () => {
     it('should handle branch names with special characters', () => {
       const scope: Scope = {
         type: 'branch',
-        identifier: '/home/user/projects/test-repo',
-        branch: 'feature/new-feature',
+        primaryPath: '/home/user/projects/test-repo',
+        branchName: 'feature/new-feature',
       }
       expect(formatScopeForListDisplay(scope)).toBe('test-repo:feature/new-feature')
     })
@@ -46,7 +46,7 @@ describe('Web UI List Scope Display', () => {
     it('should handle root directory as repository', () => {
       const scope: Scope = {
         type: 'repository',
-        identifier: '/',
+        primaryPath: '/',
       }
       expect(formatScopeForListDisplay(scope)).toBe('/')
     })
@@ -61,7 +61,7 @@ describe('Web UI List Scope Display', () => {
     it('should return appropriate CSS class for repository scope', () => {
       const scope: Scope = {
         type: 'repository',
-        identifier: '/path/to/repo',
+        primaryPath: '/path/to/repo',
       }
       expect(getScopeDisplayClass(scope)).toBe('badge-secondary')
     })
@@ -69,8 +69,8 @@ describe('Web UI List Scope Display', () => {
     it('should return appropriate CSS class for branch scope', () => {
       const scope: Scope = {
         type: 'branch',
-        identifier: '/path/to/repo',
-        branch: 'main',
+        primaryPath: '/path/to/repo',
+        branchName: 'main',
       }
       expect(getScopeDisplayClass(scope)).toBe('badge-accent')
     })
