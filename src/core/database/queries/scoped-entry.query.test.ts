@@ -25,7 +25,7 @@ describe('ScopedEntryQuery', () => {
     versionRepo = new VersionRepository(ctx)
 
     // Create a test scope
-    const scope: Scope = { type: 'repository', identifier: '/test/repo' }
+    const scope: Scope = { type: 'repository', primaryPath: '/test/repo' }
     scopeId = scopeRepo.create(scope)
   })
 
@@ -168,7 +168,7 @@ describe('ScopedEntryQuery', () => {
   describe('listByScopes', () => {
     it('should list entries for multiple scopes in one query', () => {
       // Create another scope
-      const scope2: Scope = { type: 'repository', identifier: '/other/repo' }
+      const scope2: Scope = { type: 'repository', primaryPath: '/other/repo' }
       const scopeId2 = scopeRepo.create(scope2)
 
       // Add entries to both scopes

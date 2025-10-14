@@ -26,10 +26,10 @@ describe('getEntry with allScopes option', () => {
     // Mock git functions
     vi.spyOn(git, 'getGitInfo').mockReturnValue({
       isGitRepo: true,
-      repoRoot: testDir,
+      primaryWorktreePath: testDir,
+      currentWorktreePath: testDir,
       currentBranch: 'main',
       isWorktree: false,
-      remoteUrl: 'https://github.com/test/repo.git'
     })
   })
 
@@ -273,10 +273,10 @@ describe('getEntry with allScopes option', () => {
       // Mock git info for custom repo
       vi.spyOn(git, 'getGitInfo').mockReturnValue({
         isGitRepo: true,
-        repoRoot: customRepoPath,
+        primaryWorktreePath: customRepoPath,
+        currentWorktreePath: customRepoPath,
         currentBranch: 'develop',
         isWorktree: false,
-        remoteUrl: 'https://github.com/test/custom.git'
       })
 
       const customContext = resolveVaultContext({ scope: 'repository', repo: customRepoPath })

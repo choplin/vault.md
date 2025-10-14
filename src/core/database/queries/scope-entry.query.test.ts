@@ -27,7 +27,7 @@ describe('ScopeEntryQuery', () => {
 
   describe('getEntriesWithVersionCount', () => {
     it('should return entries with version counts', () => {
-      const scope: Scope = { type: 'repository', identifier: '/test/repo' }
+      const scope: Scope = { type: 'repository', primaryPath: '/test/repo' }
       const scopeId = scopeRepo.create(scope)
 
       // Create entries with different version counts
@@ -56,7 +56,7 @@ describe('ScopeEntryQuery', () => {
     })
 
     it('should return empty array for scope with no entries', () => {
-      const scope: Scope = { type: 'repository', identifier: '/empty/repo' }
+      const scope: Scope = { type: 'repository', primaryPath: '/empty/repo' }
       const scopeId = scopeRepo.create(scope)
 
       const results = query.getEntriesWithVersionCount(scopeId)
@@ -66,7 +66,7 @@ describe('ScopeEntryQuery', () => {
 
   describe('getTotalVersionCount', () => {
     it('should return total version count for scope', () => {
-      const scope: Scope = { type: 'repository', identifier: '/test/repo' }
+      const scope: Scope = { type: 'repository', primaryPath: '/test/repo' }
       const scopeId = scopeRepo.create(scope)
 
       const entry1 = entryRepo.create(scopeId, 'key1')
@@ -83,7 +83,7 @@ describe('ScopeEntryQuery', () => {
     })
 
     it('should return 0 for scope with no versions', () => {
-      const scope: Scope = { type: 'repository', identifier: '/test/repo' }
+      const scope: Scope = { type: 'repository', primaryPath: '/test/repo' }
       const scopeId = scopeRepo.create(scope)
       entryRepo.create(scopeId, 'key1') // Entry with no versions
 
@@ -94,14 +94,14 @@ describe('ScopeEntryQuery', () => {
 
   describe('getScopesWithCounts', () => {
     it('should return all scopes with entry and version counts', () => {
-      // Create multiple scopes with same identifier
-      const scope1: Scope = { type: 'repository', identifier: '/test/repo' }
+      // Create multiple scopes with same primary path
+      const scope1: Scope = { type: 'repository', primaryPath: '/test/repo' }
       const scopeId1 = scopeRepo.create(scope1)
 
-      const scope2: Scope = { type: 'branch', identifier: '/test/repo', branch: 'main' }
+      const scope2: Scope = { type: 'branch', primaryPath: '/test/repo', branchName: 'main' }
       const scopeId2 = scopeRepo.create(scope2)
 
-      const scope3: Scope = { type: 'branch', identifier: '/test/repo', branch: 'dev' }
+      const scope3: Scope = { type: 'branch', primaryPath: '/test/repo', branchName: 'dev' }
       const scopeId3 = scopeRepo.create(scope3)
 
       // Add entries and versions to scope1
@@ -133,7 +133,7 @@ describe('ScopeEntryQuery', () => {
       expect(scope3Info?.versionCount).toBe(0)
     })
 
-    it('should return empty array for non-existent identifier', () => {
+    it('should return empty array for non-existent primary path', () => {
       const results = query.getScopesWithCounts('/non/existent')
       expect(results).toHaveLength(0)
     })

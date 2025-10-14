@@ -16,7 +16,7 @@ describe('EntryRepository', () => {
     scopeRepo = new ScopeRepository(ctx)
 
     // Create a test scope
-    const scope: Scope = { type: 'repository', identifier: '/test/repo' }
+    const scope: Scope = { type: 'repository', primaryPath: '/test/repo' }
     scopeId = scopeRepo.create(scope)
   })
 
@@ -79,7 +79,7 @@ describe('EntryRepository', () => {
       entryRepo.create(scopeId, 'test-key')
 
       // Create another scope
-      const scope2: Scope = { type: 'repository', identifier: '/other/repo' }
+      const scope2: Scope = { type: 'repository', primaryPath: '/other/repo' }
       const scopeId2 = scopeRepo.create(scope2)
 
       const found = entryRepo.findByScopeAndKey(scopeId2, 'test-key')
@@ -109,7 +109,7 @@ describe('EntryRepository', () => {
       entryRepo.create(scopeId, 'key1')
 
       // Create another scope with entries
-      const scope2: Scope = { type: 'repository', identifier: '/other/repo' }
+      const scope2: Scope = { type: 'repository', primaryPath: '/other/repo' }
       const scopeId2 = scopeRepo.create(scope2)
       entryRepo.create(scopeId2, 'key2')
 
@@ -158,7 +158,7 @@ describe('EntryRepository', () => {
       entryRepo.create(scopeId, 'key1')
 
       // Create another scope with entries
-      const scope2: Scope = { type: 'repository', identifier: '/other/repo' }
+      const scope2: Scope = { type: 'repository', primaryPath: '/other/repo' }
       const scopeId2 = scopeRepo.create(scope2)
       entryRepo.create(scopeId2, 'key2')
 

@@ -21,16 +21,16 @@ describe('ScopeService', () => {
 
   describe('getOrCreate', () => {
     it('should create new scope', () => {
-      const scope: Scope = { type: 'repository', identifier: '/test/repo' }
+      const scope: Scope = { type: 'repository', primaryPath: '/test/repo' }
       const id = scopeService.getOrCreate(scope)
       expect(id).toBeGreaterThan(0)
 
       const retrieved = scopeService.getById(id)
-      expect(retrieved).toEqual(scope)
+      expect(retrieved).toMatchObject(scope)
     })
 
     it('should return existing scope id', () => {
-      const scope: Scope = { type: 'repository', identifier: '/test/repo' }
+      const scope: Scope = { type: 'repository', primaryPath: '/test/repo' }
       const id1 = scopeService.getOrCreate(scope)
       const id2 = scopeService.getOrCreate(scope)
       expect(id2).toBe(id1)
@@ -41,8 +41,8 @@ describe('ScopeService', () => {
     it('should return all scopes', () => {
       const scopes: Scope[] = [
         { type: 'global' },
-        { type: 'repository', identifier: '/repo1' },
-        { type: 'branch', identifier: '/repo1', branch: 'main' },
+        { type: 'repository', primaryPath: '/repo1' },
+        { type: 'branch', primaryPath: '/repo1', branchName: 'main' },
       ]
 
       scopes.forEach((scope) => scopeService.getOrCreate(scope))
@@ -55,8 +55,8 @@ describe('ScopeService', () => {
   describe('getAllEntriesGrouped', () => {
     it('should return entries grouped by scope', async () => {
       // Create scopes
-      const scope1: Scope = { type: 'repository', identifier: '/repo1' }
-      const scope2: Scope = { type: 'repository', identifier: '/repo2' }
+      const scope1: Scope = { type: 'repository', primaryPath: '/repo1' }
+      const scope2: Scope = { type: 'repository', primaryPath: '/repo2' }
       const scopeId1 = scopeService.getOrCreate(scope1)
       const scopeId2 = scopeService.getOrCreate(scope2)
 
@@ -87,20 +87,20 @@ describe('ScopeService', () => {
       expect(grouped.size).toBe(2)
 
       const scope1Entries = Array.from(grouped.entries()).find(
-        ([scope]) => (scope.type === 'repository' || scope.type === 'branch') && scope.identifier === '/repo1',
+        ([scope]) => (scope.type === 'repository' || scope.type === 'branch') && scope.primaryPath === '/repo1',
       )?.[1]
       expect(scope1Entries).toHaveLength(2)
       expect(scope1Entries?.map((e) => e.key).sort()).toEqual(['key1', 'key2'])
 
       const scope2Entries = Array.from(grouped.entries()).find(
-        ([scope]) => (scope.type === 'repository' || scope.type === 'branch') && scope.identifier === '/repo2',
+        ([scope]) => (scope.type === 'repository' || scope.type === 'branch') && scope.primaryPath === '/repo2',
       )?.[1]
       expect(scope2Entries).toHaveLength(1)
       expect(scope2Entries?.[0].key).toBe('key3')
     })
 
     it('should return empty arrays for scopes without entries', async () => {
-      const scope: Scope = { type: 'repository', identifier: '/empty' }
+      const scope: Scope = { type: 'repository', primaryPath: '/empty' }
       scopeService.getOrCreate(scope)
 
       const grouped = await scopeService.getAllEntriesGrouped()
@@ -113,7 +113,7 @@ describe('ScopeService', () => {
 
   describe('deleteScope', () => {
     it('should delete scope and all its entries and versions', async () => {
-      const scope: Scope = { type: 'repository', identifier: '/test/repo' }
+      const scope: Scope = { type: 'repository', primaryPath: '/test/repo' }
       const scopeId = scopeService.getOrCreate(scope)
 
       // Add entries with multiple versions
@@ -139,7 +139,7 @@ describe('ScopeService', () => {
         hash: 'hash3',
       })
 
-      const deletedVersions = await scopeService.deleteScope('/test/repo', 'repository')
+      const deletedVersions = await scopeService.deleteScope(scope)
       expect(deletedVersions).toBe(3)
 
       // Verify scope is deleted
@@ -152,26 +152,26 @@ describe('ScopeService', () => {
     })
 
     it('should return 0 for non-existent scope', async () => {
-      const deletedVersions = await scopeService.deleteScope('/non/existent', 'repository')
+      const deletedVersions = await scopeService.deleteScope({ type: 'repository', primaryPath: '/non/existent' })
       expect(deletedVersions).toBe(0)
     })
 
     it('should handle scope with no entries', async () => {
-      const scope: Scope = { type: 'repository', identifier: '/empty/repo' }
+      const scope: Scope = { type: 'repository', primaryPath: '/empty/repo' }
       scopeService.getOrCreate(scope)
 
-      const deletedVersions = await scopeService.deleteScope('/empty/repo', 'repository')
+      const deletedVersions = await scopeService.deleteScope(scope)
       expect(deletedVersions).toBe(0)
     })
   })
 
   describe('deleteAllBranches', () => {
-    it('should delete all scopes with same identifier', async () => {
-      // Create multiple scopes with same identifier
+    it('should delete all scopes with same primary path', async () => {
+      // Create multiple scopes with same repository
       const scopes: Scope[] = [
-        { type: 'repository', identifier: '/test/repo' },
-        { type: 'branch', identifier: '/test/repo', branch: 'main' },
-        { type: 'branch', identifier: '/test/repo', branch: 'dev' },
+        { type: 'repository', primaryPath: '/test/repo' },
+        { type: 'branch', primaryPath: '/test/repo', branchName: 'main' },
+        { type: 'branch', primaryPath: '/test/repo', branchName: 'dev' },
       ]
 
       const scopeIds = scopes.map((scope) => scopeService.getOrCreate(scope))
@@ -193,13 +193,13 @@ describe('ScopeService', () => {
       // Verify all scopes are deleted
       const remaining = scopeService.getAll()
       expect(
-        remaining.filter((s) => (s.type === 'repository' || s.type === 'branch') && s.identifier === '/test/repo'),
+        remaining.filter((s) => (s.type === 'repository' || s.type === 'branch') && s.primaryPath === '/test/repo'),
       ).toHaveLength(0)
     })
 
-    it('should not affect scopes with different identifier', async () => {
-      const scope1: Scope = { type: 'repository', identifier: '/repo1' }
-      const scope2: Scope = { type: 'repository', identifier: '/repo2' }
+    it('should not affect scopes with different primary paths', async () => {
+      const scope1: Scope = { type: 'repository', primaryPath: '/repo1' }
+      const scope2: Scope = { type: 'repository', primaryPath: '/repo2' }
 
       scopeService.getOrCreate(scope1)
       const scopeId2 = scopeService.getOrCreate(scope2)
@@ -212,7 +212,7 @@ describe('ScopeService', () => {
     })
 
     it('should handle multiple versions per entry', async () => {
-      const scope: Scope = { type: 'repository', identifier: '/test/repo' }
+      const scope: Scope = { type: 'repository', primaryPath: '/test/repo' }
       const scopeId = scopeService.getOrCreate(scope)
 
       // Create entry with multiple versions

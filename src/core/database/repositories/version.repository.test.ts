@@ -19,7 +19,7 @@ describe('VersionRepository', () => {
     scopeRepo = new ScopeRepository(ctx)
 
     // Create test scope and entry
-    const scope: Scope = { type: 'repository', identifier: '/test/repo' }
+    const scope: Scope = { type: 'repository', primaryPath: '/test/repo' }
     const scopeId = scopeRepo.create(scope)
     entryId = entryRepo.create(scopeId, 'test-key')
   })

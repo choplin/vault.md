@@ -43,7 +43,7 @@ export class ScopeEntryQuery {
   }
 
   // Get all scopes with their entry and version counts
-  getScopesWithCounts(identifier: string): Array<{ scopeId: number; entryCount: number; versionCount: number }> {
+  getScopesWithCounts(primaryPath: string): Array<{ scopeId: number; entryCount: number; versionCount: number }> {
     const rows = this.ctx.db
       .prepare(`
         SELECT
@@ -53,10 +53,10 @@ export class ScopeEntryQuery {
         FROM scopes s
         LEFT JOIN entries e ON s.id = e.scope_id
         LEFT JOIN versions v ON e.id = v.entry_id
-        WHERE s.identifier = ?
+        WHERE s.primary_path = ?
         GROUP BY s.id
       `)
-      .all(identifier) as Array<{ scope_id: number; entry_count: number; version_count: number }>
+      .all(primaryPath) as Array<{ scope_id: number; entry_count: number; version_count: number }>
 
     return rows.map((row) => ({
       scopeId: row.scope_id,

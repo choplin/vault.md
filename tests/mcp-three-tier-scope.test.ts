@@ -24,9 +24,9 @@ describe('MCP Server Three-Tier Scope Operations', () => {
     // Set up default mock before any tests run
     mockGetGitInfo.mockReturnValue({
       isGitRepo: true,
-      repoRoot: testDir,
+      primaryWorktreePath: testDir,
+      currentWorktreePath: testDir,
       currentBranch: 'main',
-      remoteUrl: 'https://github.com/example/repo.git',
     })
   })
 
@@ -37,9 +37,9 @@ describe('MCP Server Three-Tier Scope Operations', () => {
     // Reset mock to default state
     mockGetGitInfo.mockReturnValue({
       isGitRepo: true,
-      repoRoot: testDir,
+      primaryWorktreePath: testDir,
+      currentWorktreePath: testDir,
       currentBranch: 'main',
-      remoteUrl: 'https://github.com/example/repo.git',
     })
   })
 
@@ -125,9 +125,9 @@ describe('MCP Server Three-Tier Scope Operations', () => {
     it('should error when using branch scope outside git repo', async () => {
       mockGetGitInfo.mockReturnValue({
         isGitRepo: false,
-        repoRoot: null,
+        primaryWorktreePath: undefined,
+        currentWorktreePath: undefined,
         currentBranch: null,
-        remoteUrl: null,
       })
 
       const tmpFile = join(testDir, 'nogit.txt')
@@ -355,9 +355,9 @@ describe('MCP Server Three-Tier Scope Operations', () => {
     it('should handle repository scope in non-git directory', async () => {
       mockGetGitInfo.mockReturnValue({
         isGitRepo: false,
-        repoRoot: null,
+        primaryWorktreePath: undefined,
+        currentWorktreePath: undefined,
         currentBranch: null,
-        remoteUrl: null,
       })
 
       const nonGitCtx = resolveVaultContext({ scope: 'repository' })
@@ -378,9 +378,9 @@ describe('MCP Server Three-Tier Scope Operations', () => {
     it('should use HEAD as branch name in detached HEAD state', async () => {
       mockGetGitInfo.mockReturnValue({
         isGitRepo: true,
-        repoRoot: testDir,
+        primaryWorktreePath: testDir,
+        currentWorktreePath: testDir,
         currentBranch: 'HEAD',
-        remoteUrl: null,
       })
 
       const detachedCtx = resolveVaultContext({ scope: 'branch' })

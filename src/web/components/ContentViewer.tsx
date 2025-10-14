@@ -1,5 +1,6 @@
 import { createEffect, Show } from 'solid-js'
-import { api } from '../lib/api'
+import { api, type ScopePayload } from '../lib/api'
+import { formatScopeForDisplay, scopeToKey } from '../lib/grouping'
 import {
   contentLoading,
   entryContent,
@@ -29,7 +30,7 @@ export default function ContentViewer() {
     setError(null)
 
     try {
-      const content = await api.getEntry(selected.scope, selected.key, selected.version)
+      const { content } = await api.getEntry(selected.scope, selected.key, selected.version)
       setEntryContent(content)
 
       // Render on next tick
@@ -75,11 +76,20 @@ export default function ContentViewer() {
   function handleEdit() {
     const selected = selectedEntry()
     if (selected) {
+      const scopeKey = scopeToKey(selected.scope)
       const editUrl = selected.version
-        ? `vault://edit/${selected.scope}/${selected.key}/${selected.version}`
-        : `vault://edit/${selected.scope}/${selected.key}`
+        ? `vault://edit/${scopeKey}/${selected.key}/${selected.version}`
+        : `vault://edit/${scopeKey}/${selected.key}`
       window.location.href = editUrl
     }
+  }
+
+  const scopeLabel = (scope: ScopePayload | undefined) => {
+    if (!scope) return ''
+    const display = formatScopeForDisplay(scope)
+    if (display.type === 'global') return display.displayName
+    if (display.type === 'repository') return display.displayName
+    return `${display.displayName} (${display.branchName})`
   }
 
   return (
@@ -91,7 +101,7 @@ export default function ContentViewer() {
             <div>
               <h2 class="text-xl font-semibold text-base-content">{selectedEntry()!.key}</h2>
               <p class="text-sm text-base-content/60 mt-1">
-                {selectedEntry()!.scope} • Version {selectedEntry()!.version || 'latest'}
+                {scopeLabel(selectedEntry()!.scope)} • Version {selectedEntry()!.version || 'latest'}
               </p>
             </div>
             <div class="flex gap-2">

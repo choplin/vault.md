@@ -4,10 +4,10 @@ import { join, resolve } from 'node:path'
 
 export interface GitInfo {
   isGitRepo: boolean
-  repoRoot?: string
+  primaryWorktreePath?: string
+  currentWorktreePath?: string
   currentBranch?: string
   isWorktree?: boolean
-  remoteUrl?: string
 }
 
 /**
@@ -33,7 +33,7 @@ export function getGitInfo(dir: string = process.cwd()): GitInfo {
       stdio: ['pipe', 'pipe', 'ignore'],
     }).trim()
 
-    // Check if it's a worktree
+    // Determine common directory (primary repository)
     const gitDir = execSync('git rev-parse --git-dir', {
       cwd: dir,
       encoding: 'utf-8',
@@ -43,62 +43,29 @@ export function getGitInfo(dir: string = process.cwd()): GitInfo {
     const absoluteGitDir = resolve(dir, gitDir)
     const isWorktree = !existsSync(join(absoluteGitDir, 'objects'))
 
-    // Get remote URL (optional)
-    let remoteUrl: string | undefined
+    let primaryWorktreePath = gitRoot
+
     try {
-      remoteUrl = execSync('git config --get remote.origin.url', {
+      const commonDir = execSync('git rev-parse --git-common-dir', {
         cwd: dir,
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'ignore'],
       }).trim()
+      primaryWorktreePath = resolve(dir, commonDir, '..')
     } catch {
-      // Remote URL is optional
+      // Fallback to the current worktree root when common dir is unavailable
+      primaryWorktreePath = gitRoot
     }
 
+    // Get remote URL (optional)
     return {
       isGitRepo: true,
-      repoRoot: gitRoot,
+      primaryWorktreePath,
+      currentWorktreePath: gitRoot,
       currentBranch: branch,
       isWorktree,
-      remoteUrl,
     }
   } catch {
     return { isGitRepo: false }
-  }
-}
-
-/**
- * Get the main repository root for a worktree
- */
-export function getMainRepoRoot(worktreeDir: string): string | undefined {
-  try {
-    const gitDir = execSync('git rev-parse --git-dir', {
-      cwd: worktreeDir,
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'ignore'],
-    }).trim()
-
-    const absoluteGitDir = resolve(worktreeDir, gitDir)
-
-    // If it's a worktree, the .git file contains the path to the real git directory
-    if (existsSync(join(worktreeDir, '.git')) && !existsSync(join(absoluteGitDir, 'objects'))) {
-      // Read the commondir file to get the main repo
-      const commonDirPath = join(absoluteGitDir, 'commondir')
-      if (existsSync(commonDirPath)) {
-        const commonDir = execSync(`cat "${commonDirPath}"`, {
-          encoding: 'utf-8',
-          stdio: ['pipe', 'pipe', 'ignore'],
-        }).trim()
-
-        // commondir is relative to the git directory
-        const mainGitDir = resolve(absoluteGitDir, commonDir)
-        // Go up one level from .git to get the repo root
-        return resolve(mainGitDir, '..')
-      }
-    }
-
-    return worktreeDir
-  } catch {
-    return undefined
   }
 }

@@ -5,13 +5,13 @@ export function formatScopeForListDisplay(scope: Scope): string {
     case 'global':
       return 'global'
     case 'repository': {
-      const parts = scope.identifier.split('/')
-      return parts[parts.length - 1] || scope.identifier
+      const parts = scope.primaryPath.split('/')
+      return parts[parts.length - 1] || scope.primaryPath
     }
     case 'branch': {
-      const parts = scope.identifier.split('/')
-      const repoName = parts[parts.length - 1] || scope.identifier
-      return `${repoName}:${scope.branch}`
+      const parts = scope.primaryPath.split('/')
+      const repoName = parts[parts.length - 1] || scope.primaryPath
+      return `${repoName}:${scope.branchName}`
     }
   }
 }

@@ -1,5 +1,6 @@
 import { ChevronRight, MapPin } from 'lucide-solid'
 import { For, Show } from 'solid-js'
+import { scopeEquals } from '../lib/grouping'
 import { allScopesCollapsed, setAllScopesCollapsed, setViewMode } from '../stores/ui'
 import { currentScope, groupedScopes, loading, setSelectedScope } from '../stores/vault'
 import ScopeTree from './ScopeTree'
@@ -14,12 +15,13 @@ export default function Sidebar() {
     const groups = groupedScopes()
     for (const group of groups) {
       for (const branch of group.branches) {
-        if (branch.scope === current) {
+        if (scopeEquals(branch.scope, current)) {
           return {
             displayName: group.displayName,
-            branch: branch.branch,
-            identifier: group.identifier,
-            isGlobal: group.identifier === 'global',
+            branchName: branch.branchName,
+            primaryPath: group.primaryPath,
+            isGlobal: group.primaryPath === 'global',
+            scope: branch.scope,
           }
         }
       }
@@ -31,7 +33,7 @@ export default function Sidebar() {
   function selectCurrentScope() {
     const display = getCurrentScopeDisplay()
     if (display) {
-      setSelectedScope({ identifier: display.identifier, branch: display.branch })
+      setSelectedScope(display.scope)
       setViewMode('table')
     }
   }
@@ -76,7 +78,7 @@ export default function Sidebar() {
                 >
                   <span class="font-medium text-base">{display().displayName}</span>
                   <Show when={!display().isGlobal}>
-                    <span class="text-base text-base-content/60">({display().branch})</span>
+                    <span class="text-base text-base-content/60">({display().branchName})</span>
                   </Show>
                 </button>
               </div>

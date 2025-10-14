@@ -6,7 +6,7 @@ import { cors } from 'hono/cors'
 // Database imports are now handled through vault context services
 import { deleteFile, deleteProjectFiles } from '../core/filesystem.js'
 import { catEntry, getEntry, listEntries } from '../core/index.js'
-import { formatScope } from '../core/scope.js'
+import { getScopeStorageKey, type Scope } from '../core/scope.js'
 import type { VaultOptions } from '../core/types.js'
 import type { VaultContext } from '../core/vault.js'
 
@@ -15,6 +15,52 @@ export function createWebServer(vault: VaultContext) {
 
   // Middleware
   app.use('*', cors())
+
+  type ScopePayload =
+    | { type: 'global' }
+    | { type: 'repository'; primaryPath: string }
+    | { type: 'branch'; primaryPath: string; branchName: string }
+
+  const toScopePayload = (scope: Scope): ScopePayload => {
+    switch (scope.type) {
+      case 'global':
+        return { type: 'global' }
+      case 'repository':
+        return { type: 'repository', primaryPath: scope.primaryPath }
+      case 'branch':
+        return {
+          type: 'branch',
+          primaryPath: scope.primaryPath,
+          branchName: scope.branchName,
+        }
+    }
+  }
+
+  const validateScopePayload = (payload: ScopePayload): ScopePayload => {
+    if (payload.type === 'repository' && !payload.primaryPath) {
+      throw new Error('Repository scope requires primaryPath')
+    }
+    if (payload.type === 'branch' && (!payload.primaryPath || !payload.branchName)) {
+      throw new Error('Branch scope requires primaryPath and branchName')
+    }
+    return payload
+  }
+
+  const fromScopePayload = (payload: ScopePayload): Scope => {
+    const scope = validateScopePayload(payload)
+    switch (scope.type) {
+      case 'global':
+        return { type: 'global' }
+      case 'repository':
+        return { type: 'repository', primaryPath: scope.primaryPath }
+      case 'branch':
+        return {
+          type: 'branch',
+          primaryPath: scope.primaryPath,
+          branchName: scope.branchName,
+        }
+    }
+  }
 
   // API Routes
   app.get('/api/entries', async (c) => {
@@ -30,30 +76,24 @@ export function createWebServer(vault: VaultContext) {
   app.get('/api/entries/all', async (c) => {
     try {
       const scopedEntries = await vault.scopeService.getAllEntriesGrouped()
-      const currentScope = formatScope(vault.scope)
-
-      // Convert to array format expected by frontend
-      const scopes = Array.from(scopedEntries.entries()).map(([scope, entries]) => {
-        // Convert scoped entries to web format (with scope field)
-        const vaultEntries = entries.map((entry) => ({
+      const scopes = Array.from(scopedEntries.entries()).map(([scope, entries]) => ({
+        scope: toScopePayload(scope),
+        entries: entries.map((entry) => ({
           id: entry.id,
-          scope: formatScope(scope),
+          scopeId: entry.scopeId,
+          scope: toScopePayload(scope),
           version: entry.version,
           key: entry.key,
           filePath: entry.filePath,
           hash: entry.hash,
           description: entry.description,
-          created_at: entry.createdAt,
-          updated_at: entry.createdAt,
-        }))
+          createdAt: entry.createdAt.toISOString(),
+          updatedAt: entry.createdAt.toISOString(),
+          isArchived: entry.isArchived,
+        })),
+      }))
 
-        return {
-          scope: formatScope(scope),
-          entries: vaultEntries,
-        }
-      })
-
-      return c.json({ currentScope: currentScope, scopes: scopes })
+      return c.json({ currentScope: toScopePayload(vault.scope), scopes })
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
     }
@@ -61,63 +101,47 @@ export function createWebServer(vault: VaultContext) {
 
   // Get current scope
   app.get('/api/current-scope', (c) => {
-    return c.json({ scope: formatScope(vault.scope) })
+    return c.json({ scope: toScopePayload(vault.scope) })
   })
 
   // Get entries for a specific scope
-  app.get('/api/scopes/:identifier/:branch/entries', async (c) => {
+  app.post('/api/scope/entries', async (c) => {
     try {
-      const identifier = decodeURIComponent(c.req.param('identifier'))
-      const branch = decodeURIComponent(c.req.param('branch'))
+      const body = await c.req.json()
+      if (!body?.scope) {
+        return c.json({ error: 'Scope payload is required' }, 400)
+      }
 
-      // Parse query parameters
-      const allVersions = c.req.query('allVersions') === 'true'
-
-      // Build scope based on identifier and branch
-      const scope =
-        identifier === 'global' && branch === 'global'
-          ? { type: 'global' as const }
-          : {
-              type: 'branch' as const,
-              identifier,
-              branch,
-              workPath:
-                vault.scope.type === 'branch' && vault.scope.identifier === identifier
-                  ? vault.scope.workPath
-                  : undefined,
-              remoteUrl:
-                vault.scope.type === 'branch' && vault.scope.identifier === identifier
-                  ? vault.scope.remoteUrl
-                  : undefined,
-            }
+      const scope = fromScopePayload(body.scope as ScopePayload)
+      const allVersions = Boolean(body?.allVersions)
 
       // Get scope ID
-      const scopeId = vault.database.db
-        .prepare('SELECT id FROM scopes WHERE identifier = ? AND branch = ?')
-        .get(identifier, branch) as { id: number } | undefined
+      const scopeId = vault.scopeService.findScopeId(scope)
 
       if (!scopeId) {
-        return c.json({ entries: [] })
+        return c.json({ scope: toScopePayload(scope), entries: [] })
       }
 
       // Get entries for this scope
-      const entries = await vault.entryService.list(scopeId.id, false, allVersions)
+      const entries = await vault.entryService.list(scopeId, false, allVersions)
 
       // Convert to web format
       const vaultEntries = entries.map((entry) => ({
         id: entry.id,
         scopeId: entry.scopeId,
-        scope: formatScope(scope),
+        scope: toScopePayload(scope),
         version: entry.version,
         key: entry.key,
         filePath: entry.filePath,
         hash: entry.hash,
         description: entry.description,
-        createdAt: entry.createdAt,
+        createdAt: entry.createdAt.toISOString(),
+        updatedAt: entry.createdAt.toISOString(),
+        isArchived: entry.isArchived,
       }))
 
       return c.json({
-        scope: formatScope(scope),
+        scope: toScopePayload(scope),
         entries: vaultEntries,
       })
     } catch (error) {
@@ -125,48 +149,36 @@ export function createWebServer(vault: VaultContext) {
     }
   })
 
-  app.get('/api/entry/:scope/:key/:version?', async (c) => {
+  app.post('/api/entry/content', async (c) => {
     try {
-      const scopeParam = decodeURIComponent(c.req.param('scope'))
-      const key = decodeURIComponent(c.req.param('key'))
-      const version = c.req.param('version') ? parseInt(c.req.param('version')!) : undefined
+      const body = await c.req.json()
+      const { scope: scopePayload, key, version } = body ?? {}
 
-      console.log('API entry request:', { scopeParam, key, version })
+      if (!scopePayload || !key) {
+        return c.json({ error: 'Scope payload and key are required' }, 400)
+      }
 
-      // Parse scope parameter to determine if it's global or repo
+      const scope = fromScopePayload(scopePayload as ScopePayload)
+
       const options: VaultOptions = { version }
-      if (scopeParam === 'Global' || scopeParam === 'global') {
+      if (scope.type === 'global') {
         options.scope = 'global'
+      } else if (scope.type === 'repository') {
+        options.scope = 'repository'
+        options.repo = scope.primaryPath
       } else {
-        // For repo scopes, the frontend sends the formatted string "repoPath (branch)"
-        // We need to parse this to extract the repo path and branch
-        const match = scopeParam.match(/^(.+) \((.+)\)$/)
-        if (match) {
-          options.scope = 'branch'
-          options.repo = match[1]
-          options.branch = match[2]
-        } else if (scopeParam.includes(':')) {
-          // Handle repository:branch format
-          const [repo, branch] = scopeParam.split(':')
-          options.scope = 'branch'
-          options.repo = repo
-          options.branch = branch
-        } else {
-          // Assume repository scope
-          options.scope = 'repository'
-          options.repo = scopeParam
-        }
+        options.scope = 'branch'
+        options.repo = scope.primaryPath
+        options.branch = scope.branchName
       }
 
       const filePath = await getEntry(vault, key, options)
-      console.log('Got filePath:', filePath)
 
       if (!filePath) {
         return c.json({ error: 'Entry not found' }, 404)
       }
 
       const content = await catEntry(vault, key, options)
-      console.log('Got content length:', content?.length)
 
       return c.json({ content, filePath })
     } catch (error) {
@@ -175,40 +187,31 @@ export function createWebServer(vault: VaultContext) {
   })
 
   // Delete endpoints
-  app.delete('/api/entries/:identifier/:branch/:key/:version?', async (c) => {
+  app.delete('/api/entry', async (c) => {
     try {
-      const identifier = decodeURIComponent(c.req.param('identifier'))
-      const branch = decodeURIComponent(c.req.param('branch'))
-      const key = decodeURIComponent(c.req.param('key'))
-      const version = c.req.param('version') ? parseInt(c.req.param('version')!) : undefined
+      const body = await c.req.json()
+      const { scope: scopePayload, key, version } = body ?? {}
 
-      // Create scope object for database lookup
-      const scope =
-        identifier === 'global' && branch === 'global'
-          ? { type: 'global' as const }
-          : {
-              type: 'branch' as const,
-              identifier,
-              branch,
-              workPath:
-                vault.scope.type === 'branch' && vault.scope.identifier === identifier
-                  ? vault.scope.workPath
-                  : undefined,
-              remoteUrl:
-                vault.scope.type === 'branch' && vault.scope.identifier === identifier
-                  ? vault.scope.remoteUrl
-                  : undefined,
-            }
+      if (!scopePayload || !key) {
+        return c.json({ error: 'Scope payload and key are required' }, 400)
+      }
+
+      const scope = fromScopePayload(scopePayload as ScopePayload)
+      const versionNumber = typeof version === 'number' ? version : undefined
 
       // Get scope ID
-      const scopeId = vault.scopeService.getOrCreate(scope)
+      const scopeId = vault.scopeService.findScopeId(scope)
+
+      if (!scopeId) {
+        return c.json({ error: 'Scope not found' }, 404)
+      }
 
       // Get entries to find file paths before deletion
       const entries = (await vault.entryService.list(scopeId, true, true)).filter((e) => e.key === key)
 
-      if (version) {
+      if (versionNumber) {
         // Delete specific version
-        const entry = entries.find((e) => e.version === version)
+        const entry = entries.find((e) => e.version === versionNumber)
         if (!entry) {
           return c.json({ error: 'Version not found' }, 404)
         }
@@ -217,9 +220,9 @@ export function createWebServer(vault: VaultContext) {
         deleteFile(entry.filePath)
 
         // Delete from database
-        const deleted = await vault.entryService.deleteVersion(scopeId, key, version)
+        const deleted = await vault.entryService.deleteVersion(scopeId, key, versionNumber)
         if (deleted) {
-          return c.json({ message: `Deleted version ${version} of key '${key}'` })
+          return c.json({ message: `Deleted version ${versionNumber} of key '${key}'` })
         }
         return c.json({ error: 'Failed to delete version' }, 500)
       } else {
@@ -246,44 +249,38 @@ export function createWebServer(vault: VaultContext) {
     }
   })
 
-  app.delete('/api/branches/:identifier/:branch', async (c) => {
+  app.delete('/api/scope', async (c) => {
     try {
-      const identifier = decodeURIComponent(c.req.param('identifier'))
-      const branch = decodeURIComponent(c.req.param('branch'))
+      const body = await c.req.json()
+      const { scope: scopePayload, cascade } = body ?? {}
 
-      // Delete project files
-      const scopePath = `${identifier}/${branch}`.replace(/[/\\:]/g, '_')
-      deleteProjectFiles(scopePath)
-
-      // Delete from database
-      const deletedCount = await vault.scopeService.deleteScope(identifier, branch)
-      return c.json({ message: `Deleted scope with ${deletedCount} entries` })
-    } catch (error) {
-      return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
-    }
-  })
-
-  app.delete('/api/identifiers/:identifier', async (c) => {
-    try {
-      const identifier = decodeURIComponent(c.req.param('identifier'))
-
-      // Get all scopes for this identifier to delete files
-      const allScopes = await vault.scopeService.getAllEntriesGrouped()
-      for (const [scope, _] of allScopes) {
-        if ((scope.type === 'branch' || scope.type === 'repository') && scope.identifier === identifier) {
-          if (scope.type === 'branch') {
-            const scopePath = `${scope.identifier}/${scope.branch}`.replace(/[/\\:]/g, '_')
-            deleteProjectFiles(scopePath)
-          } else {
-            const scopePath = scope.identifier.replace(/[/\\:]/g, '_')
-            deleteProjectFiles(scopePath)
-          }
-        }
+      if (!scopePayload) {
+        return c.json({ error: 'Scope payload is required' }, 400)
       }
 
-      // Delete from database
-      const deletedCount = await vault.scopeService.deleteAllBranches(identifier)
-      return c.json({ message: `Deleted all branches with ${deletedCount} total entries` })
+      const scope = fromScopePayload(scopePayload as ScopePayload)
+
+      if (scope.type === 'global') {
+        return c.json({ error: 'Cannot delete global scope' }, 400)
+      }
+
+      if (scope.type === 'repository' && cascade) {
+        const allScopes = await vault.scopeService.getAllEntriesGrouped()
+        for (const existingScope of allScopes.keys()) {
+          if (existingScope.type === 'global') continue
+          if (existingScope.primaryPath === scope.primaryPath) {
+            deleteProjectFiles(getScopeStorageKey(existingScope))
+          }
+        }
+        const deletedCount = await vault.scopeService.deleteAllBranches(scope.primaryPath)
+        return c.json({ message: `Deleted repository scopes with ${deletedCount} entries` })
+      }
+
+      const scopePath = getScopeStorageKey(scope)
+      deleteProjectFiles(scopePath)
+
+      const deletedCount = await vault.scopeService.deleteScope(scope)
+      return c.json({ message: `Deleted scope with ${deletedCount} entries` })
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
     }

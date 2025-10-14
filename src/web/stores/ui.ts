@@ -32,12 +32,12 @@ export function setCollapsedRepos(repos: Set<string>) {
   saveCollapsedRepos(repos)
 }
 
-export function toggleRepoCollapse(identifier: string) {
+export function toggleRepoCollapse(primaryPath: string) {
   const current = new Set(collapsedRepos())
-  if (current.has(identifier)) {
-    current.delete(identifier)
+  if (current.has(primaryPath)) {
+    current.delete(primaryPath)
   } else {
-    current.add(identifier)
+    current.add(primaryPath)
   }
   setCollapsedRepos(current)
 }
