@@ -3,7 +3,6 @@ import ContentViewer from './components/ContentViewer'
 import EntryTable from './components/EntryTable'
 import GroupedEntryView from './components/GroupedEntryView'
 import Sidebar from './components/Sidebar'
-import { formatScopeForListDisplay } from './components/scopeDisplay.js'
 import { api, type VaultEntry } from './lib/api'
 import {
   displayMode,
@@ -39,7 +38,7 @@ export default function App() {
     if (!scope) return
 
     try {
-      const result = await api.getScopeEntries(scope.primaryPath, scope.branchName, showAllVersions())
+      const result = await api.getScopeEntries(scope, showAllVersions())
       setScopeEntries(result.entries || [])
     } catch (error) {
       console.error('Failed to load scope entries:', error)
@@ -51,20 +50,18 @@ export default function App() {
     const scope = selectedScope()
     if (!scope) return ''
 
-    // Convert selectedScope to Scope type
-    if (scope.primaryPath === 'global' && scope.branchName === 'global') {
-      return formatScopeForListDisplay({ type: 'global' })
-    } else if (scope.branchName === 'repository') {
-      return formatScopeForListDisplay({
-        type: 'repository',
-        primaryPath: scope.primaryPath,
-      })
-    } else {
-      return formatScopeForListDisplay({
-        type: 'branch',
-        primaryPath: scope.primaryPath,
-        branchName: scope.branchName,
-      })
+    switch (scope.type) {
+      case 'global':
+        return 'global'
+      case 'repository': {
+        const parts = scope.primaryPath.split('/')
+        return parts[parts.length - 1] || scope.primaryPath
+      }
+      case 'branch': {
+        const parts = scope.primaryPath.split('/')
+        const repoName = parts[parts.length - 1] || scope.primaryPath
+        return `${repoName}:${scope.branchName}`
+      }
     }
   }
 

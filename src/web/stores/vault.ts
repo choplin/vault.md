@@ -1,6 +1,6 @@
 import { createMemo, createSignal } from 'solid-js'
-import { api, type ScopeGroup, type VaultEntry } from '../lib/api'
-import { parseCurrentScope } from '../lib/grouping'
+import { api, type ScopeGroup, type ScopePayload, type VaultEntry } from '../lib/api'
+import { parseCurrentScope, scopeEquals } from '../lib/grouping'
 
 export type { ScopeGroup } from '../lib/api'
 
@@ -9,19 +9,16 @@ export interface RepositoryGroup {
   displayName: string
   branches: Array<{
     branchName: string
-    scope: string
+    scope: ScopePayload
     entries: VaultEntry[]
   }>
 }
 
-export const [currentScope, setCurrentScope] = createSignal<string>('')
+export const [currentScope, setCurrentScope] = createSignal<ScopePayload | null>(null)
 export const [scopes, setScopes] = createSignal<ScopeGroup[]>([])
-export const [selectedScope, setSelectedScope] = createSignal<{
-  primaryPath: string
-  branchName: string
-} | null>(null)
+export const [selectedScope, setSelectedScope] = createSignal<ScopePayload | null>(null)
 export const [selectedEntry, setSelectedEntry] = createSignal<{
-  scope: string
+  scope: ScopePayload
   key: string
   version?: number
 } | null>(null)
@@ -37,7 +34,7 @@ export const selectedEntryInfo = createMemo(() => {
   if (!selected) return null
 
   for (const scope of scopesList) {
-    const entry = scope.entries.find((e) => e.scope === selected.scope && e.key === selected.key)
+    const entry = scope.entries.find((e) => scopeEquals(e.scope, selected.scope) && e.key === selected.key)
     if (entry) return entry
   }
   return null
@@ -48,7 +45,7 @@ export function groupScopesIntoRepositories(scopesList: ScopeGroup[]): Repositor
   const groups: RepositoryGroup[] = []
 
   // First, add global scope if it exists
-  const globalScope = scopesList.find((s) => s.scope === 'global')
+  const globalScope = scopesList.find((s) => s.scope.type === 'global')
   if (globalScope) {
     groups.push({
       primaryPath: 'global',
@@ -67,7 +64,7 @@ export function groupScopesIntoRepositories(scopesList: ScopeGroup[]): Repositor
   const repoMap = new Map<string, RepositoryGroup>()
 
   for (const scopeGroup of scopesList) {
-    if (scopeGroup.scope === 'global') continue
+    if (scopeGroup.scope.type === 'global') continue
 
     const parsed = parseCurrentScope(scopeGroup.scope)
 
