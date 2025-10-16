@@ -128,6 +128,37 @@ describe('getSearchOrder', () => {
     })
   })
 
+  describe('worktree scope', () => {
+    it('should return worktree, repository, then global when current scope is worktree', () => {
+      const worktreeScope: Scope = {
+        type: 'worktree',
+        primaryPath: '/path/to/repo',
+        worktreeId: 'feature-x',
+        worktreePath: '/worktrees/feature-x',
+      }
+      const result = getSearchOrder(worktreeScope)
+
+      expect(result).toHaveLength(3)
+      expect(result.map((scope) => scope.type)).toEqual(['worktree', 'repository', 'global'])
+    })
+
+    it('should include repository fallback with consistent primary path', () => {
+      const worktreeScope: Scope = {
+        type: 'worktree',
+        primaryPath: '/workspace/repo',
+        worktreeId: 'feature-x',
+      }
+      const result = getSearchOrder(worktreeScope)
+
+      expect(result[0]).toEqual(worktreeScope)
+      expect(result[1]).toEqual({
+        type: 'repository',
+        primaryPath: '/workspace/repo',
+      })
+      expect(result[2]).toEqual({ type: 'global' })
+    })
+  })
+
   describe('edge cases', () => {
     it('should handle branch scope with complex paths', () => {
       const branchScope: Scope = {

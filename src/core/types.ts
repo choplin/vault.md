@@ -20,6 +20,7 @@ export interface VaultOptions {
   scope?: ScopeType
   repo?: string
   branch?: string
+  worktreeId?: string
 
   // Search options
   allScopes?: boolean

@@ -9,15 +9,17 @@ export interface EntryGroup {
 }
 
 export interface ScopeDisplayInfo {
-  type: 'global' | 'repository' | 'branch'
+  type: 'global' | 'repository' | 'branch' | 'worktree'
   displayName: string
   branchName?: string
+  worktreeId?: string
 }
 
 export interface ParsedScope {
-  type: 'global' | 'repository' | 'branch'
+  type: 'global' | 'repository' | 'branch' | 'worktree'
   primaryPath: string
   branchName?: string
+  worktreeId?: string
 }
 
 export function scopeToKey(scope: ScopePayload): string {
@@ -28,6 +30,8 @@ export function scopeToKey(scope: ScopePayload): string {
       return scope.primaryPath
     case 'branch':
       return `${scope.primaryPath}:${scope.branchName}`
+    case 'worktree':
+      return `${scope.primaryPath}@${scope.worktreeId}`
   }
 }
 
@@ -105,6 +109,8 @@ export function parseCurrentScope(scope: ScopePayload): ParsedScope {
       return { type: 'repository', primaryPath: scope.primaryPath }
     case 'branch':
       return { type: 'branch', primaryPath: scope.primaryPath, branchName: scope.branchName }
+    case 'worktree':
+      return { type: 'worktree', primaryPath: scope.primaryPath, worktreeId: scope.worktreeId }
   }
 }
 
@@ -118,7 +124,11 @@ export function formatScopeForDisplay(scope: ScopePayload): ScopeDisplayInfo {
     return { type: 'repository', displayName }
   }
 
-  return { type: 'branch', displayName, branchName: scope.branchName }
+  if (scope.type === 'branch') {
+    return { type: 'branch', displayName, branchName: scope.branchName }
+  }
+
+  return { type: 'worktree', displayName, worktreeId: scope.worktreeId }
 }
 
 export function groupEntriesByScope(entries: VaultEntry[]): RepositoryGroup[] {
@@ -144,6 +154,8 @@ export function groupEntriesByScope(entries: VaultEntry[]): RepositoryGroup[] {
       branchName = 'global'
     } else if (parsed.type === 'repository') {
       branchName = 'repository'
+    } else if (parsed.type === 'worktree') {
+      branchName = `@${parsed.worktreeId}`
     } else {
       branchName = parsed.branchName!
     }

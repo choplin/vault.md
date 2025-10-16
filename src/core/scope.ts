@@ -1,6 +1,6 @@
 import { basename } from 'node:path'
 
-export type Scope = GlobalScope | RepositoryScope | BranchScope
+export type Scope = GlobalScope | RepositoryScope | BranchScope | WorktreeScope
 export type ScopeType = Scope['type']
 
 export interface GlobalScope {
@@ -18,7 +18,14 @@ export interface BranchScope {
   branchName: string
 }
 
-const FILE_SANITIZE_PATTERN = /[/\\:?*"<>|]/g
+export interface WorktreeScope {
+  type: 'worktree'
+  primaryPath: string
+  worktreeId: string
+  worktreePath?: string
+}
+
+const FILE_SANITIZE_PATTERN = /[@/\\:?*"<>|]/g
 
 export function isGlobalScope(scope: Scope): scope is GlobalScope {
   return scope.type === 'global'
@@ -30,6 +37,10 @@ export function isRepositoryScope(scope: Scope): scope is RepositoryScope {
 
 export function isBranchScope(scope: Scope): scope is BranchScope {
   return scope.type === 'branch'
+}
+
+export function isWorktreeScope(scope: Scope): scope is WorktreeScope {
+  return scope.type === 'worktree'
 }
 
 export function validateScope(scope: Scope): void {
@@ -55,6 +66,19 @@ export function validateScope(scope: Scope): void {
         throw new Error('Branch name "global" is reserved for global scope')
       }
       return
+    case 'worktree':
+      ensureNonEmpty('Worktree scope requires a valid repository path', scope.primaryPath)
+      ensureNonEmpty('Worktree scope requires a worktree id', scope.worktreeId)
+      if (scope.primaryPath === 'global') {
+        throw new Error('Worktree scope cannot use "global" as repository path')
+      }
+      if (scope.worktreeId === 'global') {
+        throw new Error('Worktree id \"global\" is reserved for global scope')
+      }
+      if (scope.worktreeId === 'repository') {
+        throw new Error('Worktree id \"repository\" is reserved for repository scope')
+      }
+      return
   }
 }
 
@@ -70,6 +94,8 @@ export function formatScope(scope: Scope): string {
       return scope.primaryPath
     case 'branch':
       return `${scope.primaryPath}:${scope.branchName}`
+    case 'worktree':
+      return `${scope.primaryPath}@${scope.worktreeId}`
   }
 }
 
@@ -81,15 +107,25 @@ export function formatScopeShort(scope: Scope): string {
       return getDisplayName(scope.primaryPath)
     case 'branch':
       return `${getDisplayName(scope.primaryPath)}:${scope.branchName}`
+    case 'worktree':
+      return `${getDisplayName(scope.primaryPath)}@${scope.worktreeId}`
   }
 }
 
-export function getScopePrimaryPath(scope: RepositoryScope | BranchScope): string {
+export function getScopePrimaryPath(scope: RepositoryScope | BranchScope | WorktreeScope): string {
   return scope.primaryPath
 }
 
 export function getScopeBranchName(scope: BranchScope): string {
   return scope.branchName
+}
+
+export function getScopeWorktreeId(scope: WorktreeScope): string {
+  return scope.worktreeId
+}
+
+export function getScopeWorktreePath(scope: WorktreeScope): string | undefined {
+  return scope.worktreePath
 }
 
 function sanitizeForFile(value: string): string {

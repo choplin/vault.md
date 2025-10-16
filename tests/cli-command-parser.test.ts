@@ -3,8 +3,8 @@ import { ScopeType } from '../src/core/types.js'
 
 // Mock command option parsing logic
 function validateScopeOption(scope: string): ScopeType {
-  if (!['global', 'repository', 'branch'].includes(scope)) {
-    throw new Error(`Invalid scope: ${scope}. Valid scopes are: global, repository, branch`)
+  if (!['global', 'repository', 'branch', 'worktree'].includes(scope)) {
+    throw new Error(`Invalid scope: ${scope}. Valid scopes are: global, repository, branch, worktree`)
   }
   return scope as ScopeType
 }
@@ -12,6 +12,15 @@ function validateScopeOption(scope: string): ScopeType {
 function validateBranchOption(scope: ScopeType, branch?: string): void {
   if (branch && scope !== 'branch') {
     throw new Error('--branch option can only be used with --scope branch')
+  }
+}
+
+function validateWorktreeOption(scope: ScopeType, worktree?: string): void {
+  if (worktree && scope !== 'worktree') {
+    throw new Error('--worktree option can only be used with --scope worktree')
+  }
+  if (scope === 'worktree' && !worktree) {
+    throw new Error('Worktree scope requires --worktree')
   }
 }
 
@@ -29,11 +38,12 @@ describe('CLI Command Parser', () => {
       expect(validateScopeOption('global')).toBe('global')
       expect(validateScopeOption('repository')).toBe('repository')
       expect(validateScopeOption('branch')).toBe('branch')
+      expect(validateScopeOption('worktree')).toBe('worktree')
     })
 
     it('should reject invalid scope values', () => {
       expect(() => validateScopeOption('invalid')).toThrow('Invalid scope: invalid')
-      expect(() => validateScopeOption('local')).toThrow('Valid scopes are: global, repository, branch')
+      expect(() => validateScopeOption('local')).toThrow('Valid scopes are: global, repository, branch, worktree')
       expect(() => validateScopeOption('')).toThrow('Invalid scope:')
     })
   })
@@ -56,6 +66,22 @@ describe('CLI Command Parser', () => {
     })
   })
 
+  describe('validateWorktreeOption', () => {
+    it('should require worktree id when scope is worktree', () => {
+      expect(() => validateWorktreeOption('worktree', 'feature-x')).not.toThrow()
+      expect(() => validateWorktreeOption('worktree')).toThrow('Worktree scope requires --worktree')
+    })
+
+    it('should reject worktree option for non-worktree scopes', () => {
+      expect(() => validateWorktreeOption('global', 'tree')).toThrow(
+        '--worktree option can only be used with --scope worktree',
+      )
+      expect(() => validateWorktreeOption('branch', 'tree')).toThrow(
+        '--worktree option can only be used with --scope worktree',
+      )
+    })
+  })
+
   describe('validateRepoOption', () => {
     it('should return repo for repository scope', () => {
       expect(validateRepoOption('repository', '/custom/path')).toBe('/custom/path')
@@ -63,6 +89,10 @@ describe('CLI Command Parser', () => {
 
     it('should return repo for branch scope', () => {
       expect(validateRepoOption('branch', '/custom/path')).toBe('/custom/path')
+    })
+
+    it('should return repo for worktree scope', () => {
+      expect(validateRepoOption('worktree', '/custom/path')).toBe('/custom/path')
     })
 
     it('should return undefined for global scope with repo', () => {
@@ -73,6 +103,7 @@ describe('CLI Command Parser', () => {
       expect(validateRepoOption('global')).toBeUndefined()
       expect(validateRepoOption('repository')).toBeUndefined()
       expect(validateRepoOption('branch')).toBeUndefined()
+      expect(validateRepoOption('worktree')).toBeUndefined()
     })
   })
 })

@@ -70,7 +70,16 @@ export function groupScopesIntoRepositories(scopesList: ScopeGroup[]): Repositor
 
     const repoPrimaryPath = parsed.primaryPath
     const displayName = repoPrimaryPath.split('/').pop() || repoPrimaryPath
-    const branchName = parsed.type === 'repository' ? 'repository' : parsed.branchName!
+    let branchName: string
+    if (parsed.type === 'repository') {
+      branchName = 'repository'
+    } else if (parsed.type === 'branch') {
+      branchName = parsed.branchName!
+    } else if (parsed.type === 'worktree') {
+      branchName = `@${parsed.worktreeId}`
+    } else {
+      branchName = 'global'
+    }
 
     if (!repoMap.has(repoPrimaryPath)) {
       repoMap.set(repoPrimaryPath, {

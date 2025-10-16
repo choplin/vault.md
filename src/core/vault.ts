@@ -4,7 +4,14 @@ import { clearDatabase, closeDatabase, createDatabase, type DatabaseContext } fr
 import { EntryStatusRepository } from './database/repositories/entry-status.repository.js'
 import * as fs from './filesystem.js'
 import { getGitInfo } from './git.js'
-import { type BranchScope, formatScope, getScopeStorageKey, type RepositoryScope, type Scope } from './scope.js'
+import {
+  type BranchScope,
+  formatScope,
+  getScopeStorageKey,
+  type RepositoryScope,
+  type Scope,
+  type WorktreeScope,
+} from './scope.js'
 import { EntryService } from './services/entry.service.js'
 import { ScopeService } from './services/scope.service.js'
 import type { ListOptions, ScopeType, SetOptions, VaultEntry, VaultOptions } from './types.js'
@@ -21,6 +28,7 @@ export interface ResolveContextOptions {
   scope?: ScopeType
   repo?: string
   branch?: string
+  worktreeId?: string
 }
 
 export function resolveScope(options: ResolveContextOptions = {}): Scope {
@@ -68,8 +76,36 @@ export function resolveScope(options: ResolveContextOptions = {}): Scope {
       }
     }
 
+    case 'worktree': {
+      if (!gitInfo.isGitRepo) {
+        throw new Error('Not in a git repository. Worktree scope requires git repository')
+      }
+
+      const primaryPath = gitInfo.primaryWorktreePath
+      if (!primaryPath) {
+        throw new Error('Unable to resolve primary worktree path for worktree scope')
+      }
+
+      const worktreeId = options.worktreeId || gitInfo.worktreeId
+      if (!worktreeId) {
+        throw new Error('Unable to resolve worktree id for worktree scope')
+      }
+
+      const worktreeScope: WorktreeScope = {
+        type: 'worktree',
+        primaryPath,
+        worktreeId,
+      }
+
+      if (gitInfo.worktreePath) {
+        worktreeScope.worktreePath = gitInfo.worktreePath
+      }
+
+      return worktreeScope
+    }
+
     default:
-      throw new Error(`Invalid scope: ${scopeType}. Valid scopes are: global, repository, branch`)
+      throw new Error(`Invalid scope: ${scopeType}. Valid scopes are: global, repository, branch, worktree`)
   }
 }
 
@@ -174,6 +210,16 @@ export function getSearchOrder(currentScope: Scope): Scope[] {
       return [currentScope, { type: 'global' }]
 
     case 'branch':
+      return [
+        currentScope,
+        {
+          type: 'repository',
+          primaryPath: currentScope.primaryPath,
+        },
+        { type: 'global' },
+      ]
+
+    case 'worktree':
       return [
         currentScope,
         {
@@ -344,7 +390,14 @@ function areScopesEqual(scope1: Scope, scope2: Scope): boolean {
       const branch2 = scope2 as BranchScope
       return scope1.primaryPath === branch2.primaryPath && scope1.branchName === branch2.branchName
     }
+
+    case 'worktree': {
+      const worktree2 = scope2 as WorktreeScope
+      return scope1.primaryPath === worktree2.primaryPath && scope1.worktreeId === worktree2.worktreeId
+    }
   }
+
+  return false
 }
 
 // Move an entry between scopes
@@ -464,18 +517,12 @@ export async function deleteCurrentScope(ctx: VaultContext): Promise<number> {
   let scopePath: string
   let deletedCount: number
 
-  switch (ctx.scope.type) {
-    case 'repository':
-      scopePath = getScopeStorageKey(ctx.scope)
-      fs.deleteProjectFiles(scopePath)
-      deletedCount = await ctx.scopeService.deleteScope(ctx.scope)
-      break
-
-    case 'branch':
-      scopePath = getScopeStorageKey(ctx.scope)
-      fs.deleteProjectFiles(scopePath)
-      deletedCount = await ctx.scopeService.deleteScope(ctx.scope)
-      break
+  if (ctx.scope.type === 'repository' || ctx.scope.type === 'branch' || ctx.scope.type === 'worktree') {
+    scopePath = getScopeStorageKey(ctx.scope)
+    fs.deleteProjectFiles(scopePath)
+    deletedCount = await ctx.scopeService.deleteScope(ctx.scope)
+  } else {
+    throw new Error('Cannot delete scope for the current scope type')
   }
 
   return deletedCount
@@ -487,7 +534,10 @@ export async function deleteBranch(ctx: VaultContext, branch: string): Promise<n
     throw new Error('Cannot delete branches from global scope')
   }
 
-  const primaryPath = ctx.scope.type === 'branch' || ctx.scope.type === 'repository' ? ctx.scope.primaryPath : null
+  const primaryPath =
+    ctx.scope.type === 'branch' || ctx.scope.type === 'repository' || ctx.scope.type === 'worktree'
+      ? ctx.scope.primaryPath
+      : null
 
   if (!primaryPath) {
     throw new Error('No repository path found in current scope')
@@ -513,7 +563,10 @@ export async function deleteAllBranches(ctx: VaultContext): Promise<number> {
     throw new Error('Cannot delete branches from global scope')
   }
 
-  const primaryPath = ctx.scope.type === 'branch' || ctx.scope.type === 'repository' ? ctx.scope.primaryPath : null
+  const primaryPath =
+    ctx.scope.type === 'branch' || ctx.scope.type === 'repository' || ctx.scope.type === 'worktree'
+      ? ctx.scope.primaryPath
+      : null
 
   if (!primaryPath) {
     throw new Error('No repository path found in current scope')
@@ -598,6 +651,7 @@ function getAlternativeScope(_currentScope: Scope, options: VaultOptions): Scope
     scope: options.scope,
     repo: options.repo,
     branch: options.branch,
+    worktreeId: options.worktreeId,
   }
 
   return resolveScope(createOptions)

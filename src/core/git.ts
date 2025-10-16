@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 
 export interface GitInfo {
   isGitRepo: boolean
@@ -8,6 +8,8 @@ export interface GitInfo {
   currentWorktreePath?: string
   currentBranch?: string
   isWorktree?: boolean
+  worktreeId?: string
+  worktreePath?: string
 }
 
 /**
@@ -57,6 +59,10 @@ export function getGitInfo(dir: string = process.cwd()): GitInfo {
       primaryWorktreePath = gitRoot
     }
 
+    const worktreeBasename = basename(absoluteGitDir)
+    const worktreeId = worktreeBasename === '.git' ? 'primary' : worktreeBasename
+    const worktreePath = gitRoot
+
     // Get remote URL (optional)
     return {
       isGitRepo: true,
@@ -64,6 +70,8 @@ export function getGitInfo(dir: string = process.cwd()): GitInfo {
       currentWorktreePath: gitRoot,
       currentBranch: branch,
       isWorktree,
+      worktreeId,
+      worktreePath,
     }
   } catch {
     return { isGitRepo: false }

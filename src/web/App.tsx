@@ -62,6 +62,11 @@ export default function App() {
         const repoName = parts[parts.length - 1] || scope.primaryPath
         return `${repoName}:${scope.branchName}`
       }
+      case 'worktree': {
+        const parts = scope.primaryPath.split('/')
+        const repoName = parts[parts.length - 1] || scope.primaryPath
+        return `${repoName}@${scope.worktreeId}`
+      }
     }
   }
 

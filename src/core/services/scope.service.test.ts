@@ -43,12 +43,13 @@ describe('ScopeService', () => {
         { type: 'global' },
         { type: 'repository', primaryPath: '/repo1' },
         { type: 'branch', primaryPath: '/repo1', branchName: 'main' },
+        { type: 'worktree', primaryPath: '/repo1', worktreeId: 'tree-a' },
       ]
 
       scopes.forEach((scope) => scopeService.getOrCreate(scope))
 
       const all = scopeService.getAll()
-      expect(all).toHaveLength(3)
+      expect(all).toHaveLength(4)
     })
   })
 
@@ -172,6 +173,7 @@ describe('ScopeService', () => {
         { type: 'repository', primaryPath: '/test/repo' },
         { type: 'branch', primaryPath: '/test/repo', branchName: 'main' },
         { type: 'branch', primaryPath: '/test/repo', branchName: 'dev' },
+        { type: 'worktree', primaryPath: '/test/repo', worktreeId: 'tree-a' },
       ]
 
       const scopeIds = scopes.map((scope) => scopeService.getOrCreate(scope))
@@ -188,12 +190,15 @@ describe('ScopeService', () => {
       }
 
       const deletedVersions = await scopeService.deleteAllBranches('/test/repo')
-      expect(deletedVersions).toBe(3)
+      expect(deletedVersions).toBe(4)
 
       // Verify all scopes are deleted
       const remaining = scopeService.getAll()
       expect(
-        remaining.filter((s) => (s.type === 'repository' || s.type === 'branch') && s.primaryPath === '/test/repo'),
+        remaining.filter(
+          (s) =>
+            (s.type === 'repository' || s.type === 'branch' || s.type === 'worktree') && s.primaryPath === '/test/repo',
+        ),
       ).toHaveLength(0)
     })
 

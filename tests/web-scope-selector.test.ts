@@ -15,6 +15,11 @@ describe('Web UI – Scope helpers', () => {
       primaryPath: '/repo/path',
       branchName: 'feature',
     })
+    expect(parseCurrentScope({ type: 'worktree', primaryPath: '/repo/path', worktreeId: 'tree-1' })).toEqual({
+      type: 'worktree',
+      primaryPath: '/repo/path',
+      worktreeId: 'tree-1',
+    })
   })
 
   it('formats scope display labels', () => {
@@ -29,6 +34,13 @@ describe('Web UI – Scope helpers', () => {
       type: 'branch',
       displayName: 'test-repo',
       branchName: 'main',
+    })
+    expect(
+      formatScopeForDisplay({ type: 'worktree', primaryPath: '/work/test-repo', worktreeId: 'feature-x' }),
+    ).toEqual({
+      type: 'worktree',
+      displayName: 'test-repo',
+      worktreeId: 'feature-x',
     })
   })
 
@@ -46,13 +58,17 @@ describe('Web UI – Scope helpers', () => {
         scope: { type: 'branch', primaryPath: '/work/test-repo', branchName: 'dev' },
         entries: [],
       },
+      {
+        scope: { type: 'worktree', primaryPath: '/work/test-repo', worktreeId: 'feature-x' },
+        entries: [],
+      },
     ]
 
     const grouped = groupScopesIntoRepositories(scopeGroups)
 
     expect(grouped[0].primaryPath).toBe('global')
     expect(grouped[1].primaryPath).toBe('/work/test-repo')
-    expect(grouped[1].branches.map((b) => b.branchName)).toEqual(['repository', 'dev'])
+    expect(grouped[1].branches.map((b) => b.branchName)).toEqual(['repository', '@feature-x', 'dev'])
     expect(scopeEquals(grouped[1].branches[0].scope, { type: 'repository', primaryPath: '/work/test-repo' })).toBe(true)
   })
 
@@ -72,11 +88,18 @@ describe('Web UI – Scope helpers', () => {
         scope: { type: 'repository', primaryPath: '/work/test-repo' },
         version: 1,
       },
+      {
+        id: 3,
+        scopeId: 12,
+        key: 'todo',
+        scope: { type: 'worktree', primaryPath: '/work/test-repo', worktreeId: 'feature-x' },
+        version: 1,
+      },
     ])
 
     expect(grouped).toHaveLength(1)
     const repoGroup = grouped[0]
     expect(repoGroup.primaryPath).toBe('/work/test-repo')
-    expect(repoGroup.branches.map((b) => b.branchName)).toEqual(['repository', 'dev'])
+    expect(repoGroup.branches.map((b) => b.branchName)).toEqual(['repository', '@feature-x', 'dev'])
   })
 })

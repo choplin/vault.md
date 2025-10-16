@@ -286,6 +286,56 @@ describe('vault scope functions', () => {
     })
   })
 
+  describe('worktree scope', () => {
+    it('should create worktree scope for an active linked worktree', () => {
+      vi.mocked(gitUtils.getGitInfo).mockReturnValue({
+        isGitRepo: true,
+        primaryWorktreePath: '/test/repo',
+        currentBranch: 'feature-x',
+        currentWorktreePath: '/worktrees/feature-x',
+        isWorktree: true,
+        worktreeId: 'feature-x',
+        worktreePath: '/worktrees/feature-x',
+      })
+
+      const ctx = resolveVaultContext({ scope: 'worktree' })
+      try {
+        expect(ctx.scope.type).toBe('worktree')
+        if (ctx.scope.type === 'worktree') {
+          expect(ctx.scope.primaryPath).toBe('/test/repo')
+          expect(ctx.scope.worktreeId).toBe('feature-x')
+          expect(ctx.scope.worktreePath).toBe('/worktrees/feature-x')
+        }
+      } finally {
+        closeVault(ctx)
+      }
+    })
+
+    it('should treat the primary worktree as a worktree scope when no linked worktree is active', () => {
+      vi.mocked(gitUtils.getGitInfo).mockReturnValue({
+        isGitRepo: true,
+        primaryWorktreePath: '/test/repo',
+        currentBranch: 'main',
+        currentWorktreePath: '/test/repo',
+        isWorktree: false,
+        worktreeId: 'primary',
+        worktreePath: '/test/repo',
+      })
+
+      const ctx = resolveVaultContext({ scope: 'worktree' })
+      try {
+        expect(ctx.scope.type).toBe('worktree')
+        if (ctx.scope.type === 'worktree') {
+          expect(ctx.scope.primaryPath).toBe('/test/repo')
+          expect(ctx.scope.worktreeId).toBe('primary')
+          expect(ctx.scope.worktreePath).toBe('/test/repo')
+        }
+      } finally {
+        closeVault(ctx)
+      }
+    })
+  })
+
   describe('invalid scope', () => {
     it('should throw error for invalid scope type', () => {
       expect(() => resolveVaultContext({ scope: 'invalid' as any })).toThrow(
