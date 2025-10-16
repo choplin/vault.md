@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { BranchScope, RepositoryScope, Scope } from '../../scope.js'
+import type { BranchScope, RepositoryScope, Scope, WorktreeScope } from '../../scope.js'
 import { getScopeStorageKey } from '../../scope.js'
 import { closeDatabase, createDatabase, type DatabaseContext } from '../connection.js'
 import { ScopeRepository } from './scope.repository.js'
@@ -30,6 +30,11 @@ describe('ScopeRepository', () => {
       const scope: BranchScope = { type: 'branch', primaryPath: '/repo', branchName: 'feature/x' }
       expect(getScopeStorageKey(scope)).toBe('-repo-feature-x')
     })
+
+    it('includes worktree id for worktree scopes', () => {
+      const scope: WorktreeScope = { type: 'worktree', primaryPath: '/repo', worktreeId: 'feature-x' }
+      expect(getScopeStorageKey(scope)).toBe('-repo-feature-x')
+    })
   })
 
   describe('create', () => {
@@ -56,6 +61,18 @@ describe('ScopeRepository', () => {
       const id = repo.create(scope)
       expect(repo.findById(id)).toMatchObject(scope)
     })
+
+    it('persists worktree scope', () => {
+      const scope: WorktreeScope = {
+        type: 'worktree',
+        primaryPath: '/test/repo',
+        worktreeId: 'feature-x',
+        worktreePath: '/worktrees/feature-x',
+      }
+
+      const id = repo.create(scope)
+      expect(repo.findById(id)).toMatchObject(scope)
+    })
   })
 
   describe('getOrCreate', () => {
@@ -76,16 +93,18 @@ describe('ScopeRepository', () => {
         { type: 'repository', primaryPath: '/a/repo' },
         { type: 'branch', primaryPath: '/a/repo', branchName: 'main' },
         { type: 'branch', primaryPath: '/a/repo', branchName: 'dev' },
+        { type: 'worktree', primaryPath: '/a/repo', worktreeId: 'feature-x', worktreePath: '/worktrees/feature-x' },
       ]
       scopes.forEach((s) => repo.create(s))
 
       const all = repo.findAll()
-      expect(all.map((s) => s.type)).toEqual(['branch', 'branch', 'global', 'repository', 'repository'])
+      expect(all.map((s) => s.type)).toEqual(['branch', 'branch', 'global', 'repository', 'repository', 'worktree'])
       expect(all[0]).toMatchObject({ type: 'branch', primaryPath: '/a/repo', branchName: 'dev' })
       expect(all[1]).toMatchObject({ type: 'branch', primaryPath: '/a/repo', branchName: 'main' })
       expect(all[2]).toMatchObject({ type: 'global' })
       expect(all[3]).toMatchObject({ type: 'repository', primaryPath: '/a/repo' })
       expect(all[4]).toMatchObject({ type: 'repository', primaryPath: '/b/repo' })
+      expect(all[5]).toMatchObject({ type: 'worktree', worktreeId: 'feature-x' })
     })
   })
 
@@ -102,11 +121,12 @@ describe('ScopeRepository', () => {
         { type: 'repository', primaryPath: '/test/repo' },
         { type: 'branch', primaryPath: '/test/repo', branchName: 'main' },
         { type: 'branch', primaryPath: '/test/repo', branchName: 'dev' },
+        { type: 'worktree', primaryPath: '/test/repo', worktreeId: 'tree-a' },
       ]
       scopes.forEach((s) => repo.create(s))
 
       const removed = repo.deleteByPrimaryPath('/test/repo')
-      expect(removed).toBe(3)
+      expect(removed).toBe(4)
       expect(repo.findAll()).toHaveLength(0)
     })
 

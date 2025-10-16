@@ -36,6 +36,14 @@ function toPersistence(scope: Scope): ScopePersistence {
         worktree_path: null,
         branch_name: scope.branchName,
       }
+    case 'worktree':
+      return {
+        type: 'worktree',
+        primary_path: scope.primaryPath,
+        worktree_id: scope.worktreeId,
+        worktree_path: scope.worktreePath ?? null,
+        branch_name: null,
+      }
   }
 }
 
@@ -48,6 +56,15 @@ function toDomain(row: DbScopeRow): Scope {
     return {
       type: 'repository',
       primaryPath: row.primary_path || '',
+    }
+  }
+
+  if (row.type === 'worktree') {
+    return {
+      type: 'worktree',
+      primaryPath: row.primary_path || '',
+      worktreeId: row.worktree_id || '',
+      worktreePath: row.worktree_path || undefined,
     }
   }
 

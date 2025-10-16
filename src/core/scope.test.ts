@@ -7,15 +7,17 @@ import {
   isBranchScope,
   isGlobalScope,
   isRepositoryScope,
+  isWorktreeScope,
   type RepositoryScope,
   type ScopeType,
   validateScope,
+  type WorktreeScope,
 } from './scope.js'
 
 describe('scope type guards', () => {
   it('should include all scope types', () => {
-    const types: ScopeType[] = ['global', 'repository', 'branch']
-    expect(types).toEqual(['global', 'repository', 'branch'])
+    const types: ScopeType[] = ['global', 'repository', 'branch', 'worktree']
+    expect(types).toEqual(['global', 'repository', 'branch', 'worktree'])
   })
 
   it('should identify global scope', () => {
@@ -29,6 +31,7 @@ describe('scope type guards', () => {
     const scope: RepositoryScope = { type: 'repository', primaryPath: '/repo' }
     expect(isRepositoryScope(scope)).toBe(true)
     expect(isBranchScope(scope)).toBe(false)
+    expect(isWorktreeScope(scope)).toBe(false)
   })
 
   it('should identify branch scope', () => {
@@ -39,6 +42,18 @@ describe('scope type guards', () => {
     }
     expect(isBranchScope(scope)).toBe(true)
     expect(isRepositoryScope(scope)).toBe(false)
+    expect(isWorktreeScope(scope)).toBe(false)
+  })
+
+  it('should identify worktree scope', () => {
+    const scope: WorktreeScope = {
+      type: 'worktree',
+      primaryPath: '/repo',
+      worktreeId: 'feature-x',
+    }
+    expect(isWorktreeScope(scope)).toBe(true)
+    expect(isRepositoryScope(scope)).toBe(false)
+    expect(isBranchScope(scope)).toBe(false)
   })
 })
 
@@ -82,6 +97,25 @@ describe('validateScope', () => {
     const scope: BranchScope = { type: 'branch', primaryPath: '/repo', branchName: 'repository' }
     expect(() => validateScope(scope)).toThrow('Branch name "repository" is reserved for repository scope')
   })
+
+  it('accepts valid worktree scope', () => {
+    const scope: WorktreeScope = {
+      type: 'worktree',
+      primaryPath: '/repo',
+      worktreeId: 'feature-x',
+    }
+    expect(() => validateScope(scope)).not.toThrow()
+  })
+
+  it('throws on empty worktree primary path', () => {
+    const scope: WorktreeScope = { type: 'worktree', primaryPath: '', worktreeId: 'feature-x' }
+    expect(() => validateScope(scope)).toThrow('Worktree scope requires a valid repository path')
+  })
+
+  it('throws on empty worktree id', () => {
+    const scope: WorktreeScope = { type: 'worktree', primaryPath: '/repo', worktreeId: '' }
+    expect(() => validateScope(scope)).toThrow('Worktree scope requires a worktree id')
+  })
 })
 
 describe('formatScope', () => {
@@ -102,6 +136,12 @@ describe('formatScope', () => {
       '/home/user/repo:feature/x',
     )
   })
+
+  it('formats worktree scope', () => {
+    expect(formatScope({ type: 'worktree', primaryPath: '/home/user/repo', worktreeId: 'feature-x' })).toBe(
+      '/home/user/repo@feature-x',
+    )
+  })
 })
 
 describe('formatScopeShort', () => {
@@ -116,6 +156,12 @@ describe('formatScopeShort', () => {
   it('formats branch scope short', () => {
     expect(formatScopeShort({ type: 'branch', primaryPath: '/path/to/repo', branchName: 'feature/x' })).toBe(
       'repo:feature/x',
+    )
+  })
+
+  it('formats worktree scope short', () => {
+    expect(formatScopeShort({ type: 'worktree', primaryPath: '/path/to/repo', worktreeId: 'feature-x' })).toBe(
+      'repo@feature-x',
     )
   })
 })

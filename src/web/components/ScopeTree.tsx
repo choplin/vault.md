@@ -177,7 +177,7 @@ export default function ScopeTree(props: ScopeTreeProps) {
                           setDeleteConfirm({ type: 'scope', branchName: branch.branchName, scope: branch.scope })
                         }
                       >
-                        Delete vault for this branch
+                        Delete vault for this {branch.scope.type === 'worktree' ? 'worktree' : 'branch'}
                       </button>
                     </li>
                   </ul>
@@ -196,7 +196,7 @@ export default function ScopeTree(props: ScopeTreeProps) {
               <h3 class="font-bold text-lg">Confirm Deletion</h3>
               <p class="py-4">
                 {confirm().type === 'scope'
-                  ? `Delete vault for branch '${confirm().branchName}' of '${props.repository.displayName}'? This action cannot be undone.`
+                  ? `Delete vault for ${confirm().scope?.type === 'worktree' ? 'worktree' : confirm().scope?.type === 'branch' ? 'branch' : 'scope'} '${confirm().branchName}' of '${props.repository.displayName}'? This action cannot be undone.`
                   : `Delete entire vault for '${props.repository.displayName}'? This will remove all data across all branches.`}
               </p>
               <div class="modal-action">

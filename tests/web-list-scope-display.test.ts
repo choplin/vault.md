@@ -43,6 +43,15 @@ describe('Web UI List Scope Display', () => {
       expect(formatScopeForListDisplay(scope)).toBe('test-repo:feature/new-feature')
     })
 
+    it('should display repository@worktree for worktree scope', () => {
+      const scope: Scope = {
+        type: 'worktree',
+        primaryPath: '/home/user/projects/test-repo',
+        worktreeId: 'feature-login',
+      }
+      expect(formatScopeForListDisplay(scope)).toBe('test-repo@feature-login')
+    })
+
     it('should handle root directory as repository', () => {
       const scope: Scope = {
         type: 'repository',
@@ -73,6 +82,15 @@ describe('Web UI List Scope Display', () => {
         branchName: 'main',
       }
       expect(getScopeDisplayClass(scope)).toBe('badge-accent')
+    })
+
+    it('should return appropriate CSS class for worktree scope', () => {
+      const scope: Scope = {
+        type: 'worktree',
+        primaryPath: '/path/to/repo',
+        worktreeId: 'feature-login',
+      }
+      expect(getScopeDisplayClass(scope)).toBe('badge-info')
     })
   })
 })

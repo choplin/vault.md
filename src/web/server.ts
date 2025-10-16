@@ -20,6 +20,7 @@ export function createWebServer(vault: VaultContext) {
     | { type: 'global' }
     | { type: 'repository'; primaryPath: string }
     | { type: 'branch'; primaryPath: string; branchName: string }
+    | { type: 'worktree'; primaryPath: string; worktreeId: string; worktreePath?: string }
 
   const toScopePayload = (scope: Scope): ScopePayload => {
     switch (scope.type) {
@@ -33,6 +34,13 @@ export function createWebServer(vault: VaultContext) {
           primaryPath: scope.primaryPath,
           branchName: scope.branchName,
         }
+      case 'worktree':
+        return {
+          type: 'worktree',
+          primaryPath: scope.primaryPath,
+          worktreeId: scope.worktreeId,
+          worktreePath: scope.worktreePath,
+        }
     }
   }
 
@@ -42,6 +50,9 @@ export function createWebServer(vault: VaultContext) {
     }
     if (payload.type === 'branch' && (!payload.primaryPath || !payload.branchName)) {
       throw new Error('Branch scope requires primaryPath and branchName')
+    }
+    if (payload.type === 'worktree' && (!payload.primaryPath || !payload.worktreeId)) {
+      throw new Error('Worktree scope requires primaryPath and worktreeId')
     }
     return payload
   }
@@ -58,6 +69,13 @@ export function createWebServer(vault: VaultContext) {
           type: 'branch',
           primaryPath: scope.primaryPath,
           branchName: scope.branchName,
+        }
+      case 'worktree':
+        return {
+          type: 'worktree',
+          primaryPath: scope.primaryPath,
+          worktreeId: scope.worktreeId,
+          worktreePath: scope.worktreePath,
         }
     }
   }
@@ -166,10 +184,14 @@ export function createWebServer(vault: VaultContext) {
       } else if (scope.type === 'repository') {
         options.scope = 'repository'
         options.repo = scope.primaryPath
-      } else {
+      } else if (scope.type === 'branch') {
         options.scope = 'branch'
         options.repo = scope.primaryPath
         options.branch = scope.branchName
+      } else {
+        options.scope = 'worktree'
+        options.repo = scope.primaryPath
+        options.worktreeId = scope.worktreeId
       }
 
       const filePath = await getEntry(vault, key, options)

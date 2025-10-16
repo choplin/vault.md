@@ -4,6 +4,8 @@ import { ScopeType } from '../src/core/types.js'
 // Mock scope priority logic
 function getScopePriority(scope: ScopeType): number {
   switch (scope) {
+    case 'worktree':
+      return 4
     case 'branch':
       return 3
     case 'repository':
@@ -16,14 +18,18 @@ function getScopePriority(scope: ScopeType): number {
 }
 
 function getScopeSearchOrder(currentScope: ScopeType = 'repository'): ScopeType[] {
-  const scopes: ScopeType[] = ['branch', 'repository', 'global']
+  const scopes: ScopeType[] = ['worktree', 'branch', 'repository', 'global']
 
   // If current scope is branch, search in priority order
   if (currentScope === 'branch') {
-    return scopes
+    return scopes.filter((scope) => scope !== 'worktree')
   }
 
-  // If current scope is repository, skip branch
+  if (currentScope === 'worktree') {
+    return ['worktree', 'repository', 'global']
+  }
+
+  // If current scope is repository, skip worktree and branch
   if (currentScope === 'repository') {
     return ['repository', 'global']
   }
@@ -45,9 +51,14 @@ function findEntryInScopes(key: string, scopes: ScopeType[], entries: Map<string
 describe('Scope Priority Logic', () => {
   describe('getScopePriority', () => {
     it('should return correct priority values', () => {
+      expect(getScopePriority('worktree')).toBe(4)
       expect(getScopePriority('branch')).toBe(3)
       expect(getScopePriority('repository')).toBe(2)
       expect(getScopePriority('global')).toBe(1)
+    })
+
+    it('should prioritize worktree over branch', () => {
+      expect(getScopePriority('worktree')).toBeGreaterThan(getScopePriority('branch'))
     })
 
     it('should prioritize branch over repository', () => {
@@ -60,6 +71,10 @@ describe('Scope Priority Logic', () => {
   })
 
   describe('getScopeSearchOrder', () => {
+    it('should return worktree fallback order when in worktree scope', () => {
+      expect(getScopeSearchOrder('worktree')).toEqual(['worktree', 'repository', 'global'])
+    })
+
     it('should return full priority order when in branch scope', () => {
       expect(getScopeSearchOrder('branch')).toEqual(['branch', 'repository', 'global'])
     })
@@ -83,10 +98,11 @@ describe('Scope Priority Logic', () => {
       ['repository:config', 'repository'],
       ['branch:feature', 'branch'],
       ['repository:shared', 'repository'],
+      ['worktree:feature', 'worktree'],
     ])
 
     it('should find entry in highest priority scope', () => {
-      const scopes: ScopeType[] = ['branch', 'repository', 'global']
+      const scopes: ScopeType[] = ['worktree', 'branch', 'repository', 'global']
       expect(findEntryInScopes('config', scopes, entries)).toBe('repository')
     })
 
@@ -103,6 +119,11 @@ describe('Scope Priority Logic', () => {
     it('should find branch-specific entries', () => {
       const scopes: ScopeType[] = ['branch', 'repository', 'global']
       expect(findEntryInScopes('feature', scopes, entries)).toBe('branch')
+    })
+
+    it('should find worktree-specific entries first', () => {
+      const scopes: ScopeType[] = ['worktree', 'branch', 'repository', 'global']
+      expect(findEntryInScopes('feature', scopes, entries)).toBe('worktree')
     })
   })
 })

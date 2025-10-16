@@ -13,6 +13,11 @@ export function formatScopeForListDisplay(scope: Scope): string {
       const repoName = parts[parts.length - 1] || scope.primaryPath
       return `${repoName}:${scope.branchName}`
     }
+    case 'worktree': {
+      const parts = scope.primaryPath.split('/')
+      const repoName = parts[parts.length - 1] || scope.primaryPath
+      return `${repoName}@${scope.worktreeId}`
+    }
   }
 }
 
@@ -24,5 +29,7 @@ export function getScopeDisplayClass(scope: Scope): string {
       return 'badge-secondary'
     case 'branch':
       return 'badge-accent'
+    case 'worktree':
+      return 'badge-info'
   }
 }

@@ -2,6 +2,7 @@ export type ScopePayload =
   | { type: 'global' }
   | { type: 'repository'; primaryPath: string }
   | { type: 'branch'; primaryPath: string; branchName: string }
+  | { type: 'worktree'; primaryPath: string; worktreeId: string; worktreePath?: string }
 
 export interface VaultEntry {
   id?: number
