@@ -87,7 +87,9 @@ func ClearDatabase(ctx *Context) error {
 
 	for _, stmt := range statements {
 		if _, err := tx.Exec(stmt); err != nil {
-			tx.Rollback()
+			if rbErr := tx.Rollback(); rbErr != nil {
+				return fmt.Errorf("failed to execute %s: %w (rollback error: %v)", stmt, err, rbErr)
+			}
 			return fmt.Errorf("failed to execute %s: %w", stmt, err)
 		}
 	}
@@ -189,7 +191,9 @@ func runMigration(db *sql.DB, version int) error {
 
 		for _, stmt := range stmts {
 			if _, err := tx.Exec(stmt); err != nil {
-				tx.Rollback()
+				if rbErr := tx.Rollback(); rbErr != nil {
+					return fmt.Errorf("migration statement failed: %w (rollback error: %v)", err, rbErr)
+				}
 				return fmt.Errorf("migration statement failed: %w", err)
 			}
 		}

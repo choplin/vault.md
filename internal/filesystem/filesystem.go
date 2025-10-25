@@ -14,9 +14,7 @@ import (
 	"github.com/vault-md/vaultmd/internal/config"
 )
 
-var (
-	ensureOnce sync.Once
-)
+var ensureOnce sync.Once
 
 // ensureObjectsDir initialises the objects directory the first time it is needed.
 func ensureObjectsDir() error {
