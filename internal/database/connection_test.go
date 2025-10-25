@@ -31,18 +31,26 @@ func setupTestDB(t *testing.T) *Context {
 func TestDatabaseCreationAndMigration(t *testing.T) {
 	ctx := setupTestDB(t)
 
+	if ctx.Queries == nil {
+		t.Fatal("expected sqlc queries helper to be initialised")
+	}
+
 	dbPath := filepath.Join(config.GetVaultDir(), "index.db")
 	if _, err := os.Stat(dbPath); err != nil {
 		t.Fatalf("expected database file to exist at %s: %v", dbPath, err)
 	}
 
-	var userVersion int
-	if err := ctx.DB.QueryRow("PRAGMA user_version").Scan(&userVersion); err != nil {
-		t.Fatalf("failed to read user_version: %v", err)
+	var (
+		version int
+		dirty   bool
+	)
+	err := ctx.DB.QueryRow(`SELECT version, dirty FROM schema_migrations ORDER BY version DESC LIMIT 1`).Scan(&version, &dirty)
+	if err != nil {
+		t.Fatalf("failed to read schema_migrations: %v", err)
 	}
 
-	if userVersion != currentVersion {
-		t.Fatalf("expected user_version %d, got %d", currentVersion, userVersion)
+	if version != 1 || dirty {
+		t.Fatalf("expected schema version 1 and clean state, got version=%d dirty=%t", version, dirty)
 	}
 
 	tables := []string{"scopes", "entries", "entry_status", "versions"}

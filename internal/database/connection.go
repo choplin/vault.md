@@ -1,21 +1,28 @@
 package database
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/sqlite"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
+
+	"github.com/vault-md/vaultmd/db/migrations"
 	"github.com/vault-md/vaultmd/internal/config"
+	sqldb "github.com/vault-md/vaultmd/internal/database/sqlc"
 
 	_ "modernc.org/sqlite"
 )
 
 type Context struct {
-	DB *sql.DB
+	DB      *sql.DB
+	Queries *sqldb.Queries
 }
-
-const currentVersion = 1
 
 func CreateDatabase(dbPath string) (*Context, error) {
 	path := dbPath
@@ -57,12 +64,15 @@ func CreateDatabase(dbPath string) (*Context, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	if err := migrate(db); err != nil {
+	if err := runMigrations(db); err != nil {
 		db.Close()
 		return nil, err
 	}
 
-	return &Context{DB: db}, nil
+	return &Context{
+		DB:      db,
+		Queries: sqldb.New(db),
+	}, nil
 }
 
 func CloseDatabase(ctx *Context) error {
@@ -73,136 +83,79 @@ func CloseDatabase(ctx *Context) error {
 }
 
 func ClearDatabase(ctx *Context) error {
-	tx, err := ctx.DB.Begin()
+	if ctx == nil || ctx.DB == nil {
+		return nil
+	}
+
+	tx, err := ctx.DB.BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	statements := []string{
-		"DELETE FROM versions",
-		"DELETE FROM entry_status",
-		"DELETE FROM entries",
-		"DELETE FROM scopes",
+	queries := ctx.Queries
+	if queries == nil {
+		queries = sqldb.New(ctx.DB)
+	}
+	queries = queries.WithTx(tx)
+	bg := context.Background()
+
+	if err := queries.DeleteAllVersions(bg); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("failed to delete versions: %w (rollback error: %v)", err, rbErr)
+		}
+		return fmt.Errorf("failed to delete versions: %w", err)
 	}
 
-	for _, stmt := range statements {
-		if _, err := tx.Exec(stmt); err != nil {
-			if rbErr := tx.Rollback(); rbErr != nil {
-				return fmt.Errorf("failed to execute %s: %w (rollback error: %v)", stmt, err, rbErr)
-			}
-			return fmt.Errorf("failed to execute %s: %w", stmt, err)
+	if err := queries.DeleteAllEntryStatus(bg); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("failed to delete entry_status: %w (rollback error: %v)", err, rbErr)
 		}
+		return fmt.Errorf("failed to delete entry_status: %w", err)
+	}
+
+	if err := queries.DeleteAllEntries(bg); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("failed to delete entries: %w (rollback error: %v)", err, rbErr)
+		}
+		return fmt.Errorf("failed to delete entries: %w", err)
+	}
+
+	if err := queries.DeleteAllScopes(bg); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("failed to delete scopes: %w (rollback error: %v)", err, rbErr)
+		}
+		return fmt.Errorf("failed to delete scopes: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit clear transaction: %w", err)
 	}
+
 	return nil
 }
 
-func migrate(db *sql.DB) error {
-	current, err := getSchemaVersion(db)
+func runMigrations(db *sql.DB) error {
+	driver, err := sqlite.WithInstance(db, &sqlite.Config{})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to initialise migrate driver: %w", err)
 	}
 
-	switch {
-	case current < currentVersion:
-		for v := current + 1; v <= currentVersion; v++ {
-			if err := runMigration(db, v); err != nil {
-				return err
-			}
-		}
-		if err := setSchemaVersion(db, currentVersion); err != nil {
-			return err
-		}
-	case current > currentVersion:
-		return fmt.Errorf("database schema version %d is newer than expected %d", current, currentVersion)
+	sourceDriver, err := iofs.New(migrations.Files, ".")
+	if err != nil {
+		return fmt.Errorf("failed to load embedded migrations: %w", err)
+	}
+	defer func() {
+		_ = sourceDriver.Close()
+	}()
+
+	migrator, err := migrate.NewWithInstance("iofs", sourceDriver, "sqlite", driver)
+	if err != nil {
+		return fmt.Errorf("failed to create migrator: %w", err)
+	}
+
+	if err := migrator.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
 
 	return nil
-}
-
-func getSchemaVersion(db *sql.DB) (int, error) {
-	var version int
-	if err := db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
-		return 0, fmt.Errorf("failed to read schema version: %w", err)
-	}
-	return version, nil
-}
-
-func setSchemaVersion(db *sql.DB, version int) error {
-	if _, err := db.Exec(fmt.Sprintf("PRAGMA user_version = %d", version)); err != nil {
-		return fmt.Errorf("failed to set schema version: %w", err)
-	}
-	return nil
-}
-
-func runMigration(db *sql.DB, version int) error {
-	switch version {
-	case 1:
-		tx, err := db.Begin()
-		if err != nil {
-			return fmt.Errorf("failed to begin migration transaction: %w", err)
-		}
-
-		stmts := []string{
-			`CREATE TABLE scopes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                type TEXT NOT NULL,
-                primary_path TEXT,
-                worktree_id TEXT,
-                worktree_path TEXT,
-                branch_name TEXT,
-                scope_path TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(type, primary_path, worktree_id, branch_name),
-                UNIQUE(scope_path)
-            )`,
-			`CREATE INDEX idx_scopes_lookup ON scopes(type, primary_path, branch_name)`,
-			`CREATE INDEX idx_scopes_primary_path ON scopes(primary_path)`,
-			`CREATE TABLE entries (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                scope_id INTEGER NOT NULL REFERENCES scopes(id),
-                key TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(scope_id, key)
-            )`,
-			`CREATE INDEX idx_entries_lookup ON entries(scope_id, key)`,
-			`CREATE TABLE entry_status (
-                entry_id INTEGER PRIMARY KEY REFERENCES entries(id),
-                is_archived INTEGER DEFAULT 0,
-                current_version INTEGER DEFAULT 0,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )`,
-			`CREATE TABLE versions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                entry_id INTEGER NOT NULL REFERENCES entries(id),
-                version INTEGER NOT NULL,
-                file_path TEXT NOT NULL,
-                hash TEXT NOT NULL,
-                description TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(entry_id, version)
-            )`,
-			`CREATE INDEX idx_versions_lookup ON versions(entry_id, version DESC)`,
-		}
-
-		for _, stmt := range stmts {
-			if _, err := tx.Exec(stmt); err != nil {
-				if rbErr := tx.Rollback(); rbErr != nil {
-					return fmt.Errorf("migration statement failed: %w (rollback error: %v)", err, rbErr)
-				}
-				return fmt.Errorf("migration statement failed: %w", err)
-			}
-		}
-
-		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("failed to commit migration: %w", err)
-		}
-		return nil
-	default:
-		return fmt.Errorf("unknown migration version %d", version)
-	}
 }

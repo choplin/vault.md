@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/adrg/xdg"
 )
 
 // GetVaultDir resolves the base directory for all vault storage. It mirrors the
@@ -14,16 +16,22 @@ func GetVaultDir() string {
 		return explicit
 	}
 
-	xdgDataHome := os.Getenv("XDG_DATA_HOME")
-	if xdgDataHome == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return filepath.Join(os.TempDir(), "vault.md")
+	xdg.Reload()
+
+	dataHome := xdg.DataHome
+	if dataHome == "" {
+		home := xdg.Home
+		if home == "" {
+			var err error
+			home, err = os.UserHomeDir()
+			if err != nil {
+				return filepath.Join(os.TempDir(), "vault.md")
+			}
 		}
-		xdgDataHome = filepath.Join(home, ".local", "share")
+		dataHome = filepath.Join(home, ".local", "share")
 	}
 
-	return filepath.Join(xdgDataHome, "vault.md")
+	return filepath.Join(dataHome, "vault.md")
 }
 
 // GetDbPath returns the absolute path to the SQLite database file.

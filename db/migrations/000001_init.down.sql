@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS versions;
+DROP TABLE IF EXISTS entry_status;
+DROP TABLE IF EXISTS entries;
+DROP TABLE IF EXISTS scopes;
