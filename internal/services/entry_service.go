@@ -12,23 +12,56 @@ import (
 
 // EntryService exposes high-level operations for scoped entries using sqlc-generated queries.
 type EntryService struct {
-	ctx              *database.Context
-	scopedEntryQuery *scopedEntryQuery
+	ctx *database.Context
 }
 
 func NewEntryService(ctx *database.Context) *EntryService {
 	return &EntryService{
-		ctx:              ctx,
-		scopedEntryQuery: newScopedEntryQuery(ctx),
+		ctx: ctx,
 	}
 }
 
 func (s *EntryService) GetLatest(ctx context.Context, scopeID int64, key string) (*database.ScopedEntryRecord, error) {
-	return s.scopedEntryQuery.getLatest(ctx, scopeID, key)
+	q, err := s.queries()
+	if err != nil {
+		return nil, err
+	}
+
+	row, err := q.GetScopedEntryLatest(ctx, sqldb.GetScopedEntryLatestParams{
+		ScopeID: scopeID,
+		Key:     key,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	record := database.ScopedEntryRecordFromRow(row.EntryID, row.ScopeID, row.Key, row.EntryCreatedAt, row.IsArchived, row.Version, row.FilePath, row.Hash, row.Description)
+	return &record, nil
 }
 
 func (s *EntryService) GetByVersion(ctx context.Context, scopeID int64, key string, version int64) (*database.ScopedEntryRecord, error) {
-	return s.scopedEntryQuery.getByVersion(ctx, scopeID, key, version)
+	q, err := s.queries()
+	if err != nil {
+		return nil, err
+	}
+
+	row, err := q.GetScopedEntryByVersion(ctx, sqldb.GetScopedEntryByVersionParams{
+		ScopeID: scopeID,
+		Key:     key,
+		Version: version,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	record := database.ScopedEntryRecordFromRow(row.EntryID, row.ScopeID, row.Key, row.EntryCreatedAt, row.IsArchived, row.Version, row.FilePath, row.Hash, row.Description)
+	return &record, nil
 }
 
 func (s *EntryService) GetNextVersion(ctx context.Context, scopeID int64, key string) (int64, error) {
@@ -144,7 +177,40 @@ func (s *EntryService) Create(ctx context.Context, entry database.ScopedEntryRec
 }
 
 func (s *EntryService) List(ctx context.Context, scopeID int64, includeArchived, allVersions bool) ([]database.ScopedEntryRecord, error) {
-	return s.scopedEntryQuery.list(ctx, scopeID, includeArchived, allVersions)
+	q, err := s.queries()
+	if err != nil {
+		return nil, err
+	}
+
+	if allVersions {
+		rows, err := q.ListScopedEntriesAllVersions(ctx, sqldb.ListScopedEntriesAllVersionsParams{
+			ScopeID:         scopeID,
+			IncludeArchived: includeArchived,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		result := make([]database.ScopedEntryRecord, 0, len(rows))
+		for _, row := range rows {
+			result = append(result, database.ScopedEntryRecordFromRow(row.EntryID, row.ScopeID, row.Key, row.EntryCreatedAt, row.IsArchived, row.Version, row.FilePath, row.Hash, row.Description))
+		}
+		return result, nil
+	}
+
+	rows, err := q.ListScopedEntriesLatest(ctx, sqldb.ListScopedEntriesLatestParams{
+		ScopeID:         scopeID,
+		IncludeArchived: includeArchived,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]database.ScopedEntryRecord, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, database.ScopedEntryRecordFromRow(row.EntryID, row.ScopeID, row.Key, row.EntryCreatedAt, row.IsArchived, row.Version, row.FilePath, row.Hash, row.Description))
+	}
+	return result, nil
 }
 
 func (s *EntryService) DeleteVersion(ctx context.Context, scopeID int64, key string, version int64) (bool, error) {

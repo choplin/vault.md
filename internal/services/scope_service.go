@@ -13,15 +13,11 @@ import (
 
 // ScopeService provides higher-level operations on scopes and their entries.
 type ScopeService struct {
-	ctx              *database.Context
-	scopedEntryQuery *scopedEntryQuery
+	ctx *database.Context
 }
 
 func NewScopeService(ctx *database.Context) *ScopeService {
-	return &ScopeService{
-		ctx:              ctx,
-		scopedEntryQuery: newScopedEntryQuery(ctx),
-	}
+	return &ScopeService{ctx: ctx}
 }
 
 func (s *ScopeService) GetOrCreate(ctx context.Context, sc scope.Scope) (int64, error) {
@@ -129,7 +125,7 @@ func (s *ScopeService) GetAllEntriesGrouped(ctx context.Context) (map[scope.Scop
 		scopeIDs[i] = id
 	}
 
-	entriesByScope, err := s.scopedEntryQuery.listByScopes(ctx, scopeIDs)
+	entriesByScope, err := s.listEntriesByScopes(ctx, scopeIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -225,6 +221,32 @@ func (s *ScopeService) DeleteAllBranches(ctx context.Context, primaryPath string
 		return 0, err
 	}
 	return totalVersions, nil
+}
+
+func (s *ScopeService) listEntriesByScopes(ctx context.Context, scopeIDs []int64) (map[int64][]database.ScopedEntryRecord, error) {
+	q, err := s.queries()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[int64][]database.ScopedEntryRecord, len(scopeIDs))
+	for _, scopeID := range scopeIDs {
+		rows, err := q.ListScopedEntriesLatest(ctx, sqldb.ListScopedEntriesLatestParams{
+			ScopeID:         scopeID,
+			IncludeArchived: false,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		entries := make([]database.ScopedEntryRecord, 0, len(rows))
+		for _, row := range rows {
+			entries = append(entries, database.ScopedEntryRecordFromRow(row.EntryID, row.ScopeID, row.Key, row.EntryCreatedAt, row.IsArchived, row.Version, row.FilePath, row.Hash, row.Description))
+		}
+		result[scopeID] = entries
+	}
+
+	return result, nil
 }
 
 func (s *ScopeService) withTx(ctx context.Context, fn func(context.Context, *sqldb.Queries) error) error {

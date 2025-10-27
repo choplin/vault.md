@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"os"
+)
 
 func main() {
-	fmt.Println("vault CLI (Go port) - work in progress")
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

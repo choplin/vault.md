@@ -3,8 +3,6 @@ package database
 import (
 	"database/sql"
 	"time"
-
-	sqldb "github.com/vault-md/vaultmd/internal/database/sqlc"
 )
 
 func nullString(value string) sql.NullString {
@@ -12,24 +10,6 @@ func nullString(value string) sql.NullString {
 		return sql.NullString{}
 	}
 	return sql.NullString{String: value, Valid: true}
-}
-
-func stringPtrToNullString(value *string) sql.NullString {
-	if value == nil {
-		return sql.NullString{}
-	}
-	if *value == "" {
-		return sql.NullString{}
-	}
-	return sql.NullString{String: *value, Valid: true}
-}
-
-func nullInt64(value int64) sql.NullInt64 {
-	return sql.NullInt64{Int64: value, Valid: true}
-}
-
-func boolToNullInt64(value bool) sql.NullInt64 {
-	return sql.NullInt64{Int64: boolToInt64(value), Valid: true}
 }
 
 func optionalString(ns sql.NullString) string {
@@ -58,24 +38,4 @@ func optionalTime(nt sql.NullTime) time.Time {
 		return time.Time{}
 	}
 	return nt.Time
-}
-
-func boolToInt64(value bool) int64 {
-	if value {
-		return 1
-	}
-	return 0
-}
-
-func queriesFromContext(ctx *Context) *sqldb.Queries {
-	if ctx == nil {
-		return nil
-	}
-	if ctx.Queries != nil {
-		return ctx.Queries
-	}
-	if ctx.DB == nil {
-		return nil
-	}
-	return sqldb.New(ctx.DB)
 }
