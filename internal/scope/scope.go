@@ -60,45 +60,45 @@ func Validate(s Scope) error {
 	case ScopeGlobal:
 		return nil
 	case ScopeRepository:
-		if err := ensureNonEmpty("Repository scope requires a valid repository path", s.PrimaryPath); err != nil {
+		if err := ensureNonEmpty("repository scope requires a valid repository path", s.PrimaryPath); err != nil {
 			return err
 		}
 		if s.PrimaryPath == string(ScopeGlobal) {
-			return errors.New("Repository path cannot be \"global\" (reserved for global scope)")
+			return errors.New("repository path cannot be \"global\" (reserved for global scope)")
 		}
 		return nil
 	case ScopeBranch:
-		if err := ensureNonEmpty("Branch scope requires a valid repository path", s.PrimaryPath); err != nil {
+		if err := ensureNonEmpty("branch scope requires a valid repository path", s.PrimaryPath); err != nil {
 			return err
 		}
-		if err := ensureNonEmpty("Branch scope requires a valid branch name", s.BranchName); err != nil {
+		if err := ensureNonEmpty("branch scope requires a valid branch name", s.BranchName); err != nil {
 			return err
 		}
 		if s.PrimaryPath == string(ScopeGlobal) {
-			return errors.New("Branch scope cannot use \"global\" as repository path")
+			return errors.New("branch scope cannot use \"global\" as repository path")
 		}
 		if s.BranchName == string(ScopeRepository) {
-			return errors.New("Branch name \"repository\" is reserved for repository scope")
+			return errors.New("branch name \"repository\" is reserved for repository scope")
 		}
 		if s.BranchName == string(ScopeGlobal) {
-			return errors.New("Branch name \"global\" is reserved for global scope")
+			return errors.New("branch name \"global\" is reserved for global scope")
 		}
 		return nil
 	case ScopeWorktree:
-		if err := ensureNonEmpty("Worktree scope requires a valid repository path", s.PrimaryPath); err != nil {
+		if err := ensureNonEmpty("worktree scope requires a valid repository path", s.PrimaryPath); err != nil {
 			return err
 		}
-		if err := ensureNonEmpty("Worktree scope requires a worktree id", s.WorktreeID); err != nil {
+		if err := ensureNonEmpty("worktree scope requires a worktree id", s.WorktreeID); err != nil {
 			return err
 		}
 		if s.PrimaryPath == string(ScopeGlobal) {
-			return errors.New("Worktree scope cannot use \"global\" as repository path")
+			return errors.New("worktree scope cannot use \"global\" as repository path")
 		}
 		if s.WorktreeID == string(ScopeGlobal) {
-			return errors.New("Worktree id \"global\" is reserved for global scope")
+			return errors.New("worktree id \"global\" is reserved for global scope")
 		}
 		if s.WorktreeID == string(ScopeRepository) {
-			return errors.New("Worktree id \"repository\" is reserved for repository scope")
+			return errors.New("worktree id \"repository\" is reserved for repository scope")
 		}
 		return nil
 	default:

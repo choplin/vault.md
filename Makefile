@@ -19,6 +19,7 @@ fmt:
 
 lint:
 	go tool github.com/golangci/golangci-lint/cmd/golangci-lint run ./...
+	go tool honnef.co/go/tools/cmd/staticcheck ./...
 
 clean:
 	rm -rf bin

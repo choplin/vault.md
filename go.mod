@@ -210,5 +210,6 @@ require (
 
 tool (
 	github.com/golangci/golangci-lint/cmd/golangci-lint
+	honnef.co/go/tools/cmd/staticcheck
 	mvdan.cc/gofumpt
 )
