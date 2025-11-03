@@ -34,8 +34,8 @@ func GetVaultDir() string {
 	return filepath.Join(dataHome, "vault.md")
 }
 
-// GetDbPath returns the absolute path to the SQLite database file.
-func GetDbPath() string {
+// GetDBPath returns the absolute path to the SQLite database file.
+func GetDBPath() string {
 	return filepath.Join(GetVaultDir(), "index.db")
 }
 

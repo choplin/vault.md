@@ -37,8 +37,8 @@ func TestGetDbAndObjectsPath(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("VAULT_DIR", tmpDir)
 
-	if got, want := GetDbPath(), filepath.Join(tmpDir, "index.db"); got != want {
-		t.Fatalf("GetDbPath expected %q, got %q", want, got)
+	if got, want := GetDBPath(), filepath.Join(tmpDir, "index.db"); got != want {
+		t.Fatalf("GetDBPath expected %q, got %q", want, got)
 	}
 
 	if got, want := GetObjectsDir(), filepath.Join(tmpDir, "objects"); got != want {

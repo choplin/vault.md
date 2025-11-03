@@ -149,7 +149,7 @@ func urlEncode(value string) string {
 	return strings.ReplaceAll(url.QueryEscape(value), "+", "%20")
 }
 
-// WalkProjectFiles provides a helper for iterating project files with custom logic.
+// WalkFunc explores each entry under the project's object directory.
 type WalkFunc func(path string, d fs.DirEntry) error
 
 func WalkProjectFiles(project string, fn WalkFunc) error {

@@ -27,7 +27,7 @@ type Context struct {
 func CreateDatabase(dbPath string) (*Context, error) {
 	path := dbPath
 	if path == "" {
-		path = config.GetDbPath()
+		path = config.GetDBPath()
 	}
 
 	useMemory := path == ":memory:"
