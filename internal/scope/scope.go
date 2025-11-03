@@ -17,6 +17,8 @@ const (
 	ScopeWorktree   ScopeType = "worktree"
 )
 
+// Scope represents the contextual unit for entries. Field expectations depend on Type
+// and are documented in Validate.
 type Scope struct {
 	Type         ScopeType
 	PrimaryPath  string
@@ -48,6 +50,11 @@ func IsRepository(s Scope) bool { return s.Type == ScopeRepository }
 func IsBranch(s Scope) bool     { return s.Type == ScopeBranch }
 func IsWorktree(s Scope) bool   { return s.Type == ScopeWorktree }
 
+// Validate enforces that each scope type carries the required fields:
+//   - ScopeGlobal: no additional fields.
+//   - ScopeRepository: PrimaryPath must be set.
+//   - ScopeBranch: PrimaryPath and BranchName must be set.
+//   - ScopeWorktree: PrimaryPath and WorktreeID must be set; WorktreePath is optional metadata.
 func Validate(s Scope) error {
 	switch s.Type {
 	case ScopeGlobal:
