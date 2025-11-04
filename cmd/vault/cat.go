@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/vault-md/vaultmd/internal/usecase"
 )
 
-func newGetCmd() *cobra.Command {
+func newCatCmd() *cobra.Command {
 	var (
 		versionFlag int
 		allScopes   bool
@@ -21,8 +22,8 @@ func newGetCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "get <key>",
-		Short: "Get file path from the vault",
+		Use:   "cat <key>",
+		Short: "Output entry content to stdout",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
@@ -66,7 +67,14 @@ func newGetCmd() *cobra.Command {
 				return fmt.Errorf("key not found: %s", key)
 			}
 
-			fmt.Fprintln(cmd.OutOrStdout(), result.Record.FilePath)
+			content, err := os.ReadFile(result.Record.FilePath)
+			if err != nil {
+				return err
+			}
+
+			if _, err := cmd.OutOrStdout().Write(content); err != nil {
+				return err
+			}
 			return nil
 		},
 	}
