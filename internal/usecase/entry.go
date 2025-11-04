@@ -137,3 +137,71 @@ func getSearchOrder(current scope.Scope) []scope.Scope {
 		return []scope.Scope{scope.NewGlobal()}
 	}
 }
+
+type ListInput struct {
+	Scope           scope.Scope
+	IncludeArchived bool
+	AllVersions     bool
+	AllScopes       bool
+}
+
+type ListResult struct {
+	Entries []ListEntry
+}
+
+type ListEntry struct {
+	Record     database.ScopedEntryRecord
+	Scope      scope.Scope
+	ScopeType  scope.ScopeType
+	ScopeShort string
+}
+
+func (u *Entry) List(ctx context.Context, input ListInput) (*ListResult, error) {
+	var allEntries []ListEntry
+
+	if input.AllScopes {
+		// Get all scopes from database
+		scopes, err := u.scopeService.GetAll(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, scopeRecord := range scopes {
+			entries, err := u.entryService.List(ctx, scopeRecord.ID, input.IncludeArchived, input.AllVersions)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, entry := range entries {
+				allEntries = append(allEntries, ListEntry{
+					Record:     entry,
+					Scope:      scopeRecord.Scope,
+					ScopeType:  scopeRecord.Scope.Type,
+					ScopeShort: scope.FormatScopeShort(scopeRecord.Scope),
+				})
+			}
+		}
+	} else {
+		// List from single scope
+		scopeID, err := u.scopeService.GetOrCreate(ctx, input.Scope)
+		if err != nil {
+			return nil, err
+		}
+
+		entries, err := u.entryService.List(ctx, scopeID, input.IncludeArchived, input.AllVersions)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, entry := range entries {
+			allEntries = append(allEntries, ListEntry{
+				Record:     entry,
+				Scope:      input.Scope,
+				ScopeType:  input.Scope.Type,
+				ScopeShort: scope.FormatScopeShort(input.Scope),
+			})
+		}
+	}
+
+	return &ListResult{Entries: allEntries}, nil
+}
