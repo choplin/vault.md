@@ -38,10 +38,15 @@ func newGetCmd() *cobra.Command {
 				return err
 			}
 
-			var versionPtr *int
-			if cmd.Flags().Changed("ver") {
-				version := versionFlag
-				versionPtr = &version
+			var opts *usecase.GetOptions
+			if cmd.Flags().Changed("ver") || allScopes {
+				opts = &usecase.GetOptions{
+					AllScopes: allScopes,
+				}
+				if cmd.Flags().Changed("ver") {
+					version := versionFlag
+					opts.Version = &version
+				}
 			}
 
 			dbCtx, err := database.CreateDatabase("")
@@ -54,12 +59,7 @@ func newGetCmd() *cobra.Command {
 
 			ctx := context.Background()
 			uc := usecase.NewEntry(dbCtx)
-			result, err := uc.Get(ctx, usecase.GetInput{
-				Scope:     sc,
-				Key:       key,
-				Version:   versionPtr,
-				AllScopes: allScopes,
-			})
+			result, err := uc.Get(ctx, sc, key, opts)
 			if err != nil {
 				return err
 			}

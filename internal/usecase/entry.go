@@ -24,7 +24,11 @@ func NewEntry(dbCtx *database.Context) *Entry {
 	}
 }
 
-func (u *Entry) Set(ctx context.Context, sc scope.Scope, key, content string, description *string) (string, error) {
+type SetOptions struct {
+	Description *string
+}
+
+func (u *Entry) Set(ctx context.Context, sc scope.Scope, key, content string, opts *SetOptions) (string, error) {
 	scopeID, err := u.scopeService.GetOrCreate(ctx, sc)
 	if err != nil {
 		return "", err
@@ -39,6 +43,11 @@ func (u *Entry) Set(ctx context.Context, sc scope.Scope, key, content string, de
 	path, hash, err := filesystem.SaveFile(scopeKey, key, int(nextVersion), content)
 	if err != nil {
 		return "", err
+	}
+
+	var description *string
+	if opts != nil {
+		description = opts.Description
 	}
 
 	if _, err := u.entryService.Create(ctx, database.ScopedEntryRecord{
@@ -56,9 +65,7 @@ func (u *Entry) Set(ctx context.Context, sc scope.Scope, key, content string, de
 	return path, nil
 }
 
-type GetInput struct {
-	Scope     scope.Scope
-	Key       string
+type GetOptions struct {
 	Version   *int
 	AllScopes bool
 }
@@ -67,29 +74,29 @@ type GetResult struct {
 	Record database.ScopedEntryRecord
 }
 
-func (u *Entry) Get(ctx context.Context, input GetInput) (*GetResult, error) {
-	searchScopes := []scope.Scope{input.Scope}
-	if input.AllScopes {
-		searchScopes = append(searchScopes, getSearchOrder(input.Scope)[1:]...)
+func (u *Entry) Get(ctx context.Context, sc scope.Scope, key string, opts *GetOptions) (*GetResult, error) {
+	searchScopes := []scope.Scope{sc}
+	if opts != nil && opts.AllScopes {
+		searchScopes = append(searchScopes, getSearchOrder(sc)[1:]...)
 	}
 
-	for idx, sc := range searchScopes {
+	for idx, searchScope := range searchScopes {
 		if idx > 0 {
-			if err := scope.Validate(sc); err != nil {
+			if err := scope.Validate(searchScope); err != nil {
 				return nil, err
 			}
 		}
 
-		scopeID, err := u.scopeService.GetOrCreate(ctx, sc)
+		scopeID, err := u.scopeService.GetOrCreate(ctx, searchScope)
 		if err != nil {
 			return nil, err
 		}
 
 		var entry *database.ScopedEntryRecord
-		if input.Version != nil {
-			entry, err = u.entryService.GetByVersion(ctx, scopeID, input.Key, int64(*input.Version))
+		if opts != nil && opts.Version != nil {
+			entry, err = u.entryService.GetByVersion(ctx, scopeID, key, int64(*opts.Version))
 		} else {
-			entry, err = u.entryService.GetLatest(ctx, scopeID, input.Key)
+			entry, err = u.entryService.GetLatest(ctx, scopeID, key)
 		}
 		if err != nil {
 			return nil, err
@@ -103,7 +110,7 @@ func (u *Entry) Get(ctx context.Context, input GetInput) (*GetResult, error) {
 			return nil, err
 		}
 		if !ok {
-			return nil, fmt.Errorf("file integrity check failed for %s", input.Key)
+			return nil, fmt.Errorf("file integrity check failed for %s", key)
 		}
 
 		return &GetResult{Record: *entry}, nil
@@ -138,8 +145,7 @@ func getSearchOrder(current scope.Scope) []scope.Scope {
 	}
 }
 
-type ListInput struct {
-	Scope           scope.Scope
+type ListOptions struct {
 	IncludeArchived bool
 	AllVersions     bool
 	AllScopes       bool
@@ -156,10 +162,14 @@ type ListEntry struct {
 	ScopeShort string
 }
 
-func (u *Entry) List(ctx context.Context, input ListInput) (*ListResult, error) {
+func (u *Entry) List(ctx context.Context, sc scope.Scope, opts *ListOptions) (*ListResult, error) {
 	var allEntries []ListEntry
 
-	if input.AllScopes {
+	includeArchived := opts != nil && opts.IncludeArchived
+	allVersions := opts != nil && opts.AllVersions
+	allScopes := opts != nil && opts.AllScopes
+
+	if allScopes {
 		// Get all scopes from database
 		scopes, err := u.scopeService.GetAll(ctx)
 		if err != nil {
@@ -167,7 +177,7 @@ func (u *Entry) List(ctx context.Context, input ListInput) (*ListResult, error) 
 		}
 
 		for _, scopeRecord := range scopes {
-			entries, err := u.entryService.List(ctx, scopeRecord.ID, input.IncludeArchived, input.AllVersions)
+			entries, err := u.entryService.List(ctx, scopeRecord.ID, includeArchived, allVersions)
 			if err != nil {
 				return nil, err
 			}
@@ -183,12 +193,12 @@ func (u *Entry) List(ctx context.Context, input ListInput) (*ListResult, error) 
 		}
 	} else {
 		// List from single scope
-		scopeID, err := u.scopeService.GetOrCreate(ctx, input.Scope)
+		scopeID, err := u.scopeService.GetOrCreate(ctx, sc)
 		if err != nil {
 			return nil, err
 		}
 
-		entries, err := u.entryService.List(ctx, scopeID, input.IncludeArchived, input.AllVersions)
+		entries, err := u.entryService.List(ctx, scopeID, includeArchived, allVersions)
 		if err != nil {
 			return nil, err
 		}
@@ -196,9 +206,9 @@ func (u *Entry) List(ctx context.Context, input ListInput) (*ListResult, error) 
 		for _, entry := range entries {
 			allEntries = append(allEntries, ListEntry{
 				Record:     entry,
-				Scope:      input.Scope,
-				ScopeType:  input.Scope.Type,
-				ScopeShort: scope.FormatScopeShort(input.Scope),
+				Scope:      sc,
+				ScopeType:  sc.Type,
+				ScopeShort: scope.FormatScopeShort(sc),
 			})
 		}
 	}

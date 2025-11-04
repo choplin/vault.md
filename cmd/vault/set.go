@@ -54,14 +54,16 @@ func newSetCmd() *cobra.Command {
 			}()
 
 			ctx := context.Background()
-			var descPtr *string
+			var opts *usecase.SetOptions
 			if strings.TrimSpace(description) != "" {
 				d := description
-				descPtr = &d
+				opts = &usecase.SetOptions{
+					Description: &d,
+				}
 			}
 
 			uc := usecase.NewEntry(dbCtx)
-			path, err := uc.Set(ctx, sc, key, content, descPtr)
+			path, err := uc.Set(ctx, sc, key, content, opts)
 			if err != nil {
 				return err
 			}

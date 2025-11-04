@@ -52,12 +52,16 @@ func newListCmd() *cobra.Command {
 
 			useAllScopes := scopeType == "" && repoPath == "" && branchName == "" && worktreeID == ""
 
-			result, err := uc.List(ctx, usecase.ListInput{
-				Scope:           sc,
-				IncludeArchived: includeArchived,
-				AllVersions:     allVersions,
-				AllScopes:       useAllScopes,
-			})
+			var opts *usecase.ListOptions
+			if includeArchived || allVersions || useAllScopes {
+				opts = &usecase.ListOptions{
+					IncludeArchived: includeArchived,
+					AllVersions:     allVersions,
+					AllScopes:       useAllScopes,
+				}
+			}
+
+			result, err := uc.List(ctx, sc, opts)
 			if err != nil {
 				return err
 			}
