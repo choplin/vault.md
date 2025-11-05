@@ -72,6 +72,7 @@ type GetOptions struct {
 
 type GetResult struct {
 	Record database.ScopedEntryRecord
+	Scope  scope.Scope
 }
 
 func (u *Entry) Get(ctx context.Context, sc scope.Scope, key string, opts *GetOptions) (*GetResult, error) {
@@ -113,7 +114,10 @@ func (u *Entry) Get(ctx context.Context, sc scope.Scope, key string, opts *GetOp
 			return nil, fmt.Errorf("file integrity check failed for %s", key)
 		}
 
-		return &GetResult{Record: *entry}, nil
+		return &GetResult{
+			Record: *entry,
+			Scope:  searchScope,
+		}, nil
 	}
 
 	return nil, nil

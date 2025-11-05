@@ -15,4 +15,5 @@ func init() {
 	rootCmd.AddCommand(newGetCmd())
 	rootCmd.AddCommand(newCatCmd())
 	rootCmd.AddCommand(newListCmd())
+	rootCmd.AddCommand(newInfoCmd())
 }
