@@ -41,7 +41,7 @@ func newInfoCmd() *cobra.Command {
 			}
 
 			var opts *usecase.GetOptions
-			if cmd.Flags().Changed("ver") {
+			if cmd.Flags().Changed("version") {
 				version := versionFlag
 				opts = &usecase.GetOptions{
 					Version: &version,
@@ -77,7 +77,7 @@ func newInfoCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&versionFlag, "ver", "v", 0, "Specific version to retrieve")
+	cmd.Flags().IntVarP(&versionFlag, "version", "v", 0, "Specific version to retrieve")
 	cmd.Flags().StringVar(&format, "format", "table", "Output format: table or json")
 	cmd.Flags().StringVar(&scopeType, "scope", "", "Scope type: global, repository, branch, or worktree")
 	cmd.Flags().StringVar(&repoPath, "repo", "", "Repository path for repository/branch/worktree scopes")
