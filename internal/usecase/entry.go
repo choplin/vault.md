@@ -219,3 +219,93 @@ func (u *Entry) List(ctx context.Context, sc scope.Scope, opts *ListOptions) (*L
 
 	return &ListResult{Entries: allEntries}, nil
 }
+
+// DeleteVersion deletes a specific version of an entry.
+// Returns true if the version was deleted, false if it didn't exist.
+func (u *Entry) DeleteVersion(ctx context.Context, sc scope.Scope, key string, version int) (bool, error) {
+	if err := scope.Validate(sc); err != nil {
+		return false, err
+	}
+
+	scopeID, err := u.scopeService.GetOrCreate(ctx, sc)
+	if err != nil {
+		return false, err
+	}
+
+	// Get the entry before deleting to get the file path
+	entry, err := u.entryService.GetByVersion(ctx, scopeID, key, int64(version))
+	if err != nil {
+		return false, err
+	}
+	if entry == nil {
+		return false, nil
+	}
+
+	// Delete from database first (within transaction)
+	deleted, err := u.entryService.DeleteVersion(ctx, scopeID, key, int64(version))
+	if err != nil {
+		return false, err
+	}
+
+	// Delete file from filesystem
+	if deleted {
+		if err := filesystem.DeleteFile(entry.FilePath); err != nil {
+			// Log error but don't fail - DB is already updated
+			return true, fmt.Errorf("deleted from database but failed to delete file %s: %w", entry.FilePath, err)
+		}
+	}
+
+	return deleted, nil
+}
+
+// DeleteKey deletes all versions of an entry.
+// Returns the number of versions deleted.
+func (u *Entry) DeleteKey(ctx context.Context, sc scope.Scope, key string) (int, error) {
+	if err := scope.Validate(sc); err != nil {
+		return 0, err
+	}
+
+	scopeID, err := u.scopeService.GetOrCreate(ctx, sc)
+	if err != nil {
+		return 0, err
+	}
+
+	// Get all versions before deleting to get file paths
+	entries, err := u.entryService.List(ctx, scopeID, true, true)
+	if err != nil {
+		return 0, err
+	}
+
+	// Filter entries by key
+	var filePaths []string
+	for _, entry := range entries {
+		if entry.Key == key {
+			filePaths = append(filePaths, entry.FilePath)
+		}
+	}
+
+	if len(filePaths) == 0 {
+		return 0, nil
+	}
+
+	// Delete from database first (within transaction)
+	deleted, err := u.entryService.DeleteAll(ctx, scopeID, key)
+	if err != nil {
+		return 0, err
+	}
+
+	if !deleted {
+		return 0, nil
+	}
+
+	// Delete all files from filesystem
+	deletedCount := len(filePaths)
+	for _, filePath := range filePaths {
+		if err := filesystem.DeleteFile(filePath); err != nil {
+			// Log error but continue with other files
+			return deletedCount, fmt.Errorf("deleted from database but failed to delete some files: %w", err)
+		}
+	}
+
+	return deletedCount, nil
+}
