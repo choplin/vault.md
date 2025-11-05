@@ -66,8 +66,7 @@ func (u *Entry) Set(ctx context.Context, sc scope.Scope, key, content string, op
 }
 
 type GetOptions struct {
-	Version   *int
-	AllScopes bool
+	Version *int
 }
 
 type GetResult struct {
@@ -76,77 +75,40 @@ type GetResult struct {
 }
 
 func (u *Entry) Get(ctx context.Context, sc scope.Scope, key string, opts *GetOptions) (*GetResult, error) {
-	searchScopes := []scope.Scope{sc}
-	if opts != nil && opts.AllScopes {
-		searchScopes = append(searchScopes, getSearchOrder(sc)[1:]...)
+	if err := scope.Validate(sc); err != nil {
+		return nil, err
 	}
 
-	for idx, searchScope := range searchScopes {
-		if idx > 0 {
-			if err := scope.Validate(searchScope); err != nil {
-				return nil, err
-			}
-		}
-
-		scopeID, err := u.scopeService.GetOrCreate(ctx, searchScope)
-		if err != nil {
-			return nil, err
-		}
-
-		var entry *database.ScopedEntryRecord
-		if opts != nil && opts.Version != nil {
-			entry, err = u.entryService.GetByVersion(ctx, scopeID, key, int64(*opts.Version))
-		} else {
-			entry, err = u.entryService.GetLatest(ctx, scopeID, key)
-		}
-		if err != nil {
-			return nil, err
-		}
-		if entry == nil {
-			continue
-		}
-
-		ok, err := filesystem.VerifyFile(entry.FilePath, entry.Hash)
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
-			return nil, fmt.Errorf("file integrity check failed for %s", key)
-		}
-
-		return &GetResult{
-			Record: *entry,
-			Scope:  searchScope,
-		}, nil
+	scopeID, err := u.scopeService.GetOrCreate(ctx, sc)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, nil
-}
-
-func getSearchOrder(current scope.Scope) []scope.Scope {
-	switch current.Type {
-	case scope.ScopeGlobal:
-		return []scope.Scope{scope.NewGlobal()}
-	case scope.ScopeRepository:
-		return []scope.Scope{
-			scope.NewRepository(current.PrimaryPath),
-			scope.NewGlobal(),
-		}
-	case scope.ScopeBranch:
-		return []scope.Scope{
-			scope.NewBranch(current.PrimaryPath, current.BranchName),
-			scope.NewRepository(current.PrimaryPath),
-			scope.NewGlobal(),
-		}
-	case scope.ScopeWorktree:
-		return []scope.Scope{
-			scope.NewWorktree(current.PrimaryPath, current.WorktreeID, current.WorktreePath),
-			scope.NewRepository(current.PrimaryPath),
-			scope.NewGlobal(),
-		}
-	default:
-		return []scope.Scope{scope.NewGlobal()}
+	var entry *database.ScopedEntryRecord
+	if opts != nil && opts.Version != nil {
+		entry, err = u.entryService.GetByVersion(ctx, scopeID, key, int64(*opts.Version))
+	} else {
+		entry, err = u.entryService.GetLatest(ctx, scopeID, key)
 	}
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	ok, err := filesystem.VerifyFile(entry.FilePath, entry.Hash)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, fmt.Errorf("file integrity check failed for %s", key)
+	}
+
+	return &GetResult{
+		Record: *entry,
+		Scope:  sc,
+	}, nil
 }
 
 type ListOptions struct {

@@ -15,7 +15,6 @@ import (
 func newCatCmd() *cobra.Command {
 	var (
 		versionFlag int
-		allScopes   bool
 		scopeType   string
 		repoPath    string
 		branchName  string
@@ -40,13 +39,10 @@ func newCatCmd() *cobra.Command {
 			}
 
 			var opts *usecase.GetOptions
-			if cmd.Flags().Changed("version") || allScopes {
+			if cmd.Flags().Changed("version") {
+				version := versionFlag
 				opts = &usecase.GetOptions{
-					AllScopes: allScopes,
-				}
-				if cmd.Flags().Changed("version") {
-					version := versionFlag
-					opts.Version = &version
+					Version: &version,
 				}
 			}
 
@@ -81,7 +77,6 @@ func newCatCmd() *cobra.Command {
 	}
 
 	cmd.Flags().IntVarP(&versionFlag, "version", "v", 0, "Specific version to retrieve")
-	cmd.Flags().BoolVar(&allScopes, "all-scopes", false, "Search higher scopes if not found")
 	cmd.Flags().StringVar(&scopeType, "scope", "", "Scope type: global, repository, branch, or worktree")
 	cmd.Flags().StringVar(&repoPath, "repo", "", "Repository path for repository/branch/worktree scopes")
 	cmd.Flags().StringVar(&branchName, "branch", "", "Branch name (requires --scope branch)")
