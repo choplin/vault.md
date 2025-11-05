@@ -18,4 +18,5 @@ func init() {
 	rootCmd.AddCommand(newInfoCmd())
 	rootCmd.AddCommand(newDeleteCmd())
 	rootCmd.AddCommand(newEditCmd())
+	rootCmd.AddCommand(newMCPCmd())
 }
