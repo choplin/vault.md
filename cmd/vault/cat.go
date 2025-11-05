@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/vault-md/vaultmd/internal/database"
+	"github.com/vault-md/vaultmd/internal/scope"
 	"github.com/vault-md/vaultmd/internal/usecase"
 )
 
@@ -28,7 +29,7 @@ func newCatCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
 
-			sc, err := usecase.ResolveScope(usecase.ScopeOptions{
+			sc, err := scope.ResolveScope(scope.ScopeOptions{
 				Type:     scopeType,
 				Repo:     repoPath,
 				Branch:   branchName,

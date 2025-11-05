@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/vault-md/vaultmd/internal/database"
+	"github.com/vault-md/vaultmd/internal/scope"
 	"github.com/vault-md/vaultmd/internal/usecase"
 )
 
@@ -29,7 +30,7 @@ func newListCmd() *cobra.Command {
 		Short: "List keys in vault",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sc, err := usecase.ResolveScope(usecase.ScopeOptions{
+			sc, err := scope.ResolveScope(scope.ScopeOptions{
 				Type:     scopeType,
 				Repo:     repoPath,
 				Branch:   branchName,
