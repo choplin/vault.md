@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	sqldb "github.com/vault-md/vaultmd/internal/database/sqlc"
-	"github.com/vault-md/vaultmd/internal/scope"
+	sqldb "github.com/choplin/vault.md/internal/database/sqlc"
+	"github.com/choplin/vault.md/internal/scope"
 )
 
 func ScopeRecordFromRow(row sqldb.Scope) ScopeRecord {

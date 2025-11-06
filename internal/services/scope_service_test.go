@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/vault-md/vaultmd/internal/database"
-	"github.com/vault-md/vaultmd/internal/scope"
+	"github.com/choplin/vault.md/internal/database"
+	"github.com/choplin/vault.md/internal/scope"
 )
 
 func TestScopeServiceDeleteScope(t *testing.T) {

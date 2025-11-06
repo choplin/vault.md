@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/vault-md/vaultmd/internal/database"
-	sqldb "github.com/vault-md/vaultmd/internal/database/sqlc"
+	"github.com/choplin/vault.md/internal/database"
+	sqldb "github.com/choplin/vault.md/internal/database/sqlc"
 )
 
 // EntryService exposes high-level operations for scoped entries using sqlc-generated queries.

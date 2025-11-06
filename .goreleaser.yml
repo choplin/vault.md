@@ -72,7 +72,7 @@ brews:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: .
-    homepage: https://github.com/vault-md/vaultmd
+    homepage: https://github.com/choplin/vault.md
     description: "vault.md - A knowledge vault for AI-assisted development"
     license: MIT
     install: |

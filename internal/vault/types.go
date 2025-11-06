@@ -3,7 +3,7 @@ package vault
 import (
 	"time"
 
-	"github.com/vault-md/vaultmd/internal/scope"
+	"github.com/choplin/vault.md/internal/scope"
 )
 
 type VaultEntry struct {

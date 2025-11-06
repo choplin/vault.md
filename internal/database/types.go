@@ -3,7 +3,7 @@ package database
 import (
 	"time"
 
-	"github.com/vault-md/vaultmd/internal/scope"
+	"github.com/choplin/vault.md/internal/scope"
 )
 
 // ScopeRecord represents a row in the scopes table. Each scope groups a set

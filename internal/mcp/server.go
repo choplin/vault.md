@@ -8,9 +8,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/vault-md/vaultmd/internal/database"
-	"github.com/vault-md/vaultmd/internal/scope"
-	"github.com/vault-md/vaultmd/internal/usecase"
+	"github.com/choplin/vault.md/internal/database"
+	"github.com/choplin/vault.md/internal/scope"
+	"github.com/choplin/vault.md/internal/usecase"
 )
 
 // Server wraps the MCP server with vault-specific functionality
@@ -44,7 +44,11 @@ func NewServer() (*Server, error) {
 
 // Run starts the MCP server with stdio transport
 func (s *Server) Run(ctx context.Context) error {
-	defer database.CloseDatabase(s.dbCtx)
+	defer func() {
+		if err := database.CloseDatabase(s.dbCtx); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to close database: %v\n", err)
+		}
+	}()
 	return s.server.Run(ctx, &mcp.StdioTransport{})
 }
 

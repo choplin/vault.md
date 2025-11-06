@@ -2,8 +2,8 @@
 
 A knowledge vault for AI-assisted development with versioned, scoped content storage.
 
-[![CI](https://github.com/vault-md/vaultmd/actions/workflows/ci.yml/badge.svg)](https://github.com/vault-md/vaultmd/actions/workflows/ci.yml)
-[![Release](https://github.com/vault-md/vaultmd/actions/workflows/release.yml/badge.svg)](https://github.com/vault-md/vaultmd/actions/workflows/release.yml)
+[![CI](https://github.com/choplin/vault.md/actions/workflows/ci.yml/badge.svg)](https://github.com/choplin/vault.md/actions/workflows/ci.yml)
+[![Release](https://github.com/choplin/vault.md/actions/workflows/release.yml/badge.svg)](https://github.com/choplin/vault.md/actions/workflows/release.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/vault-md/vaultmd)](https://goreportcard.com/report/github.com/vault-md/vaultmd)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -29,12 +29,12 @@ brew install choplin/tap/vault
 Requires Go 1.25 or later:
 
 ```bash
-go install github.com/vault-md/vaultmd/cmd/vault@latest
+go install github.com/choplin/vault.md/cmd/vault@latest
 ```
 
 ### Manual Installation
 
-Download the latest release from [GitHub Releases](https://github.com/vault-md/vaultmd/releases).
+Download the latest release from [GitHub Releases](https://github.com/choplin/vault.md/releases).
 
 ## Usage
 

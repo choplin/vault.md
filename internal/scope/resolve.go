@@ -3,7 +3,7 @@ package scope
 import (
 	"fmt"
 
-	"github.com/vault-md/vaultmd/internal/git"
+	"github.com/choplin/vault.md/internal/git"
 )
 
 // ScopeOptions contains options for resolving a scope from CLI/MCP input

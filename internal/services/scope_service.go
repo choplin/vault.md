@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/vault-md/vaultmd/internal/database"
-	sqldb "github.com/vault-md/vaultmd/internal/database/sqlc"
-	"github.com/vault-md/vaultmd/internal/scope"
+	"github.com/choplin/vault.md/internal/database"
+	sqldb "github.com/choplin/vault.md/internal/database/sqlc"
+	"github.com/choplin/vault.md/internal/scope"
 )
 
 // ScopeService provides higher-level operations on scopes and their entries.

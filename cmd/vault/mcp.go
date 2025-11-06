@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/vault-md/vaultmd/internal/mcp"
+	"github.com/choplin/vault.md/internal/mcp"
 )
 
 func newMCPCmd() *cobra.Command {

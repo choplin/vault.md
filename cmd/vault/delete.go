@@ -9,9 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/vault-md/vaultmd/internal/database"
-	"github.com/vault-md/vaultmd/internal/scope"
-	"github.com/vault-md/vaultmd/internal/usecase"
+	"github.com/choplin/vault.md/internal/database"
+	"github.com/choplin/vault.md/internal/scope"
+	"github.com/choplin/vault.md/internal/usecase"
 )
 
 func newDeleteCmd() *cobra.Command {

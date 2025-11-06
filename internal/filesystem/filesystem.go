@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/vault-md/vaultmd/internal/config"
+	"github.com/choplin/vault.md/internal/config"
 )
 
 var ensureOnce sync.Once

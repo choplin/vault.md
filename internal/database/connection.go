@@ -12,9 +12,9 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/sqlite"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 
-	"github.com/vault-md/vaultmd/db/migrations"
-	"github.com/vault-md/vaultmd/internal/config"
-	sqldb "github.com/vault-md/vaultmd/internal/database/sqlc"
+	"github.com/choplin/vault.md/db/migrations"
+	"github.com/choplin/vault.md/internal/config"
+	sqldb "github.com/choplin/vault.md/internal/database/sqlc"
 
 	_ "modernc.org/sqlite"
 )

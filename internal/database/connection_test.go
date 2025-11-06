@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/vault-md/vaultmd/internal/config"
+	"github.com/choplin/vault.md/internal/config"
 )
 
 func setupTestDB(t *testing.T) *Context {

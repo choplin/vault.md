@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/vault-md/vaultmd/internal/database"
-	"github.com/vault-md/vaultmd/internal/filesystem"
-	"github.com/vault-md/vaultmd/internal/scope"
-	"github.com/vault-md/vaultmd/internal/services"
+	"github.com/choplin/vault.md/internal/database"
+	"github.com/choplin/vault.md/internal/filesystem"
+	"github.com/choplin/vault.md/internal/scope"
+	"github.com/choplin/vault.md/internal/services"
 )
 
 type Entry struct {

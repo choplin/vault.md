@@ -1,4 +1,4 @@
-module github.com/vault-md/vaultmd
+module github.com/choplin/vault.md
 
 go 1.25
 
