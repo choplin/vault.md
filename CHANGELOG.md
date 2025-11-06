@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2025-11-06
+
 ### Added
 
 - **MCP Server**: Model Context Protocol server with 5 core tools (`vault_set`, `vault_get`, `vault_list`, `vault_delete`, `vault_info`)
