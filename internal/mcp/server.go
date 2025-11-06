@@ -83,14 +83,14 @@ func (s *Server) registerTools() {
 // Input/Output types for each tool
 
 type SetInput struct {
-	Key         string  `json:"key" jsonschema:"required,description=The key for the vault entry"`
-	Content     string  `json:"content" jsonschema:"required,description=The content to store"`
-	Description *string `json:"description,omitempty" jsonschema:"description=Optional description for the entry"`
-	Scope       *string `json:"scope,omitempty" jsonschema:"enum=global;repository;branch;worktree,description=Scope type"`
-	Repo        *string `json:"repo,omitempty" jsonschema:"description=Repository path"`
-	Branch      *string `json:"branch,omitempty" jsonschema:"description=Branch name (for branch scope)"`
-	Worktree    *string `json:"worktree,omitempty" jsonschema:"description=Worktree ID (for worktree scope)"`
-	WorkingDir  *string `json:"workingDir,omitempty" jsonschema:"description=Working directory for git detection"`
+	Key         string  `json:"key" jsonschema_description:"The key for the vault entry"`
+	Content     string  `json:"content" jsonschema_description:"The content to store"`
+	Description *string `json:"description,omitempty" jsonschema_description:"Optional description for the entry"`
+	Scope       *string `json:"scope,omitempty" jsonschema_description:"Scope type (global, repository, branch, or worktree)"`
+	Repo        *string `json:"repo,omitempty" jsonschema_description:"Repository path"`
+	Branch      *string `json:"branch,omitempty" jsonschema_description:"Branch name (for branch scope)"`
+	Worktree    *string `json:"worktree,omitempty" jsonschema_description:"Worktree ID (for worktree scope)"`
+	WorkingDir  *string `json:"workingDir,omitempty" jsonschema_description:"Working directory for git detection"`
 }
 
 type SetOutput struct {
@@ -99,13 +99,13 @@ type SetOutput struct {
 }
 
 type GetInput struct {
-	Key        string  `json:"key" jsonschema:"required,description=The key for the vault entry"`
-	Version    *int    `json:"version,omitempty" jsonschema:"description=Specific version to retrieve (latest if not specified)"`
-	Scope      *string `json:"scope,omitempty" jsonschema:"enum=global;repository;branch;worktree,description=Scope type"`
-	Repo       *string `json:"repo,omitempty" jsonschema:"description=Repository path"`
-	Branch     *string `json:"branch,omitempty" jsonschema:"description=Branch name (for branch scope)"`
-	Worktree   *string `json:"worktree,omitempty" jsonschema:"description=Worktree ID (for worktree scope)"`
-	WorkingDir *string `json:"workingDir,omitempty" jsonschema:"description=Working directory for git detection"`
+	Key        string  `json:"key" jsonschema_description:"The key for the vault entry"`
+	Version    *int    `json:"version,omitempty" jsonschema_description:"Specific version to retrieve (latest if not specified)"`
+	Scope      *string `json:"scope,omitempty" jsonschema_description:"Scope type (global, repository, branch, or worktree)"`
+	Repo       *string `json:"repo,omitempty" jsonschema_description:"Repository path"`
+	Branch     *string `json:"branch,omitempty" jsonschema_description:"Branch name (for branch scope)"`
+	Worktree   *string `json:"worktree,omitempty" jsonschema_description:"Worktree ID (for worktree scope)"`
+	WorkingDir *string `json:"workingDir,omitempty" jsonschema_description:"Working directory for git detection"`
 }
 
 type GetOutput struct {
@@ -113,13 +113,13 @@ type GetOutput struct {
 }
 
 type ListInput struct {
-	AllVersions     *bool   `json:"allVersions,omitempty" jsonschema:"description=Include all versions, not just latest"`
-	IncludeArchived *bool   `json:"includeArchived,omitempty" jsonschema:"description=Include archived entries"`
-	Scope           *string `json:"scope,omitempty" jsonschema:"enum=global;repository;branch;worktree,description=Scope type"`
-	Repo            *string `json:"repo,omitempty" jsonschema:"description=Repository path"`
-	Branch          *string `json:"branch,omitempty" jsonschema:"description=Branch name (for branch scope)"`
-	Worktree        *string `json:"worktree,omitempty" jsonschema:"description=Worktree ID (for worktree scope)"`
-	WorkingDir      *string `json:"workingDir,omitempty" jsonschema:"description=Working directory for git detection"`
+	AllVersions     *bool   `json:"allVersions,omitempty" jsonschema_description:"Include all versions, not just latest"`
+	IncludeArchived *bool   `json:"includeArchived,omitempty" jsonschema_description:"Include archived entries"`
+	Scope           *string `json:"scope,omitempty" jsonschema_description:"Scope type (global, repository, branch, or worktree)"`
+	Repo            *string `json:"repo,omitempty" jsonschema_description:"Repository path"`
+	Branch          *string `json:"branch,omitempty" jsonschema_description:"Branch name (for branch scope)"`
+	Worktree        *string `json:"worktree,omitempty" jsonschema_description:"Worktree ID (for worktree scope)"`
+	WorkingDir      *string `json:"workingDir,omitempty" jsonschema_description:"Working directory for git detection"`
 }
 
 type ListOutput struct {
@@ -136,13 +136,13 @@ type ListEntry struct {
 }
 
 type DeleteInput struct {
-	Key        string  `json:"key" jsonschema:"required,description=The key for the vault entry to delete"`
-	Version    *int    `json:"version,omitempty" jsonschema:"description=Specific version to delete (all versions if not specified)"`
-	Scope      *string `json:"scope,omitempty" jsonschema:"enum=global;repository;branch;worktree,description=Scope type"`
-	Repo       *string `json:"repo,omitempty" jsonschema:"description=Repository path"`
-	Branch     *string `json:"branch,omitempty" jsonschema:"description=Branch name (for branch scope)"`
-	Worktree   *string `json:"worktree,omitempty" jsonschema:"description=Worktree ID (for worktree scope)"`
-	WorkingDir *string `json:"workingDir,omitempty" jsonschema:"description=Working directory for git detection"`
+	Key        string  `json:"key" jsonschema_description:"The key for the vault entry to delete"`
+	Version    *int    `json:"version,omitempty" jsonschema_description:"Specific version to delete (all versions if not specified)"`
+	Scope      *string `json:"scope,omitempty" jsonschema_description:"Scope type (global, repository, branch, or worktree)"`
+	Repo       *string `json:"repo,omitempty" jsonschema_description:"Repository path"`
+	Branch     *string `json:"branch,omitempty" jsonschema_description:"Branch name (for branch scope)"`
+	Worktree   *string `json:"worktree,omitempty" jsonschema_description:"Worktree ID (for worktree scope)"`
+	WorkingDir *string `json:"workingDir,omitempty" jsonschema_description:"Working directory for git detection"`
 }
 
 type DeleteOutput struct {
@@ -151,13 +151,13 @@ type DeleteOutput struct {
 }
 
 type InfoInput struct {
-	Key        string  `json:"key" jsonschema:"required,description=The key for the vault entry"`
-	Version    *int    `json:"version,omitempty" jsonschema:"description=Specific version (latest if not specified)"`
-	Scope      *string `json:"scope,omitempty" jsonschema:"enum=global;repository;branch;worktree,description=Scope type"`
-	Repo       *string `json:"repo,omitempty" jsonschema:"description=Repository path"`
-	Branch     *string `json:"branch,omitempty" jsonschema:"description=Branch name (for branch scope)"`
-	Worktree   *string `json:"worktree,omitempty" jsonschema:"description=Worktree ID (for worktree scope)"`
-	WorkingDir *string `json:"workingDir,omitempty" jsonschema:"description=Working directory for git detection"`
+	Key        string  `json:"key" jsonschema_description:"The key for the vault entry"`
+	Version    *int    `json:"version,omitempty" jsonschema_description:"Specific version (latest if not specified)"`
+	Scope      *string `json:"scope,omitempty" jsonschema_description:"Scope type (global, repository, branch, or worktree)"`
+	Repo       *string `json:"repo,omitempty" jsonschema_description:"Repository path"`
+	Branch     *string `json:"branch,omitempty" jsonschema_description:"Branch name (for branch scope)"`
+	Worktree   *string `json:"worktree,omitempty" jsonschema_description:"Worktree ID (for worktree scope)"`
+	WorkingDir *string `json:"workingDir,omitempty" jsonschema_description:"Working directory for git detection"`
 }
 
 type InfoOutput struct {
