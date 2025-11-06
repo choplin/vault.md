@@ -4,7 +4,7 @@ A knowledge vault for AI-assisted development with versioned, scoped content sto
 
 [![CI](https://github.com/choplin/vault.md/actions/workflows/ci.yml/badge.svg)](https://github.com/choplin/vault.md/actions/workflows/ci.yml)
 [![Release](https://github.com/choplin/vault.md/actions/workflows/release.yml/badge.svg)](https://github.com/choplin/vault.md/actions/workflows/release.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/vault-md/vaultmd)](https://goreportcard.com/report/github.com/vault-md/vaultmd)
+[![Go Report Card](https://goreportcard.com/badge/github.com/choplin/vault.md)](https://goreportcard.com/report/github.com/choplin/vault.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
