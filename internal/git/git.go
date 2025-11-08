@@ -1,3 +1,4 @@
+// Package git provides utilities for detecting and working with git repositories.
 package git
 
 import (
@@ -8,6 +9,8 @@ import (
 )
 
 // GitInfo contains information about a git repository
+//
+//nolint:revive // GitInfo is intentionally prefixed to avoid overly generic "Info" type
 type GitInfo struct {
 	IsGitRepo           bool
 	PrimaryWorktreePath string
@@ -26,6 +29,7 @@ func GetGitInfo(dir string) (*GitInfo, error) {
 		var err error
 		dir, err = os.Getwd()
 		if err != nil {
+			//nolint:nilerr // Intentionally return non-repo info instead of error
 			return &GitInfo{IsGitRepo: false}, nil
 		}
 	}
@@ -33,6 +37,7 @@ func GetGitInfo(dir string) (*GitInfo, error) {
 	// Check if it's a git repository
 	gitRoot, err := runGitCommand(dir, "rev-parse", "--show-toplevel")
 	if err != nil {
+		//nolint:nilerr // Intentionally return non-repo info instead of error
 		return &GitInfo{IsGitRepo: false}, nil
 	}
 
@@ -43,12 +48,14 @@ func GetGitInfo(dir string) (*GitInfo, error) {
 	// Get current branch
 	branch, err := runGitCommand(dir, "rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
+		//nolint:nilerr // Intentionally return non-repo info instead of error
 		return &GitInfo{IsGitRepo: false}, nil
 	}
 
 	// Get git directory
 	gitDir, err := runGitCommand(dir, "rev-parse", "--git-dir")
 	if err != nil {
+		//nolint:nilerr // Intentionally return non-repo info instead of error
 		return &GitInfo{IsGitRepo: false}, nil
 	}
 

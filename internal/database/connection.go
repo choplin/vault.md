@@ -1,3 +1,4 @@
+// Package database provides database connection management and operations for vault.md.
 package database
 
 import (
@@ -16,14 +17,17 @@ import (
 	"github.com/choplin/vault.md/internal/config"
 	sqldb "github.com/choplin/vault.md/internal/database/sqlc"
 
+	// Import SQLite driver for database/sql
 	_ "modernc.org/sqlite"
 )
 
+// Context holds the database connection and query interface.
 type Context struct {
 	DB      *sql.DB
 	Queries *sqldb.Queries
 }
 
+// CreateDatabase creates and initializes a database connection with migrations.
 func CreateDatabase(dbPath string) (*Context, error) {
 	path := dbPath
 	if path == "" {
@@ -33,7 +37,7 @@ func CreateDatabase(dbPath string) (*Context, error) {
 	useMemory := path == ":memory:"
 
 	if !useMemory {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 			return nil, fmt.Errorf("failed to create database directory: %w", err)
 		}
 	}
@@ -55,17 +59,17 @@ func CreateDatabase(dbPath string) (*Context, error) {
 	}
 
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
 	}
 
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	if err := runMigrations(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 
@@ -75,6 +79,7 @@ func CreateDatabase(dbPath string) (*Context, error) {
 	}, nil
 }
 
+// CloseDatabase closes the database connection.
 func CloseDatabase(ctx *Context) error {
 	if ctx == nil || ctx.DB == nil {
 		return nil
@@ -82,6 +87,7 @@ func CloseDatabase(ctx *Context) error {
 	return ctx.DB.Close()
 }
 
+// ClearDatabase removes all data from the database.
 func ClearDatabase(ctx *Context) error {
 	if ctx == nil || ctx.DB == nil {
 		return nil
@@ -101,28 +107,28 @@ func ClearDatabase(ctx *Context) error {
 
 	if err := queries.DeleteAllVersions(bg); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("failed to delete versions: %w (rollback error: %v)", err, rbErr)
+			return fmt.Errorf("failed to delete versions: %w (rollback error: %w)", err, rbErr)
 		}
 		return fmt.Errorf("failed to delete versions: %w", err)
 	}
 
 	if err := queries.DeleteAllEntryStatus(bg); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("failed to delete entry_status: %w (rollback error: %v)", err, rbErr)
+			return fmt.Errorf("failed to delete entry_status: %w (rollback error: %w)", err, rbErr)
 		}
 		return fmt.Errorf("failed to delete entry_status: %w", err)
 	}
 
 	if err := queries.DeleteAllEntries(bg); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("failed to delete entries: %w (rollback error: %v)", err, rbErr)
+			return fmt.Errorf("failed to delete entries: %w (rollback error: %w)", err, rbErr)
 		}
 		return fmt.Errorf("failed to delete entries: %w", err)
 	}
 
 	if err := queries.DeleteAllScopes(bg); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("failed to delete scopes: %w (rollback error: %v)", err, rbErr)
+			return fmt.Errorf("failed to delete scopes: %w (rollback error: %w)", err, rbErr)
 		}
 		return fmt.Errorf("failed to delete scopes: %w", err)
 	}

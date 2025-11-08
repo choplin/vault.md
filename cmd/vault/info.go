@@ -120,23 +120,54 @@ func outputInfoJSON(cmd *cobra.Command, result *usecase.GetResult) error {
 }
 
 func outputInfoTable(cmd *cobra.Command, result *usecase.GetResult) error {
-	// Key-value pair format for single entry
-	fmt.Fprintf(cmd.OutOrStdout(), "ID:          %d\n", result.Record.EntryID)
-	fmt.Fprintf(cmd.OutOrStdout(), "Scope ID:    %d\n", result.Record.ScopeID)
-	fmt.Fprintf(cmd.OutOrStdout(), "Scope:       %s\n", scope.FormatScope(result.Scope))
-	fmt.Fprintf(cmd.OutOrStdout(), "Key:         %s\n", result.Record.Key)
-	fmt.Fprintf(cmd.OutOrStdout(), "Version:     %d\n", result.Record.Version)
-	fmt.Fprintf(cmd.OutOrStdout(), "File Path:   %s\n", result.Record.FilePath)
-	fmt.Fprintf(cmd.OutOrStdout(), "Hash:        %s\n", result.Record.Hash)
-
-	if result.Record.Description != nil {
-		fmt.Fprintf(cmd.OutOrStdout(), "Description: %s\n", *result.Record.Description)
-	} else {
-		fmt.Fprintf(cmd.OutOrStdout(), "Description: \n")
+	// Helper function to handle output errors
+	out := cmd.OutOrStdout()
+	fprintf := func(format string, args ...interface{}) error {
+		if _, err := fmt.Fprintf(out, format, args...); err != nil {
+			return err
+		}
+		return nil
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "Created At:  %s\n", result.Record.CreatedAt.Format("2006-01-02 15:04:05"))
-	fmt.Fprintf(cmd.OutOrStdout(), "Archived:    %t\n", result.Record.IsArchived)
+	// Key-value pair format for single entry
+	if err := fprintf("ID:          %d\n", result.Record.EntryID); err != nil {
+		return err
+	}
+	if err := fprintf("Scope ID:    %d\n", result.Record.ScopeID); err != nil {
+		return err
+	}
+	if err := fprintf("Scope:       %s\n", scope.FormatScope(result.Scope)); err != nil {
+		return err
+	}
+	if err := fprintf("Key:         %s\n", result.Record.Key); err != nil {
+		return err
+	}
+	if err := fprintf("Version:     %d\n", result.Record.Version); err != nil {
+		return err
+	}
+	if err := fprintf("File Path:   %s\n", result.Record.FilePath); err != nil {
+		return err
+	}
+	if err := fprintf("Hash:        %s\n", result.Record.Hash); err != nil {
+		return err
+	}
+
+	if result.Record.Description != nil {
+		if err := fprintf("Description: %s\n", *result.Record.Description); err != nil {
+			return err
+		}
+	} else {
+		if err := fprintf("Description: \n"); err != nil {
+			return err
+		}
+	}
+
+	if err := fprintf("Created At:  %s\n", result.Record.CreatedAt.Format("2006-01-02 15:04:05")); err != nil {
+		return err
+	}
+	if err := fprintf("Archived:    %t\n", result.Record.IsArchived); err != nil {
+		return err
+	}
 
 	return nil
 }

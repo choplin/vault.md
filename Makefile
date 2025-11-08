@@ -16,12 +16,11 @@ run: build
 test:
 	go test ./...
 
-fmt:
-	go tool mvdan.cc/gofumpt -w .
-
 lint:
-	go tool github.com/golangci/golangci-lint/cmd/golangci-lint run ./...
-	go tool honnef.co/go/tools/cmd/staticcheck ./...
+	golangci-lint run ./...
+
+fmt:
+	golangci-lint run --fix ./...
 
 clean:
 	rm -rf bin

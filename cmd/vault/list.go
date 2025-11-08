@@ -29,7 +29,7 @@ func newListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List keys in vault",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			sc, err := scope.ResolveScope(scope.ScopeOptions{
 				Type:     scopeType,
 				Repo:     repoPath,
@@ -71,7 +71,8 @@ func newListCmd() *cobra.Command {
 			case "json":
 				return outputJSON(cmd, result)
 			case "table":
-				return outputTable(cmd, result, includeArchived)
+				outputTable(cmd, result, includeArchived)
+				return nil
 			default:
 				return fmt.Errorf("invalid format: %s (valid values: table, json)", format)
 			}
@@ -123,7 +124,7 @@ func outputJSON(cmd *cobra.Command, result *usecase.ListResult) error {
 	return encoder.Encode(output)
 }
 
-func outputTable(cmd *cobra.Command, result *usecase.ListResult, includeArchived bool) error {
+func outputTable(cmd *cobra.Command, result *usecase.ListResult, includeArchived bool) {
 	t := table.NewWriter()
 	t.SetOutputMirror(cmd.OutOrStdout())
 	t.SetStyle(table.StyleLight)
@@ -170,5 +171,4 @@ func outputTable(cmd *cobra.Command, result *usecase.ListResult, includeArchived
 	}
 
 	t.Render()
-	return nil
 }

@@ -10,17 +10,22 @@ import (
 	sqldb "github.com/choplin/vault.md/internal/database/sqlc"
 )
 
+// ErrNotFound is returned when a requested entry is not found.
+var ErrNotFound = errors.New("entry not found")
+
 // EntryService exposes high-level operations for scoped entries using sqlc-generated queries.
 type EntryService struct {
 	ctx *database.Context
 }
 
+// NewEntryService creates a new EntryService.
 func NewEntryService(ctx *database.Context) *EntryService {
 	return &EntryService{
 		ctx: ctx,
 	}
 }
 
+// GetLatest retrieves the latest version of an entry.
 func (s *EntryService) GetLatest(ctx context.Context, scopeID int64, key string) (*database.ScopedEntryRecord, error) {
 	q, err := s.queries()
 	if err != nil {
@@ -33,7 +38,7 @@ func (s *EntryService) GetLatest(ctx context.Context, scopeID int64, key string)
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
@@ -42,6 +47,7 @@ func (s *EntryService) GetLatest(ctx context.Context, scopeID int64, key string)
 	return &record, nil
 }
 
+// GetByVersion retrieves a specific version of an entry.
 func (s *EntryService) GetByVersion(ctx context.Context, scopeID int64, key string, version int64) (*database.ScopedEntryRecord, error) {
 	q, err := s.queries()
 	if err != nil {
@@ -55,7 +61,7 @@ func (s *EntryService) GetByVersion(ctx context.Context, scopeID int64, key stri
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
@@ -64,6 +70,7 @@ func (s *EntryService) GetByVersion(ctx context.Context, scopeID int64, key stri
 	return &record, nil
 }
 
+// GetNextVersion returns the next version number for an entry.
 func (s *EntryService) GetNextVersion(ctx context.Context, scopeID int64, key string) (int64, error) {
 	q, err := s.queries()
 	if err != nil {
@@ -176,6 +183,7 @@ func (s *EntryService) Create(ctx context.Context, entry database.ScopedEntryRec
 	return versionID, nil
 }
 
+// List retrieves entries from the vault with specified filters.
 func (s *EntryService) List(ctx context.Context, scopeID int64, includeArchived, allVersions bool) ([]database.ScopedEntryRecord, error) {
 	q, err := s.queries()
 	if err != nil {
@@ -213,6 +221,7 @@ func (s *EntryService) List(ctx context.Context, scopeID int64, includeArchived,
 	return result, nil
 }
 
+// DeleteVersion deletes a specific version of an entry and returns true if deleted.
 func (s *EntryService) DeleteVersion(ctx context.Context, scopeID int64, key string, version int64) (bool, error) {
 	var deleted bool
 	err := s.withTx(ctx, func(txCtx context.Context, q *sqldb.Queries) error {
@@ -258,6 +267,7 @@ func (s *EntryService) DeleteVersion(ctx context.Context, scopeID int64, key str
 	return deleted, nil
 }
 
+// DeleteAll deletes all versions of an entry and returns true if deleted.
 func (s *EntryService) DeleteAll(ctx context.Context, scopeID int64, key string) (bool, error) {
 	var deleted bool
 	err := s.withTx(ctx, func(txCtx context.Context, q *sqldb.Queries) error {
@@ -293,6 +303,7 @@ func (s *EntryService) DeleteAll(ctx context.Context, scopeID int64, key string)
 	return deleted, nil
 }
 
+// Archive marks an entry as archived and returns true if archived.
 func (s *EntryService) Archive(ctx context.Context, scopeID int64, key string) (bool, error) {
 	q, err := s.queries()
 	if err != nil {
@@ -332,6 +343,7 @@ func (s *EntryService) Archive(ctx context.Context, scopeID int64, key string) (
 	return affected > 0, nil
 }
 
+// Restore unarchives an entry and returns true if restored.
 func (s *EntryService) Restore(ctx context.Context, scopeID int64, key string) (bool, error) {
 	q, err := s.queries()
 	if err != nil {
@@ -371,6 +383,7 @@ func (s *EntryService) Restore(ctx context.Context, scopeID int64, key string) (
 	return affected > 0, nil
 }
 
+// GetEntryByKey retrieves the entry record for a given key.
 func (s *EntryService) GetEntryByKey(ctx context.Context, scopeID int64, key string) (*database.EntryRecord, error) {
 	q, err := s.queries()
 	if err != nil {
@@ -382,7 +395,7 @@ func (s *EntryService) GetEntryByKey(ctx context.Context, scopeID int64, key str
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}

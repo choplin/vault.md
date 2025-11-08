@@ -69,7 +69,9 @@ func newSetCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintln(cmd.OutOrStdout(), path)
+			if _, err := fmt.Fprintln(cmd.OutOrStdout(), path); err != nil {
+				return err
+			}
 			return nil
 		},
 	}
@@ -86,6 +88,7 @@ func newSetCmd() *cobra.Command {
 
 func readContent(cmd *cobra.Command, filePath string) (string, error) {
 	if filePath != "" {
+		//nolint:gosec // G304: filePath is from user's --file flag, intentional file read
 		bytes, err := os.ReadFile(filePath)
 		if err != nil {
 			return "", err
@@ -95,7 +98,9 @@ func readContent(cmd *cobra.Command, filePath string) (string, error) {
 
 	stat, err := os.Stdin.Stat()
 	if err == nil && (stat.Mode()&os.ModeCharDevice) != 0 {
-		fmt.Fprintln(cmd.ErrOrStderr(), "Enter content (Ctrl-D when done):")
+		if _, err := fmt.Fprintln(cmd.ErrOrStderr(), "Enter content (Ctrl-D when done):"); err != nil {
+			return "", err
+		}
 	}
 
 	bytes, err := io.ReadAll(os.Stdin)

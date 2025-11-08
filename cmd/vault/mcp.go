@@ -14,7 +14,7 @@ func newMCPCmd() *cobra.Command {
 		Use:   "mcp",
 		Short: "Start MCP server",
 		Long:  "Start the Model Context Protocol server for vault.md",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			server, err := mcp.NewServer()
 			if err != nil {
 				log.Fatalf("Failed to create MCP server: %v", err)

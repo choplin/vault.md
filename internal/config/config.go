@@ -1,3 +1,4 @@
+// Package config provides configuration utilities for vault.md storage paths.
 package config
 
 import (

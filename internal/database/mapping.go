@@ -8,6 +8,7 @@ import (
 	"github.com/choplin/vault.md/internal/scope"
 )
 
+// ScopeRecordFromRow converts a database scope row to a ScopeRecord.
 func ScopeRecordFromRow(row sqldb.Scope) ScopeRecord {
 	domainScope := scope.Scope{Type: scope.ScopeType(row.Type)}
 	switch domainScope.Type {
@@ -37,6 +38,7 @@ func ScopeRecordFromRow(row sqldb.Scope) ScopeRecord {
 	}
 }
 
+// ScopeInsertParams creates insert parameters from a scope.
 func ScopeInsertParams(sc scope.Scope) (sqldb.InsertScopeParams, error) {
 	params := sqldb.InsertScopeParams{
 		Type:      string(sc.Type),
@@ -61,6 +63,7 @@ func ScopeInsertParams(sc scope.Scope) (sqldb.InsertScopeParams, error) {
 	return params, nil
 }
 
+// ScopeUpdateParams creates update parameters from a scope.
 func ScopeUpdateParams(id int64, sc scope.Scope) (sqldb.UpdateScopeParams, error) {
 	params, err := ScopeInsertParams(sc)
 	if err != nil {
@@ -78,6 +81,7 @@ func ScopeUpdateParams(id int64, sc scope.Scope) (sqldb.UpdateScopeParams, error
 	}, nil
 }
 
+// ScopeCountsFromRows converts database rows to scope counts.
 func ScopeCountsFromRows(rows []sqldb.ListScopesWithCountsRow) []ScopeCounts {
 	result := make([]ScopeCounts, 0, len(rows))
 	for _, row := range rows {
@@ -90,6 +94,7 @@ func ScopeCountsFromRows(rows []sqldb.ListScopesWithCountsRow) []ScopeCounts {
 	return result
 }
 
+// EntryRecordFromRow converts a database entry row to an EntryRecord.
 func EntryRecordFromRow(row sqldb.Entry) EntryRecord {
 	return EntryRecord{
 		ID:        row.ID,
@@ -99,6 +104,7 @@ func EntryRecordFromRow(row sqldb.Entry) EntryRecord {
 	}
 }
 
+// EntryStatusRecordFromRow converts a database entry status row to an EntryStatusRecord.
 func EntryStatusRecordFromRow(row sqldb.EntryStatus) EntryStatusRecord {
 	return EntryStatusRecord{
 		EntryID:        row.EntryID,
@@ -108,6 +114,7 @@ func EntryStatusRecordFromRow(row sqldb.EntryStatus) EntryStatusRecord {
 	}
 }
 
+// VersionRecordFromRow converts a database version row to a VersionRecord.
 func VersionRecordFromRow(row sqldb.Version) VersionRecord {
 	var description *string
 	if row.Description.Valid {
@@ -126,6 +133,7 @@ func VersionRecordFromRow(row sqldb.Version) VersionRecord {
 	}
 }
 
+// ScopedEntryRecordFromRow creates a ScopedEntryRecord from individual fields.
 func ScopedEntryRecordFromRow(entryID, scopeID int64, key string, entryCreatedAt sql.NullTime, isArchived sql.NullInt64, version int64, filePath, hash string, description sql.NullString) ScopedEntryRecord {
 	var descPtr *string
 	if description.Valid {

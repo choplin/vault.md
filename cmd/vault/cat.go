@@ -1,3 +1,4 @@
+// Package main provides the vault.md CLI application.
 package main
 
 import (

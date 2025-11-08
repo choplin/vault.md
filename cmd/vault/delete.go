@@ -51,7 +51,9 @@ func newDeleteCmd() *cobra.Command {
 				}
 
 				reader := bufio.NewReader(os.Stdin)
-				fmt.Fprint(cmd.ErrOrStderr(), message)
+				if _, err := fmt.Fprint(cmd.ErrOrStderr(), message); err != nil {
+					return err
+				}
 				answer, err := reader.ReadString('\n')
 				if err != nil {
 					return err
@@ -59,7 +61,9 @@ func newDeleteCmd() *cobra.Command {
 
 				answer = strings.TrimSpace(strings.ToLower(answer))
 				if answer != "y" {
-					fmt.Fprintln(cmd.OutOrStdout(), "Deletion cancelled")
+					if _, err := fmt.Fprintln(cmd.OutOrStdout(), "Deletion cancelled"); err != nil {
+						return err
+					}
 					return nil
 				}
 			}
@@ -84,7 +88,9 @@ func newDeleteCmd() *cobra.Command {
 				if !deleted {
 					return fmt.Errorf("version %d of key '%s' not found", versionFlag, key)
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "Deleted version %d of '%s'\n", versionFlag, key)
+				if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Deleted version %d of '%s'\n", versionFlag, key); err != nil {
+					return err
+				}
 			} else {
 				count, err := uc.DeleteKey(ctx, sc, key)
 				if err != nil {
@@ -94,9 +100,13 @@ func newDeleteCmd() *cobra.Command {
 					return fmt.Errorf("key '%s' not found", key)
 				}
 				if count == 1 {
-					fmt.Fprintf(cmd.OutOrStdout(), "Deleted 1 version of '%s'\n", key)
+					if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Deleted 1 version of '%s'\n", key); err != nil {
+						return err
+					}
 				} else {
-					fmt.Fprintf(cmd.OutOrStdout(), "Deleted %d versions of '%s'\n", count, key)
+					if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Deleted %d versions of '%s'\n", count, key); err != nil {
+						return err
+					}
 				}
 			}
 

@@ -80,10 +80,10 @@ func newEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer os.RemoveAll(tempDir)
+			defer func() { _ = os.RemoveAll(tempDir) }()
 
 			tempFile := filepath.Join(tempDir, key+".md")
-			if err := os.WriteFile(tempFile, currentContent, 0600); err != nil {
+			if err := os.WriteFile(tempFile, currentContent, 0o600); err != nil {
 				return err
 			}
 
@@ -97,6 +97,7 @@ func newEditCmd() *cobra.Command {
 			}
 
 			// Open editor
+			//nolint:gosec // G204: editor is from EDITOR env var or default vi
 			editorCmd := exec.Command(editor, tempFile)
 			editorCmd.Stdin = os.Stdin
 			editorCmd.Stdout = os.Stdout
@@ -107,6 +108,7 @@ func newEditCmd() *cobra.Command {
 			}
 
 			// Read edited content
+			//nolint:gosec // G304: tempFile is safely created via os.CreateTemp
 			editedContent, err := os.ReadFile(tempFile)
 			if err != nil {
 				return err
@@ -117,7 +119,9 @@ func newEditCmd() *cobra.Command {
 			editedHash := sha256.Sum256(editedContent)
 
 			if currentHash == editedHash {
-				fmt.Fprintln(cmd.OutOrStdout(), "No changes made")
+				if _, err := fmt.Fprintln(cmd.OutOrStdout(), "No changes made"); err != nil {
+					return err
+				}
 				return nil
 			}
 
@@ -130,7 +134,9 @@ func newEditCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintln(cmd.OutOrStdout(), "Entry updated")
+			if _, err := fmt.Fprintln(cmd.OutOrStdout(), "Entry updated"); err != nil {
+				return err
+			}
 			return nil
 		},
 	}

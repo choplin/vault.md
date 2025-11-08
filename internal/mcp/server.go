@@ -1,7 +1,9 @@
+// Package mcp provides Model Context Protocol server implementation for vault.md.
 package mcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/choplin/vault.md/internal/database"
 	"github.com/choplin/vault.md/internal/scope"
+	"github.com/choplin/vault.md/internal/services"
 	"github.com/choplin/vault.md/internal/usecase"
 )
 
@@ -86,6 +89,7 @@ func (s *Server) registerTools() {
 
 // Input/Output types for each tool
 
+// SetInput is the input for the vault_set tool.
 type SetInput struct {
 	Key         string  `json:"key" jsonschema_description:"The key for the vault entry"`
 	Content     string  `json:"content" jsonschema_description:"The content to store"`
@@ -97,11 +101,13 @@ type SetInput struct {
 	WorkingDir  *string `json:"workingDir,omitempty" jsonschema_description:"Working directory for git detection"`
 }
 
+// SetOutput is the output for the vault_set tool.
 type SetOutput struct {
 	Message string `json:"message"`
 	Path    string `json:"path"`
 }
 
+// GetInput is the input for the vault_get tool.
 type GetInput struct {
 	Key        string  `json:"key" jsonschema_description:"The key for the vault entry"`
 	Version    *int    `json:"version,omitempty" jsonschema_description:"Specific version to retrieve (latest if not specified)"`
@@ -112,10 +118,12 @@ type GetInput struct {
 	WorkingDir *string `json:"workingDir,omitempty" jsonschema_description:"Working directory for git detection"`
 }
 
+// GetOutput is the output for the vault_get tool.
 type GetOutput struct {
 	Content string `json:"content"`
 }
 
+// ListInput is the input for the vault_list tool.
 type ListInput struct {
 	AllVersions     *bool   `json:"allVersions,omitempty" jsonschema_description:"Include all versions, not just latest"`
 	IncludeArchived *bool   `json:"includeArchived,omitempty" jsonschema_description:"Include archived entries"`
@@ -126,10 +134,12 @@ type ListInput struct {
 	WorkingDir      *string `json:"workingDir,omitempty" jsonschema_description:"Working directory for git detection"`
 }
 
+// ListOutput is the output for the vault_list tool.
 type ListOutput struct {
 	Entries []ListEntry `json:"entries"`
 }
 
+// ListEntry represents a single entry in the list output.
 type ListEntry struct {
 	Key         string  `json:"key"`
 	Version     int64   `json:"version"`
@@ -139,6 +149,7 @@ type ListEntry struct {
 	IsArchived  bool    `json:"isArchived,omitempty"`
 }
 
+// DeleteInput is the input for the vault_delete tool.
 type DeleteInput struct {
 	Key        string  `json:"key" jsonschema_description:"The key for the vault entry to delete"`
 	Version    *int    `json:"version,omitempty" jsonschema_description:"Specific version to delete (all versions if not specified)"`
@@ -149,11 +160,13 @@ type DeleteInput struct {
 	WorkingDir *string `json:"workingDir,omitempty" jsonschema_description:"Working directory for git detection"`
 }
 
+// DeleteOutput is the output for the vault_delete tool.
 type DeleteOutput struct {
 	Message string `json:"message"`
 	Count   int    `json:"count,omitempty"`
 }
 
+// InfoInput is the input for the vault_info tool.
 type InfoInput struct {
 	Key        string  `json:"key" jsonschema_description:"The key for the vault entry"`
 	Version    *int    `json:"version,omitempty" jsonschema_description:"Specific version (latest if not specified)"`
@@ -164,6 +177,7 @@ type InfoInput struct {
 	WorkingDir *string `json:"workingDir,omitempty" jsonschema_description:"Working directory for git detection"`
 }
 
+// InfoOutput is the output for the vault_info tool.
 type InfoOutput struct {
 	ID          int64   `json:"id"`
 	ScopeID     int64   `json:"scopeId"`
@@ -201,7 +215,7 @@ func resolveScopeFromInput(scopeType, repo, branch, worktree, workingDir *string
 
 // Tool handlers
 
-func (s *Server) handleSet(ctx context.Context, req *mcp.CallToolRequest, input SetInput) (*mcp.CallToolResult, SetOutput, error) {
+func (s *Server) handleSet(ctx context.Context, _ *mcp.CallToolRequest, input SetInput) (*mcp.CallToolResult, SetOutput, error) {
 	sc, err := resolveScopeFromInput(input.Scope, input.Repo, input.Branch, input.Worktree, input.WorkingDir)
 	if err != nil {
 		return nil, SetOutput{}, fmt.Errorf("failed to resolve scope: %w", err)
@@ -226,7 +240,7 @@ func (s *Server) handleSet(ctx context.Context, req *mcp.CallToolRequest, input 
 	}, nil
 }
 
-func (s *Server) handleGet(ctx context.Context, req *mcp.CallToolRequest, input GetInput) (*mcp.CallToolResult, GetOutput, error) {
+func (s *Server) handleGet(ctx context.Context, _ *mcp.CallToolRequest, input GetInput) (*mcp.CallToolResult, GetOutput, error) {
 	sc, err := resolveScopeFromInput(input.Scope, input.Repo, input.Branch, input.Worktree, input.WorkingDir)
 	if err != nil {
 		return nil, GetOutput{}, fmt.Errorf("failed to resolve scope: %w", err)
@@ -242,10 +256,10 @@ func (s *Server) handleGet(ctx context.Context, req *mcp.CallToolRequest, input 
 
 	result, err := uc.Get(ctx, sc, input.Key, opts)
 	if err != nil {
+		if errors.Is(err, services.ErrNotFound) {
+			return nil, GetOutput{}, fmt.Errorf("entry not found: %s", input.Key)
+		}
 		return nil, GetOutput{}, fmt.Errorf("failed to get entry: %w", err)
-	}
-	if result == nil {
-		return nil, GetOutput{}, fmt.Errorf("entry not found: %s", input.Key)
 	}
 
 	content, err := os.ReadFile(result.Record.FilePath)
@@ -258,7 +272,7 @@ func (s *Server) handleGet(ctx context.Context, req *mcp.CallToolRequest, input 
 	}, nil
 }
 
-func (s *Server) handleList(ctx context.Context, req *mcp.CallToolRequest, input ListInput) (*mcp.CallToolResult, ListOutput, error) {
+func (s *Server) handleList(ctx context.Context, _ *mcp.CallToolRequest, input ListInput) (*mcp.CallToolResult, ListOutput, error) {
 	sc, err := resolveScopeFromInput(input.Scope, input.Repo, input.Branch, input.Worktree, input.WorkingDir)
 	if err != nil {
 		return nil, ListOutput{}, fmt.Errorf("failed to resolve scope: %w", err)
@@ -295,7 +309,7 @@ func (s *Server) handleList(ctx context.Context, req *mcp.CallToolRequest, input
 	}, nil
 }
 
-func (s *Server) handleDelete(ctx context.Context, req *mcp.CallToolRequest, input DeleteInput) (*mcp.CallToolResult, DeleteOutput, error) {
+func (s *Server) handleDelete(ctx context.Context, _ *mcp.CallToolRequest, input DeleteInput) (*mcp.CallToolResult, DeleteOutput, error) {
 	sc, err := resolveScopeFromInput(input.Scope, input.Repo, input.Branch, input.Worktree, input.WorkingDir)
 	if err != nil {
 		return nil, DeleteOutput{}, fmt.Errorf("failed to resolve scope: %w", err)
@@ -333,7 +347,7 @@ func (s *Server) handleDelete(ctx context.Context, req *mcp.CallToolRequest, inp
 	}, nil
 }
 
-func (s *Server) handleInfo(ctx context.Context, req *mcp.CallToolRequest, input InfoInput) (*mcp.CallToolResult, InfoOutput, error) {
+func (s *Server) handleInfo(ctx context.Context, _ *mcp.CallToolRequest, input InfoInput) (*mcp.CallToolResult, InfoOutput, error) {
 	sc, err := resolveScopeFromInput(input.Scope, input.Repo, input.Branch, input.Worktree, input.WorkingDir)
 	if err != nil {
 		return nil, InfoOutput{}, fmt.Errorf("failed to resolve scope: %w", err)
@@ -349,10 +363,10 @@ func (s *Server) handleInfo(ctx context.Context, req *mcp.CallToolRequest, input
 
 	result, err := uc.Get(ctx, sc, input.Key, opts)
 	if err != nil {
+		if errors.Is(err, services.ErrNotFound) {
+			return nil, InfoOutput{}, fmt.Errorf("entry not found: %s", input.Key)
+		}
 		return nil, InfoOutput{}, fmt.Errorf("failed to get entry info: %w", err)
-	}
-	if result == nil {
-		return nil, InfoOutput{}, fmt.Errorf("entry not found: %s", input.Key)
 	}
 
 	return nil, InfoOutput{

@@ -1,3 +1,4 @@
+// Package filesystem provides content-addressable storage operations for vault entries.
 package filesystem
 
 import (
@@ -20,7 +21,7 @@ var ensureOnce sync.Once
 func ensureObjectsDir() error {
 	var setupErr error
 	ensureOnce.Do(func() {
-		setupErr = os.MkdirAll(config.GetObjectsDir(), 0o755)
+		setupErr = os.MkdirAll(config.GetObjectsDir(), 0o750)
 	})
 	return setupErr
 }
@@ -38,14 +39,14 @@ func SaveFile(project, key string, version int, content string) (string, string,
 	}
 
 	projectDir := GetProjectDir(project)
-	if err := os.MkdirAll(projectDir, 0o755); err != nil {
+	if err := os.MkdirAll(projectDir, 0o750); err != nil {
 		return "", "", err
 	}
 
 	filePath := getFilePath(project, key, version)
 	hash := calculateHash(content)
 
-	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o600); err != nil {
 		return "", "", err
 	}
 
@@ -54,6 +55,7 @@ func SaveFile(project, key string, version int, content string) (string, string,
 
 // ReadFile reads a file from disk and returns its contents as a string.
 func ReadFile(path string) (string, error) {
+	//nolint:gosec // G304: path is from database, controlled by application
 	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
@@ -152,6 +154,7 @@ func urlEncode(value string) string {
 // WalkFunc explores each entry under the project's object directory.
 type WalkFunc func(path string, d fs.DirEntry) error
 
+// WalkProjectFiles iterates over all files in a project directory.
 func WalkProjectFiles(project string, fn WalkFunc) error {
 	dir := GetProjectDir(project)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {

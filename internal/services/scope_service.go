@@ -1,3 +1,4 @@
+// Package services provides high-level business logic services for vault operations.
 package services
 
 import (
@@ -16,10 +17,12 @@ type ScopeService struct {
 	ctx *database.Context
 }
 
+// NewScopeService creates a new ScopeService.
 func NewScopeService(ctx *database.Context) *ScopeService {
 	return &ScopeService{ctx: ctx}
 }
 
+// GetOrCreate retrieves or creates a scope and returns its ID.
 func (s *ScopeService) GetOrCreate(ctx context.Context, sc scope.Scope) (int64, error) {
 	q, err := s.queries()
 	if err != nil {
@@ -57,6 +60,7 @@ func (s *ScopeService) GetOrCreate(ctx context.Context, sc scope.Scope) (int64, 
 	}
 }
 
+// GetByID retrieves a scope by its ID.
 func (s *ScopeService) GetByID(ctx context.Context, id int64) (*database.ScopeRecord, error) {
 	q, err := s.queries()
 	if err != nil {
@@ -65,7 +69,7 @@ func (s *ScopeService) GetByID(ctx context.Context, id int64) (*database.ScopeRe
 	row, err := q.FindScopeByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
@@ -73,6 +77,7 @@ func (s *ScopeService) GetByID(ctx context.Context, id int64) (*database.ScopeRe
 	return &record, nil
 }
 
+// FindScopeID finds the ID of an existing scope without creating it.
 func (s *ScopeService) FindScopeID(ctx context.Context, sc scope.Scope) (int64, error) {
 	q, err := s.queries()
 	if err != nil {
@@ -88,6 +93,7 @@ func (s *ScopeService) FindScopeID(ctx context.Context, sc scope.Scope) (int64, 
 	return row.ID, nil
 }
 
+// GetAll retrieves all scopes from the database.
 func (s *ScopeService) GetAll(ctx context.Context) ([]database.ScopeRecord, error) {
 	q, err := s.queries()
 	if err != nil {
@@ -106,6 +112,7 @@ func (s *ScopeService) GetAll(ctx context.Context) ([]database.ScopeRecord, erro
 	return result, nil
 }
 
+// GetAllEntriesGrouped retrieves all entries grouped by scope.
 func (s *ScopeService) GetAllEntriesGrouped(ctx context.Context) (map[scope.Scope][]database.ScopedEntryRecord, error) {
 	scopes, err := s.GetAll(ctx)
 	if err != nil {
@@ -137,6 +144,7 @@ func (s *ScopeService) GetAllEntriesGrouped(ctx context.Context) (map[scope.Scop
 	return result, nil
 }
 
+// DeleteScope deletes a scope and all its entries, returning the total number of versions deleted.
 func (s *ScopeService) DeleteScope(ctx context.Context, sc scope.Scope) (int64, error) {
 	var totalVersions int64
 	err := s.withTx(ctx, func(txCtx context.Context, q *sqldb.Queries) error {
@@ -181,6 +189,7 @@ func (s *ScopeService) DeleteScope(ctx context.Context, sc scope.Scope) (int64, 
 	return totalVersions, nil
 }
 
+// DeleteAllBranches deletes all branches for a given repository path, returning the total number of versions deleted.
 func (s *ScopeService) DeleteAllBranches(ctx context.Context, primaryPath string) (int64, error) {
 	var totalVersions int64
 	err := s.withTx(ctx, func(txCtx context.Context, q *sqldb.Queries) error {

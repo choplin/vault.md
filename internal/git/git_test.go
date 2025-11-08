@@ -47,7 +47,8 @@ func TestGetGitInfo_GitRepo(t *testing.T) {
 
 	// Create an initial commit
 	testFile := filepath.Join(tmpDir, "test.txt")
-	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
+	//nolint:gosec // G306: test file permissions are acceptable
+	if err := os.WriteFile(testFile, []byte("test"), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -131,7 +132,8 @@ func TestGetGitInfo_Worktree(t *testing.T) {
 
 	// Create an initial commit
 	testFile := filepath.Join(tmpDir, "test.txt")
-	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
+	//nolint:gosec // G306: test file permissions are acceptable
+	if err := os.WriteFile(testFile, []byte("test"), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -149,6 +151,7 @@ func TestGetGitInfo_Worktree(t *testing.T) {
 
 	// Create a worktree
 	worktreePath := filepath.Join(tmpDir, "worktree-test")
+	//nolint:gosec // G204: safe use of git command in test
 	worktreeCmd := exec.Command("git", "worktree", "add", worktreePath, "-b", "test-branch")
 	worktreeCmd.Dir = tmpDir
 	if err := worktreeCmd.Run(); err != nil {

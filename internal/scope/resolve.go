@@ -7,6 +7,8 @@ import (
 )
 
 // ScopeOptions contains options for resolving a scope from CLI/MCP input
+//
+//nolint:revive // ScopeOptions is intentionally prefixed for clarity in external contexts
 type ScopeOptions struct {
 	Type       string
 	Repo       string

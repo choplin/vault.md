@@ -1,7 +1,9 @@
+// Package usecase provides high-level use case implementations for vault operations.
 package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/choplin/vault.md/internal/database"
@@ -10,11 +12,13 @@ import (
 	"github.com/choplin/vault.md/internal/services"
 )
 
+// Entry provides use case operations for vault entries.
 type Entry struct {
 	scopeService *services.ScopeService
 	entryService *services.EntryService
 }
 
+// NewEntry creates a new Entry use case.
 func NewEntry(dbCtx *database.Context) *Entry {
 	scopeSvc := services.NewScopeService(dbCtx)
 	entrySvc := services.NewEntryService(dbCtx)
@@ -24,10 +28,12 @@ func NewEntry(dbCtx *database.Context) *Entry {
 	}
 }
 
+// SetOptions contains options for the Set operation.
 type SetOptions struct {
 	Description *string
 }
 
+// Set stores content in the vault.
 func (u *Entry) Set(ctx context.Context, sc scope.Scope, key, content string, opts *SetOptions) (string, error) {
 	scopeID, err := u.scopeService.GetOrCreate(ctx, sc)
 	if err != nil {
@@ -65,15 +71,18 @@ func (u *Entry) Set(ctx context.Context, sc scope.Scope, key, content string, op
 	return path, nil
 }
 
+// GetOptions contains options for the Get operation.
 type GetOptions struct {
 	Version *int
 }
 
+// GetResult contains the result of a Get operation.
 type GetResult struct {
 	Record database.ScopedEntryRecord
 	Scope  scope.Scope
 }
 
+// Get retrieves content from the vault.
 func (u *Entry) Get(ctx context.Context, sc scope.Scope, key string, opts *GetOptions) (*GetResult, error) {
 	if err := scope.Validate(sc); err != nil {
 		return nil, err
@@ -93,9 +102,6 @@ func (u *Entry) Get(ctx context.Context, sc scope.Scope, key string, opts *GetOp
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, nil
-	}
 
 	ok, err := filesystem.VerifyFile(entry.FilePath, entry.Hash)
 	if err != nil {
@@ -111,16 +117,19 @@ func (u *Entry) Get(ctx context.Context, sc scope.Scope, key string, opts *GetOp
 	}, nil
 }
 
+// ListOptions contains options for the List operation.
 type ListOptions struct {
 	IncludeArchived bool
 	AllVersions     bool
 	AllScopes       bool
 }
 
+// ListResult contains the result of a List operation.
 type ListResult struct {
 	Entries []ListEntry
 }
 
+// ListEntry represents a single entry in list results.
 type ListEntry struct {
 	Record     database.ScopedEntryRecord
 	Scope      scope.Scope
@@ -128,6 +137,7 @@ type ListEntry struct {
 	ScopeShort string
 }
 
+// List retrieves entries from the vault.
 func (u *Entry) List(ctx context.Context, sc scope.Scope, opts *ListOptions) (*ListResult, error) {
 	var allEntries []ListEntry
 
@@ -197,10 +207,10 @@ func (u *Entry) DeleteVersion(ctx context.Context, sc scope.Scope, key string, v
 	// Get the entry before deleting to get the file path
 	entry, err := u.entryService.GetByVersion(ctx, scopeID, key, int64(version))
 	if err != nil {
+		if errors.Is(err, services.ErrNotFound) {
+			return false, nil
+		}
 		return false, err
-	}
-	if entry == nil {
-		return false, nil
 	}
 
 	// Delete from database first (within transaction)

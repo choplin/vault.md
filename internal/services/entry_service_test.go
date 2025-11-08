@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/choplin/vault.md/internal/database"
@@ -120,10 +121,7 @@ func TestEntryServiceDeleteAndArchive(t *testing.T) {
 	}
 
 	latest, err := svc.GetLatest(ctx, scopeID, "notes")
-	if err != nil {
-		t.Fatalf("GetLatest after delete failed: %v", err)
-	}
-	if latest != nil {
-		t.Fatalf("expected no entry after delete, got %#v", latest)
+	if err == nil || !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound after delete, got err=%v latest=%#v", err, latest)
 	}
 }

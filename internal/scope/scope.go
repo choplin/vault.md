@@ -1,3 +1,4 @@
+// Package scope provides scope management for vault entries across global, repository, branch, and worktree levels.
 package scope
 
 import (
@@ -8,8 +9,12 @@ import (
 	"strings"
 )
 
+// ScopeType defines the type of scope for vault entries.
+//
+//nolint:revive // ScopeType is intentionally prefixed for clarity in external contexts
 type ScopeType string
 
+// Scope type constants define the available scope levels.
 const (
 	ScopeGlobal     ScopeType = "global"
 	ScopeRepository ScopeType = "repository"
@@ -29,26 +34,37 @@ type Scope struct {
 
 var fileSanitizePattern = regexp.MustCompile(`[@/\\:?*"<>|]`)
 
+// NewGlobal creates a new global scope.
 func NewGlobal() Scope {
 	return Scope{Type: ScopeGlobal}
 }
 
+// NewRepository creates a new repository scope with the given path.
 func NewRepository(path string) Scope {
 	return Scope{Type: ScopeRepository, PrimaryPath: path}
 }
 
+// NewBranch creates a new branch scope with the given repository path and branch name.
 func NewBranch(path, branch string) Scope {
 	return Scope{Type: ScopeBranch, PrimaryPath: path, BranchName: branch}
 }
 
+// NewWorktree creates a new worktree scope with the given repository path, worktree ID, and worktree path.
 func NewWorktree(path, id, wtPath string) Scope {
 	return Scope{Type: ScopeWorktree, PrimaryPath: path, WorktreeID: id, WorktreePath: wtPath}
 }
 
-func IsGlobal(s Scope) bool     { return s.Type == ScopeGlobal }
+// IsGlobal returns true if the scope is global.
+func IsGlobal(s Scope) bool { return s.Type == ScopeGlobal }
+
+// IsRepository returns true if the scope is repository-level.
 func IsRepository(s Scope) bool { return s.Type == ScopeRepository }
-func IsBranch(s Scope) bool     { return s.Type == ScopeBranch }
-func IsWorktree(s Scope) bool   { return s.Type == ScopeWorktree }
+
+// IsBranch returns true if the scope is branch-level.
+func IsBranch(s Scope) bool { return s.Type == ScopeBranch }
+
+// IsWorktree returns true if the scope is worktree-level.
+func IsWorktree(s Scope) bool { return s.Type == ScopeWorktree }
 
 // Validate enforces that each scope type carries the required fields:
 //   - ScopeGlobal: no additional fields.
@@ -106,10 +122,12 @@ func Validate(s Scope) error {
 	}
 }
 
+// GetScopeStorageKey returns the storage key for a scope.
 func GetScopeStorageKey(s Scope) string {
 	return sanitizeForFile(FormatScope(s))
 }
 
+// FormatScope returns a formatted string representation of the scope.
 func FormatScope(s Scope) string {
 	switch s.Type {
 	case ScopeGlobal:
@@ -125,6 +143,7 @@ func FormatScope(s Scope) string {
 	}
 }
 
+// FormatScopeShort returns a short formatted string representation of the scope.
 func FormatScopeShort(s Scope) string {
 	switch s.Type {
 	case ScopeGlobal:
@@ -140,18 +159,22 @@ func FormatScopeShort(s Scope) string {
 	}
 }
 
+// GetScopePrimaryPath returns the primary path of the scope.
 func GetScopePrimaryPath(s Scope) string {
 	return s.PrimaryPath
 }
 
+// GetScopeBranchName returns the branch name of the scope.
 func GetScopeBranchName(s Scope) string {
 	return s.BranchName
 }
 
+// GetScopeWorktreeID returns the worktree ID of the scope.
 func GetScopeWorktreeID(s Scope) string {
 	return s.WorktreeID
 }
 
+// GetScopeWorktreePath returns the worktree path of the scope.
 func GetScopeWorktreePath(s Scope) string {
 	return s.WorktreePath
 }

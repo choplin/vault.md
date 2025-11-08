@@ -61,17 +61,20 @@ type ScopedEntryRecord struct {
 	IsArchived  bool
 }
 
+// EntryVersionInfo contains version information for an entry.
 type EntryVersionInfo struct {
 	Version   int64
 	FilePath  string
 	CreatedAt time.Time
 }
 
+// EntryVersionCount contains version count for an entry.
 type EntryVersionCount struct {
 	EntryID      int64
 	VersionCount int64
 }
 
+// ScopeCounts contains entry and version counts for a scope.
 type ScopeCounts struct {
 	ScopeID      int64
 	EntryCount   int64
