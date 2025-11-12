@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `list` command table output now adapts to terminal width with priority-based column sizing
+
 ## [0.1.0] - 2025-11-06
 
 ### Added
